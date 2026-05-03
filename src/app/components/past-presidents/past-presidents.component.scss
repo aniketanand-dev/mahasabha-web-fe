@@ -1,0 +1,7 @@
+.past-pres-section { background: var(--ivory); }
+.past-pres-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1.2rem; }
+.pp-card { text-align: center; cursor: pointer; }
+.pp-img { width: 90px; height: 110px; object-fit: cover; border-radius: 2px; border: 2px solid var(--gold-pale); margin-bottom: 0.5rem; transition: border-color 0.2s; display: block; margin-left: auto; margin-right: auto; }
+.pp-card:hover .pp-img { border-color: var(--gold); }
+.pp-name { font-size: 0.78rem; font-weight: 600; color: var(--maroon); }
+.pp-tenure { font-size: 0.68rem; color: var(--text-light); }

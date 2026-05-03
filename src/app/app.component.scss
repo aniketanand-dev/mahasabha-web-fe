@@ -1,0 +1,28 @@
+.lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.9);
+  align-items: center;
+  justify-content: center;
+
+  &.open { display: flex; }
+
+  img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border: 2px solid rgba(201,144,26,0.3);
+  }
+}
+.lightbox-close {
+  position: absolute;
+  top: 1rem;
+  right: 1.5rem;
+  color: var(--gold);
+  font-size: 2rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+}

@@ -1,0 +1,30 @@
+<section class="events-section" id="events">
+  <div class="container">
+    <p class="ornament">✦ ಕಾರ್ಯಕ್ರಮಗಳು ✦</p>
+    <h2 class="section-title">{{ lang.t('events.title') }}</h2>
+    <p class="section-subtitle">{{ lang.t('events.subtitle') }}</p>
+
+    <div class="evt-tabs">
+      <button class="evt-tab" [class.active]="activeTab() === 'upcoming'" (click)="switchTab('upcoming')">{{ lang.t('events.tabUpcoming') }}</button>
+      <button class="evt-tab" [class.active]="activeTab() === 'past'" (click)="switchTab('past')">{{ lang.t('events.tabPast') }}</button>
+      <button class="evt-tab" [class.active]="activeTab() === 'president'" (click)="switchTab('president')">{{ lang.t('events.tabPresident') }}</button>
+    </div>
+
+    <div class="evt-grid">
+      @for (ev of currentEvents(); track ev.id) {
+        <div class="evt-card">
+          <div class="evt-img-wrap">
+            <img [src]="ev.img" [alt]="ev.title" class="evt-img" loading="lazy" />
+            <span class="evt-badge" [class]="'evt-badge badge-' + ev.badgeClass">{{ lang.t('events.badge.' + ev.badgeClass) }}</span>
+          </div>
+          <div class="evt-body">
+            <p class="evt-date">📅 {{ ev.date }}</p>
+            <h3 class="evt-title">{{ ev.title }}</h3>
+            <p class="evt-desc">{{ ev.description }}</p>
+            <a [href]="ev.link || '#'" class="evt-link">{{ lang.t('events.learnMore') }}</a>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</section>

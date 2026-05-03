@@ -1,0 +1,63 @@
+nav {
+  background: var(--ivory);
+  border-bottom: 3px solid var(--gold);
+  position: sticky; top: 0; z-index: 1000;
+  box-shadow: 0 4px 20px var(--shadow);
+}
+.nav-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.6rem 1.5rem; max-width: 1200px; margin: 0 auto;
+}
+.nav-logo { display: flex; align-items: center; gap: 0.8rem; text-decoration: none; }
+.nav-logo img { width: 56px; height: 56px; object-fit: cover; border-radius: 50%; border: 2px solid var(--gold); }
+.nav-logo-text { line-height: 1.2; }
+.name-kn { font-family: 'Noto Serif Kannada', serif; font-size: 1rem; font-weight: 700; color: var(--maroon); }
+.name-en { font-family: 'Cinzel', serif; font-size: 0.7rem; color: var(--text-light); letter-spacing: 1px; }
+.nav-links {
+  display: flex; gap: 0; list-style: none;
+  a {
+    font-family: 'Noto Sans Kannada', serif; font-size: 0.85rem; font-weight: 500;
+    color: var(--text-mid); text-decoration: none; padding: 0.5rem 0.9rem;
+    border-bottom: 2px solid transparent; transition: all 0.2s; display: block;
+    &:hover { color: var(--maroon); border-bottom-color: var(--saffron); }
+  }
+}
+.nav-end {
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.apply-btn {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #fff;
+  text-decoration: none;
+  padding: 0.42rem 0.95rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--maroon), var(--saffron));
+  box-shadow: 0 8px 18px rgba(122, 14, 34, 0.18);
+  white-space: nowrap;
+  transition: transform 0.2s, box-shadow 0.2s;
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 22px rgba(122, 14, 34, 0.22);
+  }
+}
+.admin-btn {
+  font-size: 0.82rem; font-weight: 700;
+  color: var(--maroon); text-decoration: none;
+  padding: 0.35rem 0.75rem; border-radius: 20px;
+  border: 1.5px solid var(--maroon); transition: all 0.2s;
+  white-space: nowrap;
+  &:hover { background: var(--maroon); color: #fff; }
+}
+.hamburger {
+  display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 4px;
+  span { display: block; width: 24px; height: 2px; background: var(--maroon); border-radius: 2px; }
+}
+@media (max-width: 600px) {
+  .nav-links { display: none;
+    &.open { display: flex; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; background: var(--ivory); border-bottom: 2px solid var(--gold); padding: 0.5rem 0; z-index: 100; }
+  }
+  .hamburger { display: flex; }
+  .apply-btn { font-size: 0.76rem; padding: 0.34rem 0.75rem; }
+  .admin-btn { font-size: 0.75rem; padding: 0.3rem 0.5rem; }
+}

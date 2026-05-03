@@ -3,8 +3,9 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "concurrently \"npm run backend:start\" \"ng serve\"",
     "build": "ng build",
+    "backend:start": "npm --prefix ../mahasabha-backend run dev",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
@@ -18,8 +19,10 @@
     "@angular/platform-browser": "^19.1.0-next.0",
     "@angular/platform-browser-dynamic": "^19.1.0-next.0",
     "@angular/router": "^19.1.0-next.0",
+    "concurrently": "^9.2.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
+    "xlsx": "^0.18.5",
     "zone.js": "~0.15.0"
   },
   "devDependencies": {

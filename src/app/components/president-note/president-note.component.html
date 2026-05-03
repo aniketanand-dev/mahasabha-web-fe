@@ -1,0 +1,20 @@
+<section class="president-section">
+  <div class="container">
+    <h2 class="section-title">
+      {{ lang.t('presNote.title') }}
+    </h2>
+    <p class="section-subtitle">{{ lang.t('presNote.subtitle') }}</p>
+    <div class="ornament">✦ ✦ ✦</div>
+    <div class="president-inner">
+      <div class="president-photo-wrap">
+        <img class="president-photo" [src]="data.presidentNoteContent().photoUrl" alt="Current President">
+        <div class="president-name">{{ lang.t('presNote.name') }}</div>
+        <div class="president-desg">{{ lang.t('presNote.desg') }}</div>
+      </div>
+      <div class="president-note-text">
+        <blockquote>{{ lang.t('presNote.quote') }}</blockquote>
+        <p>{{ lang.t('presNote.body') }}</p>
+      </div>
+    </div>
+  </div>
+</section>

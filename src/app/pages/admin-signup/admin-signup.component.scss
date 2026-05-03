@@ -1,0 +1,57 @@
+:host { display: block; }
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #4a0710 0%, #7A0E22 50%, #C9901A 100%);
+  padding: 1rem;
+}
+
+.login-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2.2rem 2rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.login-brand {
+  margin-bottom: 1.4rem;
+  text-align: center;
+  h1 { font-size: 1.2rem; color: #7A0E22; margin: 0 0 0.25rem; }
+  .login-subtitle { color: #777; font-size: 0.86rem; margin: 0; }
+}
+
+.login-form {
+  .form-group {
+    margin-bottom: 1rem;
+    label { display: block; font-size: 0.78rem; font-weight: 600; color: #555; margin-bottom: 0.35rem; }
+    input {
+      width: 100%;
+      padding: 0.7rem 0.85rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      box-sizing: border-box;
+      &:focus { outline: none; border-color: #7A0E22; }
+    }
+  }
+}
+
+.btn-login {
+  width: 100%;
+  padding: 0.85rem;
+  background: #7A0E22;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.login-error { margin-bottom: 0.9rem; color: #b00020; font-size: 0.84rem; }
+.login-success { margin-bottom: 0.9rem; color: #1a7a3a; font-size: 0.84rem; }
+.back-link { display: inline-block; margin-top: 1rem; color: #7A0E22; text-decoration: none; font-size: 0.85rem; }

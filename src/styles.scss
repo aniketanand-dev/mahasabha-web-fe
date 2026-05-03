@@ -1,1 +1,44 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  --saffron: #E8620A;
+  --saffron-light: #F28C3A;
+  --saffron-dark: #C04E04;
+  --maroon: #7A0E22;
+  --maroon-light: #A31432;
+  --maroon-dark: #4D0814;
+  --gold: #C9901A;
+  --gold-light: #E8B84B;
+  --gold-pale: #F5E6C0;
+  --ivory: #FDF6EC;
+  --ivory-dark: #F0E4CC;
+  --text-dark: #1A0A05;
+  --text-mid: #3D1A0A;
+  --text-light: #7A5030;
+  --border: rgba(201,144,26,0.3);
+  --shadow: rgba(122,14,34,0.15);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Noto Sans Kannada', 'Noto Serif Kannada', serif;
+  background: var(--ivory);
+  color: var(--text-dark);
+  overflow-x: hidden;
+}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--ivory-dark); }
+::-webkit-scrollbar-thumb { background: var(--maroon); border-radius: 3px; }
+.ornament { text-align: center; color: var(--gold); font-size: 22px; letter-spacing: 8px; margin: 2rem 0; opacity: 0.7; }
+
+/* ── Hide Google Translate injected banner/toolbar ── */
+.goog-te-banner-frame,
+iframe.goog-te-banner-frame,
+.skiptranslate,
+.goog-te-gadget {
+  display: none !important;
+  visibility: hidden !important;
+}
+body { top: 0 !important; }
+.section-title { font-family: 'Cinzel', serif; font-size: clamp(1.3rem, 3vw, 2rem); color: var(--maroon); text-align: center; letter-spacing: 2px; margin-bottom: 0.4rem; }
+.section-subtitle { font-family: 'Noto Sans Kannada', serif; text-align: center; color: var(--text-light); font-size: 0.95rem; margin-bottom: 2.5rem; }
+section { padding: 4rem 0; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }

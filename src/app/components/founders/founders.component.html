@@ -1,0 +1,17 @@
+<section class="founders-section" id="about">
+  <div class="container">
+    <h2 class="section-title">{{ lang.t('founders.title') }}</h2>
+    <p class="section-subtitle">{{ lang.t('founders.subtitle') }}</p>
+    <div class="ornament">✦ ✦ ✦</div>
+    <div class="founders-grid">
+      @for (f of data.founders(); track f.id) {
+        <div class="founder-card">
+          <img class="founder-img" [src]="f.img" [alt]="f.name">
+          <div class="founder-name">{{ f.name }}</div>
+          <div class="founder-title">{{ f.title }}</div>
+          <p class="founder-bio">{{ f.bio }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>

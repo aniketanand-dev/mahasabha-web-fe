@@ -1,0 +1,26 @@
+<section class="hero" id="home">
+  <div class="hero-pattern"></div>
+  <div class="hero-watermark" aria-hidden="true">WEBSITE UNDER CONSTRUCTION</div>
+  <div class="hero-border"></div>
+  <div class="hero-corner tl"></div>
+  <div class="hero-corner tr"></div>
+  <div class="hero-corner bl"></div>
+  <div class="hero-corner br"></div>
+  <div class="hero-content">
+    <div class="hero-logo-wrap">
+      <img [src]="data.heroContent().logoUrl" alt="Veerashiva Mahasabha Logo">
+    </div>
+    <h1 class="hero-title-kn">{{ lang.t('hero.title') }}</h1>
+    <p class="hero-title-en">{{ data.heroContent().englishTitle }}</p>
+    <div class="hero-divider">✦ ✦ ✦</div>
+    <p class="hero-tagline">
+      {{ lang.t('hero.tagline') }}
+    </p>
+    <div class="hero-stats">
+      @for (stat of data.heroContent().stats; track stat.id) {
+        <div class="hero-stat"><div class="num">{{ stat.value }}</div><div class="lbl">{{ stat.label }}</div></div>
+      }
+    </div>
+  </div>
+  <div class="hero-scroll">{{ data.heroContent().scrollLabel }}</div>
+</section>

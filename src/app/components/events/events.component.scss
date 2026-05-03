@@ -1,0 +1,98 @@
+.events-section { background: var(--ivory-dark); }
+
+.evt-tabs {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.evt-tab {
+  padding: 0.55rem 1.4rem;
+  border: 2px solid var(--gold);
+  background: transparent;
+  color: var(--maroon);
+  font-family: 'Noto Sans Kannada', sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.2s, color 0.2s;
+
+  &.active, &:hover {
+    background: var(--maroon);
+    color: white;
+    border-color: var(--maroon);
+  }
+}
+
+.evt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.evt-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px var(--shadow);
+  }
+}
+
+.evt-img-wrap {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+}
+
+.evt-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.evt-badge {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.72rem;
+  border-radius: 2px;
+  font-weight: 700;
+
+  &.badge-upcoming { background: var(--saffron); color: white; }
+  &.badge-open { background: #2e7d32; color: white; }
+  &.badge-past { background: var(--text-light); color: white; }
+  &.badge-president { background: var(--maroon); color: white; }
+}
+
+.evt-body { padding: 1rem; }
+
+.evt-date { font-size: 0.78rem; color: var(--text-light); margin-bottom: 0.4rem; }
+
+.evt-title {
+  font-family: 'Noto Serif Kannada', serif;
+  font-size: 1rem;
+  color: var(--maroon);
+  margin-bottom: 0.5rem;
+}
+
+.evt-desc { font-size: 0.85rem; color: var(--text-mid); line-height: 1.5; margin-bottom: 0.8rem; }
+
+.evt-link {
+  font-size: 0.82rem;
+  color: var(--saffron);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+
+  &:hover { border-color: var(--saffron); }
+}

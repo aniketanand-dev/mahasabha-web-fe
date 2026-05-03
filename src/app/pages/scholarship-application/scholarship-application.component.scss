@@ -1,0 +1,726 @@
+:host {
+  display: block;
+}
+
+.scholarship-page {
+  min-height: 100vh;
+  padding: 3rem 1.5rem 4.5rem;
+  background:
+    radial-gradient(circle at top left, rgba(201, 144, 26, 0.28), transparent 30%),
+    radial-gradient(circle at top right, rgba(122, 14, 34, 0.22), transparent 28%),
+    linear-gradient(180deg, #fff8ee 0%, #f8ebd3 100%);
+}
+
+.scholarship-shell {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.page-head {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  .back-link {
+    display: inline-flex;
+    margin-bottom: 1rem;
+    color: var(--maroon);
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.2rem;
+    color: var(--saffron-dark);
+    font-size: 0.8rem;
+    margin-bottom: 0.75rem;
+  }
+
+  h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    color: var(--maroon);
+    line-height: 1.15;
+    margin-bottom: 0.85rem;
+  }
+
+  .intro {
+    max-width: 760px;
+    margin: 0 auto;
+    color: var(--text-light);
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+}
+
+.application-form,
+.preview-card,
+.success-card {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.form-card,
+.preview-card,
+.success-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(201, 144, 26, 0.25);
+  border-radius: 24px;
+  padding: 1.6rem;
+  box-shadow: 0 20px 45px rgba(122, 14, 34, 0.08);
+  backdrop-filter: blur(6px);
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  margin-bottom: 1.25rem;
+
+  p {
+    font-family: 'Cinzel', serif;
+    color: var(--maroon);
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+
+  span {
+    color: var(--text-light);
+    font-size: 0.88rem;
+  }
+}
+
+.form-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.one-col {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.field-spacer {
+  min-height: 1px;
+}
+
+.three-cols {
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+}
+
+.two-cols {
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 0.35rem;
+
+  span {
+    display: block;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--text-mid);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    margin-bottom: 0.1rem;
+  }
+
+  input,
+  select {
+    width: 100%;
+    border: 1.5px solid rgba(122, 14, 34, 0.16);
+    border-radius: 14px;
+    padding: 0.9rem 1rem;
+    font-size: 0.96rem;
+    color: var(--text-dark);
+    background: rgba(255, 255, 255, 0.96);
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: var(--saffron);
+      box-shadow: 0 0 0 4px rgba(232, 98, 10, 0.12);
+      transform: translateY(-1px);
+    }
+  }
+
+  select:disabled {
+    background: #f2efe9;
+    color: #8d8373;
+    cursor: not-allowed;
+  }
+
+  strong {
+    font-size: 0.84rem;
+    color: var(--maroon);
+  }
+
+  small {
+    display: block;
+    color: #b42318;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    margin-top: 0.12rem;
+  }
+
+  .field-success {
+    color: #18794e;
+  }
+}
+
+.address-head {
+  margin-top: 1rem;
+}
+
+.address-example {
+  margin: 0 0 1rem;
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  background: rgba(250, 239, 214, 0.58);
+  border: 1px solid rgba(201, 144, 26, 0.2);
+
+  p {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text-light);
+    line-height: 1.5;
+  }
+
+  strong {
+    color: var(--maroon);
+  }
+}
+
+.inline-field {
+  margin-top: 0.95rem;
+}
+
+.choice-group {
+  margin-bottom: 1.35rem;
+
+  p {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-mid);
+    margin-bottom: 0.75rem;
+  }
+
+  small {
+    color: #b42318;
+    font-size: 0.78rem;
+  }
+}
+
+.choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.choice-row-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.choice-pill {
+  position: relative;
+  cursor: pointer;
+
+  input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+  }
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.3;
+    padding: 0.8rem 1rem;
+    border-radius: 999px;
+    border: 1.5px solid rgba(122, 14, 34, 0.14);
+    background: #fff;
+    color: var(--text-mid);
+    font-weight: 700;
+    min-width: 96px;
+    transition: all 0.2s ease;
+  }
+
+  input:checked + span {
+    background: linear-gradient(135deg, var(--maroon), var(--saffron));
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 14px 26px rgba(122, 14, 34, 0.16);
+  }
+}
+
+.choice-pill-wide span {
+  min-width: 100%;
+  border-radius: 22px;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.upload-note,
+.terms-box,
+.preview-terms {
+  border-radius: 18px;
+  padding: 1rem 1.1rem;
+  background: linear-gradient(135deg, rgba(255, 245, 216, 0.9), rgba(255, 255, 255, 0.95));
+  border: 1px solid rgba(201, 144, 26, 0.24);
+  color: var(--text-light);
+  line-height: 1.65;
+}
+
+.upload-note-compact {
+  margin-bottom: 1.1rem;
+
+  strong {
+    color: var(--maroon);
+  }
+}
+
+.upload-groups {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.upload-panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 239, 214, 0.72));
+  border: 1px solid rgba(201, 144, 26, 0.2);
+}
+
+.upload-panel-head {
+  display: grid;
+  gap: 0.3rem;
+
+  h3 {
+    font-family: 'Cinzel', serif;
+    color: var(--maroon);
+    font-size: 1rem;
+  }
+
+  p {
+    color: var(--text-light);
+    font-size: 0.88rem;
+    line-height: 1.6;
+  }
+}
+
+.upload-subgrid {
+  gap: 1rem;
+}
+
+.upload-field {
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(122, 14, 34, 0.08);
+}
+
+.aadhaar-guide {
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 248, 228, 0.98), rgba(255, 255, 255, 0.96));
+  border: 1px solid rgba(201, 144, 26, 0.22);
+  color: var(--text-mid);
+
+  .aadhaar-guide-title {
+    font-family: 'Cinzel', serif;
+    color: var(--maroon);
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 0.7rem;
+  }
+
+  ol {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: 0.42rem;
+    line-height: 1.6;
+    font-size: 0.88rem;
+  }
+
+  a {
+    color: var(--maroon);
+    font-weight: 700;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.guide-toggle-btn {
+  justify-self: start;
+  border: 1.5px solid rgba(122, 14, 34, 0.22);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--maroon);
+  border-radius: 999px;
+  padding: 0.62rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+
+  &:hover {
+    transform: translateY(-1px);
+    border-color: rgba(122, 14, 34, 0.4);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(232, 98, 10, 0.12);
+  }
+}
+
+.terms-box p + p {
+  margin-top: 0.55rem;
+}
+
+.membership-box {
+  margin-top: 1rem;
+}
+
+.member-check-row {
+  margin-top: 0;
+}
+
+.member-category-group {
+  margin-top: 1.25rem;
+}
+
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  color: var(--text-mid);
+  font-size: 0.92rem;
+
+  input {
+    margin-top: 0.2rem;
+    accent-color: var(--maroon);
+  }
+}
+
+.action-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.aadhaar-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(320px, 0.85fr);
+  gap: 1.25rem;
+  align-items: start;
+  margin-top: 1.25rem;
+}
+
+.aadhaar-form-panel,
+.aadhaar-preview-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.aadhaar-upload-panel {
+  padding: 1.25rem;
+}
+
+.fetch-btn {
+  justify-self: start;
+  min-width: 190px;
+}
+
+.aadhaar-card,
+.aadhaar-placeholder {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(250, 239, 214, 0.95));
+  border: 1px solid rgba(201, 144, 26, 0.24);
+  border-radius: 22px;
+  padding: 1.1rem;
+  box-shadow: 0 16px 32px rgba(122, 14, 34, 0.08);
+}
+
+.aadhaar-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+
+  h3 {
+    font-family: 'Cinzel', serif;
+    color: var(--maroon);
+    font-size: 1.15rem;
+    line-height: 1.3;
+    margin-top: 0.35rem;
+  }
+
+  img {
+    width: 108px;
+    height: 128px;
+    object-fit: cover;
+    border-radius: 16px;
+    border: 1px solid rgba(201, 144, 26, 0.24);
+    background: #fff;
+  }
+}
+
+.aadhaar-card-label {
+  text-transform: uppercase;
+  letter-spacing: 0.16rem;
+  font-size: 0.74rem;
+  color: var(--saffron-dark);
+}
+
+.aadhaar-card-body,
+.aadhaar-placeholder {
+  p {
+    color: var(--text-mid);
+    line-height: 1.7;
+  }
+}
+
+.aadhaar-warning {
+  border-radius: 14px;
+  padding: 0.8rem 1rem;
+  background: rgba(255, 244, 229, 0.95);
+  border: 1px solid rgba(232, 98, 10, 0.25);
+  color: #9a3412;
+  font-size: 0.82rem;
+}
+
+.primary-btn,
+.secondary-btn,
+.primary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.95rem 1.5rem;
+  font-weight: 700;
+  font-size: 0.94rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.primary-btn,
+.primary-link {
+  border: none;
+  color: #fff;
+  background: linear-gradient(135deg, var(--maroon), var(--saffron));
+  box-shadow: 0 14px 28px rgba(122, 14, 34, 0.2);
+}
+
+.secondary-btn {
+  border: 1.5px solid rgba(122, 14, 34, 0.16);
+  background: #fff;
+  color: var(--maroon);
+}
+
+.primary-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.submit-error,
+.full-error {
+  color: #b42318;
+  font-size: 0.84rem;
+}
+
+.field-error {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.preview-grid,
+.document-preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.preview-block {
+  background: #fff;
+  border: 1px solid rgba(122, 14, 34, 0.08);
+  border-radius: 18px;
+  padding: 1rem;
+
+  h3 {
+    font-family: 'Cinzel', serif;
+    font-size: 0.98rem;
+    color: var(--maroon);
+    margin-bottom: 0.8rem;
+  }
+
+  p {
+    color: var(--text-mid);
+    line-height: 1.65;
+  }
+}
+
+.image-block img {
+  width: 100%;
+  max-height: 260px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid rgba(201, 144, 26, 0.25);
+}
+
+.image-preview-trigger {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 14px;
+  cursor: zoom-in;
+}
+
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(14, 8, 4, 0.82);
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+}
+
+.image-lightbox-content {
+  position: relative;
+  width: min(100%, 980px);
+
+  img {
+    width: 100%;
+    max-height: calc(100vh - 2.5rem);
+    object-fit: contain;
+    border-radius: 16px;
+    background: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+  }
+}
+
+.lightbox-close {
+  position: absolute;
+  top: -0.65rem;
+  right: -0.65rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 0;
+  background: #fff;
+  color: var(--maroon);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.success-card {
+  text-align: center;
+  padding: 2.25rem 1.8rem;
+
+  .success-tag {
+    text-transform: uppercase;
+    letter-spacing: 0.22rem;
+    color: var(--saffron-dark);
+    font-size: 0.78rem;
+  }
+
+  h2 {
+    font-family: 'Cinzel', serif;
+    color: var(--maroon);
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
+    margin: 0.8rem 0;
+  }
+
+  .success-copy {
+    color: var(--text-mid);
+    line-height: 1.7;
+  }
+
+  .primary-link {
+    margin: 0.8rem auto 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .three-cols,
+  .two-cols,
+  .preview-grid,
+  .document-preview,
+  .aadhaar-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .choice-row-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-subgrid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-heading,
+  .action-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-row {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 1120px) {
+  .three-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .scholarship-page {
+    padding: 2rem 1rem 3rem;
+  }
+
+  .form-card,
+  .preview-card,
+  .success-card {
+    padding: 1.2rem;
+    border-radius: 20px;
+  }
+
+  .choice-row {
+    flex-direction: column;
+  }
+
+  .choice-pill span,
+  .primary-btn,
+  .secondary-btn,
+  .primary-link {
+    width: 100%;
+  }
+}

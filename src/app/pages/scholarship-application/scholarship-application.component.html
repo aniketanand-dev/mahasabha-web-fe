@@ -1,0 +1,590 @@
+<app-navbar></app-navbar>
+
+<section class="scholarship-page">
+  <div class="scholarship-shell">
+    <div class="page-head">
+      <a routerLink="/" class="back-link">Back to Home</a>
+      <p class="eyebrow">Scholarship Application Portal</p>
+      <h1>prathibha puraskara scholarships for AY-2025-2026</h1>
+      <p class="intro">
+        Fill in the student details, upload the required documents, review everything in preview, and then submit.
+      </p>
+    </div>
+
+    @if (submitSuccess(); as success) {
+      <div class="success-card">
+        <p class="success-tag">Application Submitted</p>
+        <h2>Your scholarship form has been saved successfully.</h2>
+        <p class="success-copy">
+          Reference number: <strong>{{ success.applicationNumber }}</strong>
+        </p>
+        <p class="success-copy">
+          Registered number: <strong>{{ success.serialNumber }}</strong>
+        </p>
+        <p class="success-copy">
+          Total scholarship applications received so far: <strong>{{ success.totalApplications }}</strong>
+        </p>
+        <p class="success-copy">
+          Submitted at: {{ success.submittedAt | date: 'medium' }}
+        </p>
+        <a routerLink="/" class="primary-link">Return to Home</a>
+      </div>
+    } @else if (!previewMode()) {
+      <form class="application-form" [formGroup]="form" (ngSubmit)="goToPreview()">
+        <div class="form-card">
+          <div class="section-heading">
+            <p>Student Details</p>
+            <span>Academic Year {{ academicYearLabel }}</span>
+          </div>
+
+          <div class="form-grid three-cols">
+            <label class="field">
+              <span>Registration No (10th/12th) *</span>
+              <input type="text" formControlName="registrationNo" placeholder="Enter 10th or 12th registration number" (input)="onRegistrationNumberChanged()" (blur)="onRegistrationNumberBlur()" />
+              @if (form.controls.registrationNo.hasError('required') && (form.controls.registrationNo.dirty || form.controls.registrationNo.touched)) { <small>Registration number (10th/12th) is required.</small> }
+              @else if (form.controls.registrationNo.hasError('maxlength') && (form.controls.registrationNo.dirty || form.controls.registrationNo.touched)) { <small>Registration number is too long.</small> }
+              @else if (form.controls.registrationNo.hasError('registrationUnavailable')) { <small> {{ registrationStatusMessage() || 'This registration number is already used.' }} </small> }
+              @else if (registrationChecking()) { <small>Checking registration number...</small> }
+              @else if (registrationStatusMessage()) { <small class="field-success">{{ registrationStatusMessage() }}</small> }
+              @else if (form.controls.registrationNo.dirty || form.controls.registrationNo.touched) { <small>Enter the board exam registration number (SSLC/PUC).</small> }
+            </label>
+            <div class="field-spacer" aria-hidden="true"></div>
+            <div class="field-spacer" aria-hidden="true"></div>
+          </div>
+
+          <div class="form-grid three-cols">
+            <label class="field">
+              <span>First Name *</span>
+              <input type="text" formControlName="firstName" placeholder="Enter first name" />
+              @if (controlHasError('firstName')) { <small>First name is required.</small> }
+            </label>
+
+            <label class="field">
+              <span>Middle Name</span>
+              <input type="text" formControlName="middleName" placeholder="Enter middle name" />
+            </label>
+
+            <label class="field">
+              <span>Last Name *</span>
+              <input type="text" formControlName="lastName" placeholder="Enter last name" />
+              @if (controlHasError('lastName')) { <small>Last name is required.</small> }
+            </label>
+          </div>
+
+          <div class="choice-group">
+            <p>Gender *</p>
+            <div class="choice-row">
+              @for (gender of genderOptions; track gender) {
+                <label class="choice-pill">
+                  <input type="radio" formControlName="gender" [value]="gender" />
+                  <span>{{ gender }}</span>
+                </label>
+              }
+            </div>
+            @if (controlHasError('gender')) { <small>Please select gender.</small> }
+          </div>
+
+          <div class="form-grid two-cols">
+            <label class="field">
+              <span>Father Name *</span>
+              <input type="text" formControlName="fatherName" placeholder="Enter father name" />
+              @if (controlHasError('fatherName')) { <small>Father name is required.</small> }
+            </label>
+
+            <label class="field">
+              <span>Mother Name *</span>
+              <input type="text" formControlName="motherName" placeholder="Enter mother name" />
+              @if (controlHasError('motherName')) { <small>Mother name is required.</small> }
+            </label>
+          </div>
+
+          <div class="form-grid two-cols">
+            <label class="field">
+              <span>Mobile Number *</span>
+              <input type="tel" formControlName="mobile" maxlength="10" placeholder="10-digit mobile number" />
+              @if (controlHasError('mobile')) { <small>Enter a valid 10-digit mobile number.</small> }
+            </label>
+
+            <label class="field">
+              <span>Aadhaar Number *</span>
+              <input type="text" formControlName="aadhaarNumber" maxlength="12" placeholder="12-digit Aadhaar number" (input)="onAadhaarNumberChanged()" />
+              @if (controlHasError('aadhaarNumber')) { <small>Enter a valid 12-digit Aadhaar number.</small> }
+              @if (aadhaarWarning()) { <small class="field-error">{{ aadhaarWarning() }}</small> }
+            </label>
+          </div>
+
+          <div class="section-heading address-head">
+            <p>Address Details</p>
+            <span>Village, taluk, district, state and PIN</span>
+          </div>
+
+          <div class="address-example">
+            <p><strong>Example:</strong> Village: Angondhalli, Taluk: Hosakote, District: Bengaluru Rural / Bengaluru Urban, State: Karnataka, PIN Code: XXXXX</p>
+          </div>
+
+          <div class="form-grid three-cols">
+            <label class="field">
+              <span>State *</span>
+              <input type="text" formControlName="state" value="Karnataka" readonly />
+              <small>Scholarship applications are accepted only from Karnataka.</small>
+            </label>
+
+            <label class="field">
+              <span>District *</span>
+              <select formControlName="district" (change)="onDistrictChanged()">
+                <option value="">Select district</option>
+                @for (district of districtOptions; track district) {
+                  <option [value]="district">{{ district }}</option>
+                }
+              </select>
+              @if (controlHasError('district')) { <small>District is required.</small> }
+            </label>
+
+            <label class="field">
+              <span>Taluk *</span>
+              <select formControlName="taluk" [disabled]="!selectedDistrict">
+                <option value="">Select taluk</option>
+                @for (taluk of talukOptions; track taluk) {
+                  <option [value]="taluk">{{ taluk }}</option>
+                }
+              </select>
+              @if (controlHasError('taluk')) { <small>Taluk is required.</small> }
+            </label>
+          </div>
+
+          <div class="form-grid two-cols">
+            <label class="field">
+              <span>Village *</span>
+              <input type="text" formControlName="village" placeholder="Enter village" />
+              @if (controlHasError('village')) { <small>Village is required.</small> }
+            </label>
+
+            <label class="field">
+              <span>PIN Code *</span>
+              <input type="text" formControlName="pinCode" maxlength="6" placeholder="Enter 6-digit PIN code" />
+              @if (controlHasError('pinCode')) { <small>Enter a valid 6-digit PIN code.</small> }
+            </label>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <div class="section-heading">
+            <p>Academic Information</p>
+            <span>Board and marks</span>
+          </div>
+
+          <div class="choice-group">
+            <p>Board *</p>
+            <div class="choice-row">
+              @for (board of boardOptions; track board) {
+                <label class="choice-pill">
+                  <input type="radio" formControlName="board" [value]="board" />
+                  <span>{{ board }}</span>
+                </label>
+              }
+            </div>
+            @if (selectedBoard === 'Other') {
+              <label class="field inline-field">
+                <span>Other Board Name *</span>
+                <input type="text" formControlName="otherBoard" placeholder="Enter board name" />
+              </label>
+            }
+            @if (controlHasError('board') || groupHasError('otherBoard')) { <small>Please select the board.</small> }
+          </div>
+
+          <div class="choice-group">
+            <p>Class *</p>
+            <div class="choice-row">
+              @for (standard of standardOptions; track standard) {
+                <label class="choice-pill">
+                  <input type="radio" formControlName="standard" [value]="standard" />
+                  <span>{{ standard }}</span>
+                </label>
+              }
+            </div>
+            @if (controlHasError('standard')) { <small>Please select the class.</small> }
+          </div>
+
+          <div class="form-grid three-cols">
+            <label class="field">
+              <span>Marks Obtained *</span>
+              <input type="text" inputmode="numeric" maxlength="4" formControlName="marksObtained" placeholder="Enter marks obtained" (input)="onMarksInput('marksObtained', $event)" />
+              @if (controlHasError('marksObtained')) { <small>Enter marks obtained using digits only, up to 4 digits.</small> }
+            </label>
+
+            <label class="field">
+              <span>Total Marks *</span>
+              <input type="text" inputmode="numeric" maxlength="4" formControlName="totalMarks" placeholder="Enter total marks" (input)="onMarksInput('totalMarks', $event)" />
+              @if (controlHasError('totalMarks')) { <small>Enter total marks using digits only, up to 4 digits.</small> }
+            </label>
+
+            <label class="field">
+              <span>Percentage</span>
+              <input type="text" [value]="percentage() !== null ? percentage() + '%' : ''" placeholder="Auto calculated" readonly />
+            </label>
+          </div>
+
+          @if (groupHasError('marksExceeded')) {
+            <small class="full-error">Marks obtained cannot be greater than total marks.</small>
+          }
+        </div>
+
+        <div class="form-card">
+          <div class="section-heading">
+            <p>Member Reference Details</p>
+            <span>Optional existing member reference</span>
+          </div>
+
+          <label class="check-row member-check-row">
+            <input type="checkbox" formControlName="heardFromMember" (change)="onHeardFromMemberChanged()" />
+            <span>I came to know about the Mahasabha through a family member / relative / friend / neighbour who is already enrolled as a member.</span>
+          </label>
+
+          <div class="terms-box membership-box">
+            <p><strong>Membership / Contribution Categories</strong></p>
+            <p>Life Member - Rs250</p>
+            <p>Ashrayadataru - Rs1,000</p>
+            <p>Upaposhakaru - Rs2,500</p>
+            <p>Sahaposhakaru - Rs5,000</p>
+            <p>District Committee Member</p>
+            <p>Mahadanigalu - Rs1,00,000</p>
+            <p>Danashiromanigalu - Rs2,50,000</p>
+            <p>Dasohigalu - Rs5,00,000</p>
+            <p>Mahadasohigalu - Rs10,00,000</p>
+            <p>Paramadasohigalu - Rs25,00,000</p>
+            <p>Institutional Member - Rs5,000</p>
+          </div>
+
+          @if (heardFromMemberSelected) {
+            <div class="choice-group member-category-group">
+              <p>Referring Member Category *</p>
+              <div class="choice-row choice-row-grid">
+                @for (option of memberCategoryOptions; track option.value) {
+                  <label class="choice-pill choice-pill-wide">
+                    <input type="radio" formControlName="referringMemberCategory" [value]="option.value" />
+                    <span>{{ option.label }}</span>
+                  </label>
+                }
+              </div>
+              @if (controlHasError('referringMemberCategory')) { <small>Please select the referring member category.</small> }
+            </div>
+
+            <div class="form-grid two-cols">
+              <label class="field">
+                <span>Referring Member Name *</span>
+                <input type="text" formControlName="referringMemberName" placeholder="Enter referring member name" />
+                @if (controlHasError('referringMemberName')) { <small>Referring member name is required.</small> }
+              </label>
+
+              <label class="field">
+                <span>Referring Member Registration Number *</span>
+                <input type="text" formControlName="referringMemberRegistrationNo" placeholder="Enter referring member registration number" />
+                @if (controlHasError('referringMemberRegistrationNo')) { <small>Referring member registration number is required.</small> }
+              </label>
+            </div>
+          }
+        </div>
+
+        <div class="form-card">
+          <div class="section-heading">
+            <p>Uploads and Verification</p>
+            <span>Photo, certificates, Aadhaar offline package</span>
+          </div>
+
+          <div class="upload-note upload-note-compact">
+            <strong>UIDAI offline eKYC:</strong> upload the ZIP or XML, enter the same share code, then fetch the resident details.
+          </div>
+
+          <div class="upload-groups">
+            <div class="upload-panel">
+              <div class="upload-panel-head">
+                <h3>Student Photo</h3>
+                <p>Upload a clear profile image of the student.</p>
+              </div>
+
+              <label class="field upload-field">
+                <span>Profile Photo *</span>
+                <input type="file" accept="image/*" (change)="onFileSelected('profilePhoto', $event)" />
+                @if (fileName('profilePhoto')) { <strong>{{ fileName('profilePhoto') }}</strong> }
+                @if (hasUploadError('profilePhoto')) { <small>Profile photo is required.</small> }
+              </label>
+            </div>
+
+            <div class="upload-panel">
+              <div class="upload-panel-head">
+                <h3>Supporting Certificates</h3>
+                <p>Upload readable photo copies of both required documents.</p>
+              </div>
+
+              <div class="form-grid two-cols upload-subgrid">
+                <label class="field upload-field">
+                  <span>Caste Certificate Photo *</span>
+                  <input type="file" accept="image/*" (change)="onFileSelected('casteCertificate', $event)" />
+                  @if (fileName('casteCertificate')) { <strong>{{ fileName('casteCertificate') }}</strong> }
+                  @if (hasUploadError('casteCertificate')) { <small>Caste certificate is required.</small> }
+                </label>
+
+                <label class="field upload-field">
+                  <span>Marks Card Photo *</span>
+                  <input type="file" accept="image/*" (change)="onFileSelected('marksCard', $event)" />
+                  @if (fileName('marksCard')) { <strong>{{ fileName('marksCard') }}</strong> }
+                  @if (hasUploadError('marksCard')) { <small>Marks card is required.</small> }
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="aadhaar-layout">
+            <div class="aadhaar-form-panel">
+              <div class="upload-panel aadhaar-upload-panel">
+                <div class="upload-panel-head">
+                  <h3>Aadhaar Offline Verification</h3>
+                  <p>Use the same share code that was used while downloading the UIDAI offline file.</p>
+                </div>
+
+                <button
+                  type="button"
+                  class="guide-toggle-btn"
+                  [attr.aria-expanded]="aadhaarGuideOpen()"
+                  (click)="toggleAadhaarGuide()"
+                >
+                  @if (aadhaarGuideOpen()) {
+                    Hide Aadhaar KYC Guide
+                  } @else {
+                    Show Aadhaar KYC Guide
+                  }
+                </button>
+
+                @if (aadhaarGuideOpen()) {
+                  <div class="aadhaar-guide">
+                    <p class="aadhaar-guide-title">Guide for students</p>
+                    <ol>
+                      <li>Open <a href="https://myaadhaar.uidai.gov.in/login" target="_blank" rel="noopener noreferrer">myaadhaar.uidai.gov.in/login</a>.</li>
+                      <li>Click `Login`.</li>
+                      <li>Enter Aadhaar number and captcha.</li>
+                      <li>Enter OTP.</li>
+                      <li>Below, click `Offline eKYC`.</li>
+                      <li>Enter a 4 digit code.</li>
+                      <li>Click `Download`.</li>
+                      <li>Upload that same downloaded file here.</li>
+                    </ol>
+                  </div>
+                }
+
+                <label class="field upload-field">
+                  <span>Aadhaar Share Code *</span>
+                  <input type="text" formControlName="aadhaarShareCode" placeholder="Enter share code exactly as downloaded" (input)="onAadhaarShareCodeChanged()" />
+                  @if (controlHasError('aadhaarShareCode')) { <small>Enter the Aadhaar share code exactly as used while downloading.</small> }
+                </label>
+
+                <label class="field upload-field">
+                  <span>Aadhaar Offline Verification File *</span>
+                  <input type="file" accept=".zip,.xml" (change)="onFileSelected('aadhaarOfflineFile', $event)" />
+                  @if (fileName('aadhaarOfflineFile')) { <strong>{{ fileName('aadhaarOfflineFile') }}</strong> }
+                  @if (hasUploadError('aadhaarOfflineFile')) { <small>Aadhaar offline verification file is required.</small> }
+                </label>
+
+                <button type="button" class="secondary-btn fetch-btn" [disabled]="aadhaarLoading()" (click)="fetchAadhaarData()">
+                  @if (aadhaarLoading()) { Fetching Aadhaar Data... } @else { Fetch Aadhaar Data }
+                </button>
+              </div>
+
+              @if (aadhaarError()) {
+                <div class="submit-error">{{ aadhaarError() }}</div>
+              }
+
+              @if (aadhaarWarning()) {
+                <div class="aadhaar-warning">{{ aadhaarWarning() }}</div>
+              }
+            </div>
+
+            <div class="aadhaar-preview-panel">
+              @if (aadhaarPreview(); as aadhaar) {
+                <div class="aadhaar-card">
+                  <div class="aadhaar-card-head">
+                    <div>
+                      <p class="aadhaar-card-label">UIDAI Offline eKYC</p>
+                      <h3>{{ aadhaar.name }}</h3>
+                    </div>
+                    @if (aadhaar.photoDataUrl) {
+                      <img [src]="aadhaar.photoDataUrl" alt="Aadhaar resident photo" />
+                    }
+                  </div>
+
+                  <div class="aadhaar-card-body">
+                    <p><strong>Reference ID:</strong> {{ maskedReferenceId() }}</p>
+                    <p><strong>Aadhaar Number:</strong> {{ formattedEnteredAadhaarNumber() || 'Not entered' }}</p>
+                    <p><strong>Date of Birth:</strong> {{ aadhaar.dob || 'Not shared' }}</p>
+                    <p><strong>Gender:</strong> {{ aadhaar.gender || 'Not shared' }}</p>
+                    <p><strong>Address:</strong> {{ aadhaar.address || 'Not shared' }}</p>
+                  </div>
+                </div>
+              } @else {
+                <div class="aadhaar-placeholder">
+                  <p class="aadhaar-card-label">Aadhaar Preview</p>
+                  <h3>Resident details will appear here</h3>
+                  <p>After upload and share-code verification, the Aadhaar photo, name, DOB, gender, and address will be shown on the right.</p>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <div class="section-heading">
+            <p>Terms and Conditions</p>
+            <span>Please read before preview</span>
+          </div>
+
+          <div class="terms-box">
+            <p>1. All information submitted must be accurate and must pertain solely to the student applicant.</p>
+            <p>2. All uploaded certificates and Aadhaar offline verification documents must be clear, legible, and valid.</p>
+            <p>3. The Scholarship Committee reserves the right to verify any information provided and request additional documentation if required.</p>
+            <p>4. The Scholarship Committee reserves the right to reject any application that is incomplete, inaccurate, or contains invalid or misleading information.</p>
+            <p>5. Submission of an application does not guarantee approval of the scholarship.</p>
+            <p>6. Scholarship awards are subject to availability of funds and fulfillment of eligibility criteria as prescribed by the Committee.</p>
+            <p>7. The scholarship amount, once approved, will be disbursed through the mode decided by the Committee.</p>
+            <p>8. The scholarship may be revoked at any stage if it is found that the applicant has provided false information or suppressed material facts.</p>
+            <p>9. The Scholarship Committee reserves the right to modify, suspend, or cancel the scholarship program at any time without prior notice.</p>
+            <p>10. By submitting the application, the applicant agrees to comply with all the terms and conditions stated herein.</p>
+          </div>
+
+          <label class="check-row">
+            <input type="checkbox" formControlName="termsAccepted" />
+            <span>I agree to the terms and conditions.</span>
+          </label>
+
+          <label class="check-row">
+            <input type="checkbox" formControlName="declarationAccepted" />
+            <span>I confirm that all details and documents provided are true.</span>
+          </label>
+
+          @if (controlHasError('termsAccepted') || controlHasError('declarationAccepted')) {
+            <small>Please accept the declarations before continuing.</small>
+          }
+        </div>
+
+        @if (submitError()) {
+          <div class="submit-error">{{ submitError() }}</div>
+        }
+
+        <div class="action-row">
+          <button type="submit" class="primary-btn">Preview Application</button>
+        </div>
+      </form>
+    } @else {
+      <div class="preview-card">
+        <div class="section-heading">
+          <p>Preview Before Submit</p>
+          <span>Review the student information carefully</span>
+        </div>
+
+        <div class="preview-grid">
+          <div class="preview-block">
+            <h3>Student Details</h3>
+            <p><strong>Registration No:</strong> {{ form.controls.registrationNo.value }}</p>
+            <p><strong>Name:</strong> {{ form.controls.firstName.value }} {{ form.controls.middleName.value }} {{ form.controls.lastName.value }}</p>
+            <p><strong>Gender:</strong> {{ form.controls.gender.value }}</p>
+            <p><strong>Father Name:</strong> {{ form.controls.fatherName.value }}</p>
+            <p><strong>Mother Name:</strong> {{ form.controls.motherName.value }}</p>
+            <p><strong>Mobile:</strong> {{ form.controls.mobile.value }}</p>
+            <p><strong>Aadhaar No:</strong> {{ form.controls.aadhaarNumber.value }}</p>
+            <p><strong>Address:</strong> {{ form.controls.village.value }}, {{ form.controls.taluk.value }}, {{ form.controls.district.value }}, {{ form.controls.state.value }} - {{ form.controls.pinCode.value }}</p>
+            @if (aadhaarPreview(); as aadhaar) {
+              <p><strong>Aadhaar Ref ID:</strong> {{ maskedReferenceId() }}</p>
+              <p><strong>Aadhaar Name:</strong> {{ aadhaar.name }}</p>
+            }
+            @if (heardFromMemberSelected) {
+              <p><strong>Referring Member Category:</strong> {{ memberCategoryPreviewLabel() }}</p>
+              <p><strong>Referring Member Name:</strong> {{ form.controls.referringMemberName.value }}</p>
+              <p><strong>Referring Member Registration No:</strong> {{ form.controls.referringMemberRegistrationNo.value }}</p>
+            }
+          </div>
+
+          <div class="preview-block">
+            <h3>Academic Details</h3>
+            <p><strong>Board:</strong> {{ boardPreviewLabel() }}</p>
+            <p><strong>Class:</strong> {{ standardPreviewLabel() }}</p>
+            <p><strong>Marks Obtained:</strong> {{ form.controls.marksObtained.value }}</p>
+            <p><strong>Total Marks:</strong> {{ form.controls.totalMarks.value }}</p>
+            <p><strong>Percentage:</strong> {{ percentage() }}%</p>
+          </div>
+        </div>
+
+        <div class="document-preview">
+          @if (aadhaarPreview(); as aadhaar) {
+            <div class="preview-block image-block">
+              <h3>Aadhaar eKYC</h3>
+              @if (aadhaar.photoDataUrl) {
+                <button type="button" class="image-preview-trigger" (click)="openImagePreview(aadhaar.photoDataUrl, 'Aadhaar preview photo')">
+                  <img [src]="aadhaar.photoDataUrl" alt="Aadhaar preview photo" />
+                </button>
+              }
+              <p><strong>Name:</strong> {{ aadhaar.name }}</p>
+              <p><strong>DOB:</strong> {{ aadhaar.dob || 'Not shared' }}</p>
+              <p><strong>Gender:</strong> {{ aadhaar.gender || 'Not shared' }}</p>
+            </div>
+          }
+
+          <div class="preview-block image-block">
+            <h3>Profile Photo</h3>
+            @if (previewUrl('profilePhoto'); as profilePreview) {
+              <button type="button" class="image-preview-trigger" (click)="openImagePreview(profilePreview, 'Profile preview')">
+                <img [src]="profilePreview" alt="Profile preview" />
+              </button>
+            }
+          </div>
+
+          <div class="preview-block image-block">
+            <h3>Caste Certificate</h3>
+            @if (previewUrl('casteCertificate'); as castePreview) {
+              <button type="button" class="image-preview-trigger" (click)="openImagePreview(castePreview, 'Caste certificate preview')">
+                <img [src]="castePreview" alt="Caste certificate preview" />
+              </button>
+            }
+          </div>
+
+          <div class="preview-block image-block">
+            <h3>Marks Card</h3>
+            @if (previewUrl('marksCard'); as marksCardPreview) {
+              <button type="button" class="image-preview-trigger" (click)="openImagePreview(marksCardPreview, 'Marks card preview')">
+                <img [src]="marksCardPreview" alt="Marks card preview" />
+              </button>
+            }
+          </div>
+
+          <div class="preview-block">
+            <h3>Aadhaar Offline File</h3>
+            <p>{{ fileName('aadhaarOfflineFile') }}</p>
+          </div>
+        </div>
+
+        <div class="terms-box preview-terms">
+          <p>The applicant has accepted the terms and conditions and confirmed that all details are true.</p>
+        </div>
+
+        @if (submitError()) {
+          <div class="submit-error">{{ submitError() }}</div>
+        }
+
+        <div class="action-row">
+          <button type="button" class="secondary-btn" (click)="editApplication()">Edit Form</button>
+          <button type="button" class="primary-btn" [disabled]="submitting()" (click)="submitApplication()">
+            @if (submitting()) { Submitting... } @else { Submit Application }
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (imagePreviewSrc(); as previewSrc) {
+    <div class="image-lightbox" (click)="closeImagePreview()">
+      <div class="image-lightbox-content" (click)="$event.stopPropagation()">
+        <button type="button" class="lightbox-close" aria-label="Close image preview" (click)="closeImagePreview()">X</button>
+        <img [src]="previewSrc" [alt]="imagePreviewAlt()" />
+      </div>
+    </div>
+  }
+</section>
+
+<app-footer></app-footer>

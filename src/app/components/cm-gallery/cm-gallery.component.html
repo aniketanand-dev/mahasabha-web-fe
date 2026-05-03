@@ -1,0 +1,19 @@
+<section class="cm-section" id="community">
+  <div class="container">
+    <h2 class="section-title">{{ lang.t('cmGallery.title') }}</h2>
+    <p class="section-subtitle">{{ lang.t('cmGallery.subtitle') }}</p>
+    <div class="ornament">✦ ✦ ✦</div>
+    <div class="cm-grid">
+      @for (l of data.cmLeaders(); track l.id) {
+        <div class="cm-card">
+          <img [src]="l.img" [alt]="l.name">
+          <div class="cm-info">
+            <div class="cm-name">{{ l.name }}</div>
+            <div class="cm-state">{{ l.state }}</div>
+            <div class="cm-party">{{ l.party }}</div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</section>

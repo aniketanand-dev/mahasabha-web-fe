@@ -1,0 +1,56 @@
+<section class="gallery-section" id="gallery">
+  <div class="container">
+    <p class="ornament">✦ ಚಿತ್ರಸಂಗ್ರಹ ✦</p>
+    <h2 class="section-title">{{ lang.t('gallery.title') }}</h2>
+    <p class="section-subtitle">{{ lang.t('gallery.subtitle') }}</p>
+
+    @if (galleryItems().length === 0) {
+      <div class="slide-caption">
+        <span>No gallery images available yet.</span>
+      </div>
+    } @else {
+
+      <!-- Carousel -->
+      <div class="slider-wrap"
+           (mouseenter)="stopAutoplay()"
+           (mouseleave)="startAutoplay()">
+
+        <!-- Slides -->
+        <div class="slider-track">
+          @for (item of galleryItems(); track item.id; let i = $index) {
+            <div class="slide" [class.active]="i === current()" (click)="openLightbox(item.src)">
+              <img [src]="item.src" [alt]="item.caption" draggable="false" />
+              <div class="slide-caption">
+                <span>{{ item.caption }}</span>
+                <span class="zoom-icon">🔍</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Arrows -->
+        <button class="slider-arrow prev" (click)="prev()" aria-label="Previous">&#8249;</button>
+        <button class="slider-arrow next" (click)="next()" aria-label="Next">&#8250;</button>
+
+        <!-- Counter -->
+        <div class="slide-counter">{{ current() + 1 }} / {{ galleryItems().length }}</div>
+      </div>
+
+      <!-- Dot indicators -->
+      <div class="slider-dots">
+        @for (item of galleryItems(); track item.id; let i = $index) {
+          <button class="dot" [class.active]="i === current()" (click)="goTo(i)" [attr.aria-label]="'Slide ' + (i+1)"></button>
+        }
+      </div>
+
+      <!-- Thumbnail strip -->
+      <div class="thumbs-strip">
+        @for (item of galleryItems(); track item.id; let i = $index) {
+          <div class="thumb" [class.active]="i === current()" (click)="goTo(i)">
+            <img [src]="item.src" [alt]="item.caption" loading="lazy" />
+          </div>
+        }
+      </div>
+    }
+  </div>
+</section>

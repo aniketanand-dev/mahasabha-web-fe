@@ -1,0 +1,41 @@
+<app-lang-bar></app-lang-bar>
+<app-navbar></app-navbar>
+<app-hero></app-hero>
+
+<section class="scholarship-notice-board">
+  <div class="notice-board-shell">
+    <div class="notice-board-card">
+      <p class="notice-board-tag">Scholarship Notice Board</p>
+      <h2>Prathibha Puraskara application status</h2>
+      @if (scholarshipCount() !== null) {
+        <p class="notice-board-count">{{ scholarshipCount() }}</p>
+        <p class="notice-board-copy">Scholarship applications have been received so far.</p>
+      } @else if (scholarshipCountError()) {
+        <p class="notice-board-copy">{{ scholarshipCountError() }}</p>
+      } @else {
+        <p class="notice-board-copy">Loading latest scholarship application count...</p>
+      }
+      <a routerLink="/scholarships/apply" class="notice-board-link">Apply for Scholarship</a>
+    </div>
+  </div>
+</section>
+
+<app-ticker></app-ticker>
+<app-founders></app-founders>
+<app-mission-vision></app-mission-vision>
+<app-president-note></app-president-note>
+<app-org-chart></app-org-chart>
+<app-cm-gallery></app-cm-gallery>
+<app-bhavan></app-bhavan>
+<app-past-presidents></app-past-presidents>
+<app-events></app-events>
+<app-gallery></app-gallery>
+<app-directory></app-directory>
+<app-hostel-section></app-hostel-section>
+<app-footer></app-footer>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" (click)="closeLb($event)">
+  <button class="lightbox-close" id="lbClose">✕</button>
+  <img id="lbImg" src="" alt="Preview">
+</div>

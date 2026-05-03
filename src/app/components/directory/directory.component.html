@@ -1,0 +1,38 @@
+<section class="directory-section" id="directory">
+  <div class="container">
+    <p class="ornament">✦ ನಿರ್ದೇಶಿಕೆ ✦</p>
+    <h2 class="section-title">{{ lang.t('dir.title') }}</h2>
+    <p class="section-subtitle">{{ lang.t('dir.subtitle') }}</p>
+
+    <div class="dir-tabs">
+      <button class="dir-tab" [class.active]="activeDir() === 'hostels'" (click)="switchDir('hostels')">{{ lang.t('dir.tabHostels') }}</button>
+      <button class="dir-tab" [class.active]="activeDir() === 'crematories'" (click)="switchDir('crematories')">{{ lang.t('dir.tabCrematories') }}</button>
+    </div>
+
+    <div class="dir-filters">
+      <input class="dir-search" type="text" [attr.placeholder]="lang.t('dir.searchPlaceholder')" (input)="onSearch($any($event.target).value)" />
+      <select class="dir-select" (change)="onFilterState($any($event.target).value)">
+        <option value="">{{ lang.t('dir.allStates') }}</option>
+        @for (st of states(); track st) {
+          <option [value]="st">{{ st }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="dir-grid">
+      @for (entry of filteredEntries(); track entry.id) {
+        <div class="dir-card">
+          <div class="dir-card-header">
+            <span class="dir-state-badge">{{ entry.state }}</span>
+            <span class="dir-district">{{ entry.district }}</span>
+          </div>
+          <h3 class="dir-name">{{ entry.name }}</h3>
+          <p class="dir-address">📍 {{ entry.address }}</p>
+          <p class="dir-contact">📞 {{ entry.contact }}</p>
+        </div>
+      } @empty {
+        <p class="dir-empty">{{ lang.t('dir.empty') }}</p>
+      }
+    </div>
+  </div>
+</section>

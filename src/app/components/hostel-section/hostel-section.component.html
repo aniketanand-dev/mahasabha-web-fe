@@ -1,0 +1,26 @@
+@if (data.hostels().length > 0) {
+  <section class="hostels-section">
+    <div class="section-header">
+      <h2 class="section-title">{{ lang.t('hostels.title') }}</h2>
+      <p class="section-sub">{{ lang.t('hostels.subtitle') }}</p>
+    </div>
+    <div class="hostels-grid">
+      @for (h of data.hostels(); track h.id) {
+        <div class="hostel-card">
+          @if (h.img) {
+            <img class="hostel-img" [src]="h.img" [alt]="h.name" loading="lazy" />
+          }
+          <div class="hostel-body">
+            <h3 class="hostel-name">{{ h.name }}</h3>
+            @if (h.location) { <p class="hostel-meta">📍 {{ h.location }}</p> }
+            @if (h.capacity) { <p class="hostel-meta">👥 Capacity: {{ h.capacity }}</p> }
+            @if (h.description) { <p class="hostel-desc">{{ h.description }}</p> }
+            @if (h.contact) {
+              <a [href]="'tel:' + h.contact" class="hostel-contact">📞 {{ h.contact }}</a>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+}

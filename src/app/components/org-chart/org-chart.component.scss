@@ -1,0 +1,121 @@
+.org-section {
+  background:
+    radial-gradient(circle at top, rgba(201, 144, 26, 0.12), transparent 34%),
+    linear-gradient(180deg, #fffdf8 0%, #ffffff 100%);
+}
+
+.org-levels {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.org-level {
+  width: 100%;
+}
+
+.org-level-connector {
+  width: 2px;
+  height: 2rem;
+  margin: 0 auto 0.8rem;
+  background: linear-gradient(180deg, rgba(122, 14, 34, 0.92), rgba(201, 144, 26, 0.7));
+}
+
+.org-level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.root-grid {
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.org-card {
+  width: 100%;
+  min-height: 100%;
+  padding: 1rem 1rem 1.05rem;
+  background: linear-gradient(180deg, #fffef9 0%, #fff6e8 100%);
+  border: 1px solid rgba(122, 14, 34, 0.12);
+  border-radius: 18px;
+  box-shadow: 0 20px 40px rgba(64, 21, 8, 0.08);
+  position: relative;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.org-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 4px;
+  border-radius: 18px 18px 0 0;
+  background: linear-gradient(90deg, var(--saffron), var(--gold));
+}
+
+.root-card {
+  background: linear-gradient(180deg, #7a0e22 0%, #5e0d1c 100%);
+  border-color: rgba(122, 14, 34, 0.4);
+  box-shadow: 0 24px 44px rgba(122, 14, 34, 0.22);
+
+  &::before {
+    background: linear-gradient(90deg, #ffe3a6, #f8c33d);
+  }
+
+  .org-card__eyebrow,
+  .org-card__subtitle {
+    color: rgba(255, 243, 218, 0.84);
+  }
+
+  .org-card__title {
+    color: #fff;
+  }
+}
+
+.org-card__eyebrow {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--saffron-dark);
+}
+
+.org-card__title {
+  margin: 0.35rem 0 0;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--maroon);
+}
+
+.org-card__subtitle {
+  margin: 0.45rem 0 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: #6d4c2c;
+}
+
+.org-empty {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 1.2rem 1.4rem;
+  border-radius: 14px;
+  text-align: center;
+  background: #faf4e8;
+  color: #7b5a36;
+  border: 1px dashed rgba(201, 144, 26, 0.45);
+}
+
+@media (max-width: 768px) {
+  .org-level-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .org-card {
+    padding-inline: 0.85rem;
+  }
+}

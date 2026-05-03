@@ -1,0 +1,17 @@
+<div class="announce-section">
+  <div class="container">
+    <div class="announce-inner">
+      <div class="announce-label">{{ lang.t('announce.label') }}</div>
+      <div class="announce-ticker">
+        <div class="announce-ticker-inner">
+          @for (t of data.tickers(); track t.id) {
+            <span>{{ t.text }}</span>
+          }
+          @for (t of data.tickers(); track t.id) {
+            <span>{{ t.text }}</span>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

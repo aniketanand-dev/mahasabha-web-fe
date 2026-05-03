@@ -1,0 +1,13 @@
+.cm-section { background: var(--ivory-dark); }
+.cm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1.5rem; }
+.cm-card {
+  background: white; border-radius: 4px; overflow: hidden; border: 1px solid var(--border); text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+  &:hover { transform: translateY(-3px); box-shadow: 0 8px 24px var(--shadow); }
+  img { width: 100%; height: 140px; object-fit: cover; }
+}
+.cm-info { padding: 0.8rem; }
+.cm-name { font-size: 0.85rem; font-weight: 600; color: var(--maroon); }
+.cm-state { font-size: 0.72rem; color: var(--saffron-dark); margin-top: 2px; }
+.cm-party { font-size: 0.7rem; color: var(--text-light); margin-top: 2px; }
+@media (max-width: 600px) { .cm-grid { grid-template-columns: repeat(3, 1fr); } }

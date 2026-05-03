@@ -1,0 +1,27 @@
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" routerLink="/">
+      <img [src]="data.navbarContent().logoUrl" alt="Mahasabha Logo">
+      <div class="nav-logo-text">
+        <div class="name-kn">{{ data.navbarContent().nameKn }}</div>
+        <div class="name-en">{{ data.navbarContent().nameEn }}</div>
+      </div>
+    </a>
+    <ul class="nav-links" [class.open]="menuOpen()">
+      @for (link of navLinks; track link.href) {
+        <li><a [href]="link.href" (click)="menuOpen.set(false)">{{ lang.t(link.key) }}</a></li>
+      }
+    </ul>
+    <div class="nav-end">
+      <a routerLink="/scholarships/apply" class="apply-btn" (click)="menuOpen.set(false)">Apply</a>
+      @if (auth.isLoggedIn()) {
+        <a routerLink="/admin" class="admin-btn" title="Admin Panel">⚙ Admin</a>
+      } @else {
+        <a routerLink="/admin/login" class="admin-btn" title="Admin Login">🔐</a>
+      }
+      <button class="hamburger" (click)="toggleMenu()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</nav>

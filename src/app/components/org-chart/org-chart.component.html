@@ -1,0 +1,34 @@
+<section class="org-section" id="org-chart">
+  <div class="container">
+    <h2 class="section-title">{{ lang.t('orgChart.title') }}</h2>
+    <p class="section-subtitle">{{ lang.t('orgChart.subtitle') }}</p>
+    <div class="ornament">✦ ✦ ✦</div>
+    @if (levels().length) {
+      <div class="org-levels">
+        @for (level of levels(); track level.depth) {
+          <section class="org-level">
+            @if (level.depth > 0) {
+              <div class="org-level-connector"></div>
+            }
+
+            <div class="org-level-grid" [class.root-grid]="level.depth === 0">
+              @for (node of level.nodes; track node.id) {
+                <article class="org-card" [class.root-card]="level.depth === 0">
+                  <div class="org-card__eyebrow">
+                    {{ level.depth === 0 ? 'Top Level' : 'Level ' + (level.depth + 1) }}
+                  </div>
+                  <h3 class="org-card__title">{{ node.title }}</h3>
+                  @if (node.subtitle) {
+                    <p class="org-card__subtitle">{{ node.subtitle }}</p>
+                  }
+                </article>
+              }
+            </div>
+          </section>
+        }
+      </div>
+    } @else {
+      <div class="org-empty">No organisation structure added yet.</div>
+    }
+  </div>
+</section>

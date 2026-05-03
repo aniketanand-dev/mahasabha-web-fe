@@ -1,0 +1,82 @@
+<footer class="site-footer" id="contact">
+  <div class="footer-top">
+    <div class="container footer-grid">
+
+      <!-- Brand -->
+      <div class="footer-col footer-brand">
+        <div class="footer-logo">
+          <span class="footer-om">{{ data.footerContent().logoSymbol }}</span>
+          <div>
+            <p class="footer-org-kn">{{ data.footerContent().orgNameKn }}</p>
+            <p class="footer-org-en">{{ data.footerContent().orgNameEn }}</p>
+          </div>
+        </div>
+        <p class="footer-tagline">{{ lang.t('footer.tagline') }}</p>
+        <div class="footer-socials">
+          <a [href]="data.footerContent().facebookUrl" aria-label="Facebook" class="social-link">f</a>
+          <a [href]="data.footerContent().twitterUrl" aria-label="Twitter" class="social-link">𝕏</a>
+          <a [href]="data.footerContent().youtubeUrl" aria-label="YouTube" class="social-link">▶</a>
+          <a [href]="data.footerContent().instagramUrl" aria-label="Instagram" class="social-link">◎</a>
+        </div>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="footer-col">
+        <h4 class="footer-col-title">{{ lang.t('footer.quickLinks') }}</h4>
+        <ul class="footer-links">
+          <li><a href="#home">{{ lang.t('footer.link.home') }}</a></li>
+          <li><a href="#founders">{{ lang.t('footer.link.founders') }}</a></li>
+          <li><a href="#mission">{{ lang.t('footer.link.mission') }}</a></li>
+          <li><a href="#president-note">{{ lang.t('footer.link.presNote') }}</a></li>
+          <li><a href="#org-chart">{{ lang.t('footer.link.org') }}</a></li>
+          <li><a href="#cms">{{ lang.t('footer.link.cms') }}</a></li>
+        </ul>
+      </div>
+
+      <!-- Community -->
+      <div class="footer-col">
+        <h4 class="footer-col-title">{{ lang.t('footer.community') }}</h4>
+        <ul class="footer-links">
+          <li><a href="#bhavan">{{ lang.t('footer.link.bhavan') }}</a></li>
+          <li><a href="#past-presidents">{{ lang.t('footer.link.pastPres') }}</a></li>
+          <li><a href="#events">{{ lang.t('footer.link.events') }}</a></li>
+          <li><a href="#gallery">{{ lang.t('footer.link.gallery') }}</a></li>
+          <li><a href="#directory">{{ lang.t('footer.link.hostels') }}</a></li>
+          <li><a href="#directory">{{ lang.t('footer.link.crematories') }}</a></li>
+        </ul>
+      </div>
+
+      <!-- Contact -->
+      <div class="footer-col">
+        <h4 class="footer-col-title">{{ lang.t('footer.contact') }}</h4>
+        <ul class="footer-contact-list">
+          <li>
+            <span class="contact-icon">📍</span>
+            <span [innerHTML]="data.footerContent().address.replaceAll('\n', '<br>')"></span>
+          </li>
+          <li>
+            <span class="contact-icon">📞</span>
+            <a [href]="'tel:' + data.footerContent().phone.replaceAll(' ', '')">{{ data.footerContent().phone }}</a>
+          </li>
+          <li>
+            <span class="contact-icon">✉️</span>
+            <a [href]="'mailto:' + data.footerContent().email">{{ data.footerContent().email }}</a>
+          </li>
+          <li>
+            <span class="contact-icon">🕐</span>
+            <span>{{ lang.t('footer.hours') }}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <p>{{ lang.t('footer.copyright') }} {{ currentYear }}</p>
+    <p class="footer-company-meta">
+      Designed &amp; Developed by <strong>E-Eazy Solutions</strong> |
+      <a href="https://e-eazysolutions.com/" target="_blank" rel="noopener noreferrer">https://e-eazysolutions.com/</a> |
+      <a [href]="'mailto:exploreunlimitted@gmail.com'">exploreunlimitted&#64;gmail.com</a>
+    </p>
+  </div>
+</footer>

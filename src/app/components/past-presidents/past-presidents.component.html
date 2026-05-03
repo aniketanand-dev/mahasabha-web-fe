@@ -1,0 +1,16 @@
+<section class="past-pres-section">
+  <div class="container">
+    <h2 class="section-title">{{ lang.t('pastPres.title') }}</h2>
+    <p class="section-subtitle">{{ lang.t('pastPres.subtitle') }}</p>
+    <div class="ornament">✦ ✦ ✦</div>
+    <div class="past-pres-grid">
+      @for (p of data.pastPresidents(); track p.id) {
+        <div class="pp-card" (click)="openLightbox(p.img)">
+          <img class="pp-img" [src]="p.img" [alt]="p.name">
+          <div class="pp-name">{{ p.name }}</div>
+          <div class="pp-tenure">{{ p.tenure }}</div>
+        </div>
+      }
+    </div>
+  </div>
+</section>

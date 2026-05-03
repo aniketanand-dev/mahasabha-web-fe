@@ -1,0 +1,1156 @@
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <div class="admin-brand">
+      <span class="brand-icon">⚙</span>
+      <div>
+        <div class="brand-title">Admin Panel</div>
+        <div class="brand-sub">Veerashiva Mahasabha</div>
+      </div>
+    </div>
+
+    <nav class="admin-nav">
+      <div class="nav-group-title">Structure</div>
+      <button [class.active]="activeTab() === 'header'" (click)="setTab('header')">
+        <span>🧭</span><span class="nav-label">Header</span>
+      </button>
+      <button [class.active]="activeTab() === 'hero'" (click)="setTab('hero')">
+        <span>🌅</span><span class="nav-label">Hero</span>
+      </button>
+      <button [class.active]="activeTab() === 'founders'" (click)="setTab('founders')">
+        <span>👥</span><span class="nav-label">Founders</span>
+      </button>
+      <button [class.active]="activeTab() === 'mission'" (click)="setTab('mission')">
+        <span>🎯</span><span class="nav-label">Mission</span>
+      </button>
+      <button [class.active]="activeTab() === 'president'" (click)="setTab('president')">
+        <span>📝</span><span class="nav-label">President Note</span>
+      </button>
+      <button [class.active]="activeTab() === 'org'" (click)="setTab('org')">
+        <span>🏛</span><span class="nav-label">Organisation</span>
+      </button>
+
+      <div class="nav-group-title">Public Sections</div>
+      <button [class.active]="activeTab() === 'leaders'" (click)="setTab('leaders')">
+        <span>🏅</span><span class="nav-label">Leaders</span>
+      </button>
+      <button [class.active]="activeTab() === 'bhavan'" (click)="setTab('bhavan')">
+        <span>🏢</span><span class="nav-label">Bhavan</span>
+      </button>
+      <button [class.active]="activeTab() === 'past-presidents'" (click)="setTab('past-presidents')">
+        <span>🕰</span><span class="nav-label">Past Presidents</span>
+      </button>
+      <button [class.active]="activeTab() === 'events'" (click)="setTab('events')">
+        <span>📅</span><span class="nav-label">Events</span>
+      </button>
+      <button [class.active]="activeTab() === 'gallery'" (click)="setTab('gallery')">
+        <span>📸</span><span class="nav-label">Gallery</span>
+      </button>
+      <button [class.active]="activeTab() === 'directory'" (click)="setTab('directory')">
+        <span>📘</span><span class="nav-label">Directory</span>
+      </button>
+      <button [class.active]="activeTab() === 'scholarships'" (click)="setTab('scholarships')">
+        <span>🎓</span><span class="nav-label">Scholarships</span>
+      </button>
+      <button [class.active]="activeTab() === 'ticker'" (click)="setTab('ticker')">
+        <span>📢</span><span class="nav-label">Announcements</span>
+      </button>
+      <button [class.active]="activeTab() === 'hostels'" (click)="setTab('hostels')">
+        <span>🏨</span><span class="nav-label">Hostels</span>
+      </button>
+      <button [class.active]="activeTab() === 'footer'" (click)="setTab('footer')">
+        <span>🔻</span><span class="nav-label">Footer</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="admin-user">👤 Admin</div>
+      <button class="btn-logout" (click)="logout()">🔓 Logout</button>
+      <a routerLink="/" class="btn-site">🏠 View Site</a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="tab-panel" [class.wide-layout]="activeTab() === 'scholarships'">
+      <div class="tab-header sticky-header">
+        <div>
+          @if (activeTab() === 'header') { <h2>🧭 Header</h2> }
+          @if (activeTab() === 'hero') { <h2>🌅 Hero</h2> }
+          @if (activeTab() === 'founders') { <h2>👥 Founders</h2> }
+          @if (activeTab() === 'mission') { <h2>🎯 Mission & Vision</h2> }
+          @if (activeTab() === 'president') { <h2>📝 President Note</h2> }
+          @if (activeTab() === 'org') { <h2>🏛 Organisation</h2> }
+          @if (activeTab() === 'leaders') { <h2>🏅 Community Leaders</h2> }
+          @if (activeTab() === 'bhavan') { <h2>🏢 Bhavan</h2> }
+          @if (activeTab() === 'past-presidents') { <h2>🕰 Past Presidents</h2> }
+          @if (activeTab() === 'events') { <h2>📅 Events</h2> }
+          @if (activeTab() === 'gallery') { <h2>📸 Gallery</h2> }
+          @if (activeTab() === 'directory') { <h2>📘 Directory</h2> }
+          @if (activeTab() === 'scholarships') { <h2>🎓 Scholarship Applications</h2> }
+          @if (activeTab() === 'ticker') { <h2>📢 Announcements</h2> }
+          @if (activeTab() === 'hostels') { <h2>🏨 Hostels</h2> }
+          @if (activeTab() === 'footer') { <h2>🔻 Footer</h2> }
+          <p class="tab-note">All admin image uploads now save into this project locally, and replacing or deleting a record removes the old managed file from disk.</p>
+        </div>
+      </div>
+
+      <div class="content-stack">
+        @if (mediaError()) {
+          <div class="gallery-status gallery-error">{{ mediaError() }}</div>
+        }
+
+        @if (mediaBusy()) {
+          <div class="gallery-status">Processing image request...</div>
+        }
+
+        @if (hasTextFields(activeTab())) {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Section Text</h3>
+                <p>These overrides replace the displayed labels and content on the website.</p>
+              </div>
+              <div class="form-actions compact-actions">
+                <button class="btn-save" (click)="saveTextFields(activeTab())">Save Text</button>
+                <button class="btn-cancel" (click)="resetTextFields(activeTab())">Reset Text</button>
+              </div>
+            </div>
+            <div class="text-field-grid">
+              @for (field of textFieldsFor(activeTab()); track field.key) {
+                <div class="form-row text-field-card" [class.span-two]="field.multiline">
+                  <label>{{ field.label }}</label>
+                  @if (field.multiline) {
+                    <textarea [(ngModel)]="textDrafts[field.key]" class="form-input form-textarea" [rows]="field.rows || 4"></textarea>
+                  } @else {
+                    <input [(ngModel)]="textDrafts[field.key]" class="form-input" />
+                  }
+                  <div class="field-key">{{ field.key }}</div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'header') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Navbar Branding</h3>
+                <p>Update the logo and organisation name shown in the header.</p>
+              </div>
+              <button class="btn-save" (click)="saveNavbarContent()">Save Header</button>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-row">
+                <label>Current Logo</label>
+                <img class="founder-thumb" [src]="navbarContent.logoUrl" />
+              </div>
+              <div class="form-row">
+                <label>Upload Logo</label>
+                <input type="file" accept="image/*" class="form-input" (change)="onNavbarLogoSelected($event)" />
+                @if (selectedFileName(navbarLogoFile)) {
+                  <div class="field-key">Selected: {{ selectedFileName(navbarLogoFile) }}</div>
+                }
+              </div>
+              <div class="form-row">
+                <label>Name Kannada</label>
+                <input [(ngModel)]="navbarContent.nameKn" class="form-input" />
+              </div>
+              <div class="form-row span-two">
+                <label>Name English</label>
+                <input [(ngModel)]="navbarContent.nameEn" class="form-input" />
+              </div>
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'hero') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Hero Media</h3>
+                <p>Manage the logo, subtitle, scroll label, and stats cards shown on the homepage hero.</p>
+              </div>
+              <button class="btn-save" (click)="saveHeroContent()">Save Hero</button>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-row">
+                <label>Current Logo</label>
+                <img class="founder-thumb" [src]="heroContent.logoUrl" />
+              </div>
+              <div class="form-row">
+                <label>Upload Logo</label>
+                <input type="file" accept="image/*" class="form-input" (change)="onHeroLogoSelected($event)" />
+                @if (selectedFileName(heroLogoFile)) {
+                  <div class="field-key">Selected: {{ selectedFileName(heroLogoFile) }}</div>
+                }
+              </div>
+              <div class="form-row">
+                <label>English Title</label>
+                <input [(ngModel)]="heroContent.englishTitle" class="form-input" />
+              </div>
+              <div class="form-row span-two">
+                <label>Scroll Label</label>
+                <input [(ngModel)]="heroContent.scrollLabel" class="form-input" />
+              </div>
+            </div>
+
+            <div class="subsection-head">
+              <h4>Hero Stats</h4>
+              <button class="btn-add" (click)="addHeroStat()">+ Add Stat</button>
+            </div>
+            <div class="stats-list">
+              @for (stat of heroContent.stats; track stat.id) {
+                <div class="stat-row">
+                  <div class="form-row">
+                    <label>Value</label>
+                    <input [(ngModel)]="stat.value" class="form-input" />
+                  </div>
+                  <div class="form-row">
+                    <label>Label</label>
+                    <input [(ngModel)]="stat.label" class="form-input" />
+                  </div>
+                  <button class="btn-delete mini-btn" (click)="deleteHeroStat(stat.id)">Delete</button>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'president') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>President Photo</h3>
+                <p>Text comes from the section text panel above. Use this card for image content.</p>
+              </div>
+              <button class="btn-save" (click)="savePresidentNoteContent()">Save President Note</button>
+            </div>
+            <div class="form-row">
+              <label>Current Photo</label>
+              <img class="founder-thumb" [src]="presidentNoteContent.photoUrl" />
+            </div>
+            <div class="form-row">
+              <label>Upload Photo</label>
+              <input type="file" accept="image/*" class="form-input" (change)="onPresidentPhotoSelected($event)" />
+              @if (selectedFileName(presidentPhotoFile)) {
+                <div class="field-key">Selected: {{ selectedFileName(presidentPhotoFile) }}</div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'org') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Organisation Structure</h3>
+                <p>Build the hierarchy shown on the website. Add top-level committees or nested child units to match your PDF chart.</p>
+              </div>
+              <button class="btn-add" (click)="startAddOrgNode()">+ Add Position</button>
+            </div>
+
+            @if (showOrgNodeAdd()) {
+              <div class="form-section-block">
+                <div class="form-grid-2">
+                  <div class="form-row">
+                    <label>Parent Item</label>
+                    <select [(ngModel)]="newOrgNode.parentId" class="form-input">
+                      <option [ngValue]="null">Top level</option>
+                      @for (option of orgParentOptions(); track option.id) {
+                        <option [ngValue]="option.id">{{ orgNodePath(option) }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-row">
+                    <label>Display Order</label>
+                    <input [(ngModel)]="newOrgNode.order" type="number" min="0" class="form-input" />
+                  </div>
+                  <div class="form-row">
+                    <label>Title *</label>
+                    <input [(ngModel)]="newOrgNode.title" class="form-input" placeholder="Working Committee" />
+                  </div>
+                  <div class="form-row">
+                    <label>Subtitle</label>
+                    <input [(ngModel)]="newOrgNode.subtitle" class="form-input" placeholder="Optional member or description" />
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button class="btn-save" (click)="addOrgNode()">Save Item</button>
+                  <button class="btn-cancel" (click)="cancelAddOrgNode()">Cancel</button>
+                </div>
+              </div>
+            }
+
+            @if (orgNodeItems().length === 0) {
+              <div class="empty-state">
+                <span>🏛</span>
+                <p>No organisation items added yet.</p>
+              </div>
+            }
+
+            <div class="items-list">
+              @for (entry of orgNodesForDisplay(); track entry.node.id) {
+                <div class="item-row org-row-admin">
+                  @if (editingOrgNodeId() === entry.node.id) {
+                    <div class="item-edit-fields">
+                      <div class="form-grid-2">
+                        <div class="form-row">
+                          <label>Parent Item</label>
+                          <select [(ngModel)]="editOrgNode.parentId" class="form-input">
+                            <option [ngValue]="null">Top level</option>
+                            @for (option of orgParentOptions(entry.node.id); track option.id) {
+                              <option [ngValue]="option.id">{{ orgNodePath(option) }}</option>
+                            }
+                          </select>
+                        </div>
+                        <div class="form-row">
+                          <label>Display Order</label>
+                          <input [(ngModel)]="editOrgNode.order" type="number" min="0" class="form-input" />
+                        </div>
+                        <div class="form-row">
+                          <label>Title</label>
+                          <input [(ngModel)]="editOrgNode.title" class="form-input" />
+                        </div>
+                        <div class="form-row">
+                          <label>Subtitle</label>
+                          <input [(ngModel)]="editOrgNode.subtitle" class="form-input" />
+                        </div>
+                      </div>
+                      <div class="form-actions">
+                        <button class="btn-save sm" (click)="saveOrgNode(entry.node.id)">Save</button>
+                        <button class="btn-cancel sm" (click)="cancelEditOrgNode()">Cancel</button>
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="item-info org-item-info" [style.padding-left.px]="entry.depth * 22">
+                      <div class="org-item-meta">
+                        <span class="org-depth-chip">Level {{ entry.depth + 1 }}</span>
+                        <span class="org-order-chip">Order {{ entry.node.order }}</span>
+                      </div>
+                      <div class="item-title">{{ entry.node.title }}</div>
+                      @if (entry.node.subtitle) {
+                        <div class="item-bio">{{ entry.node.subtitle }}</div>
+                      }
+                      <div class="item-sub">{{ orgNodePath(entry.node) }}</div>
+                    </div>
+                    <div class="item-actions">
+                      <button class="btn-add" (click)="startAddOrgNode(entry.node)">+ Child</button>
+                      <button class="btn-edit" (click)="startEditOrgNode(entry.node)">Edit</button>
+                      <button class="btn-delete" (click)="deleteOrgNode(entry.node.id)">Delete</button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'leaders') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Leader Cards</h3>
+                <p>Add, edit, or remove community leader cards shown on the homepage.</p>
+              </div>
+              <button class="btn-add" (click)="showCmLeaderAdd.set(!showCmLeaderAdd())">+ Add Leader</button>
+            </div>
+
+            @if (showCmLeaderAdd()) {
+              <div class="form-section-block">
+                <div class="form-grid-2">
+                  <div class="form-row"><label>Name</label><input [(ngModel)]="newCmLeader.name" class="form-input" /></div>
+                  <div class="form-row"><label>State / Role</label><input [(ngModel)]="newCmLeader.state" class="form-input" /></div>
+                  <div class="form-row"><label>Party / Note</label><input [(ngModel)]="newCmLeader.party" class="form-input" /></div>
+                  <div class="form-row"><label>Leader Photo *</label><input type="file" accept="image/*" class="form-input" (change)="onNewCmLeaderFileSelected($event)" /></div>
+                </div>
+                @if (selectedFileName(newCmLeaderFile)) {
+                  <div class="field-key">Selected: {{ selectedFileName(newCmLeaderFile) }}</div>
+                }
+                <div class="form-actions">
+                  <button class="btn-save" (click)="addCmLeader()">Save Leader</button>
+                  <button class="btn-cancel" (click)="showCmLeaderAdd.set(false)">Cancel</button>
+                </div>
+              </div>
+            }
+
+            <div class="items-list">
+              @for (leader of cmLeaderItems(); track leader.id) {
+                <div class="item-row">
+                  @if (editingCmLeaderId() === leader.id) {
+                    <img class="founder-thumb" [src]="editCmLeader.img || leader.img" />
+                    <div class="item-edit-fields">
+                      <div class="form-grid-2">
+                        <div class="form-row"><label>Name</label><input [(ngModel)]="editCmLeader.name" class="form-input" /></div>
+                        <div class="form-row"><label>State / Role</label><input [(ngModel)]="editCmLeader.state" class="form-input" /></div>
+                        <div class="form-row"><label>Party / Note</label><input [(ngModel)]="editCmLeader.party" class="form-input" /></div>
+                        <div class="form-row"><label>Replace Photo</label><input type="file" accept="image/*" class="form-input" (change)="onEditCmLeaderFileSelected($event)" /></div>
+                      </div>
+                      @if (selectedFileName(editCmLeaderFile)) {
+                        <div class="field-key">Selected: {{ selectedFileName(editCmLeaderFile) }}</div>
+                      }
+                      <div class="form-actions">
+                        <button class="btn-save sm" (click)="saveCmLeader(leader.id)">Save</button>
+                        <button class="btn-cancel sm" (click)="editingCmLeaderId.set(null)">Cancel</button>
+                      </div>
+                    </div>
+                  } @else {
+                    <img class="founder-thumb" [src]="leader.img" />
+                    <div class="item-info">
+                      <div class="item-title">{{ leader.name }}</div>
+                      <div class="item-sub">{{ leader.state }}</div>
+                      <div class="item-bio">{{ leader.party }}</div>
+                    </div>
+                    <div class="item-actions">
+                      <button class="btn-edit" (click)="startEditCmLeader(leader)">Edit</button>
+                      <button class="btn-delete" (click)="deleteCmLeader(leader.id)">Delete</button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'bhavan') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Bhavan Details</h3>
+                <p>Update gallery images and contact information used in the Bhavan section.</p>
+              </div>
+              <button class="btn-save" (click)="saveBhavanContent()">Save Bhavan</button>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-row"><label>Primary Image</label><img class="item-thumb" [src]="bhavanContent.imageUrls[0]" /></div>
+              <div class="form-row"><label>Upload Primary</label><input type="file" accept="image/*" class="form-input" (change)="onBhavanImageSelected(0, $event)" /></div>
+              <div class="form-row"><label>Secondary Image</label><img class="item-thumb" [src]="bhavanContent.imageUrls[1]" /></div>
+              <div class="form-row"><label>Upload Secondary</label><input type="file" accept="image/*" class="form-input" (change)="onBhavanImageSelected(1, $event)" /></div>
+              <div class="form-row"><label>Third Image</label><img class="item-thumb" [src]="bhavanContent.imageUrls[2]" /></div>
+              <div class="form-row"><label>Upload Third</label><input type="file" accept="image/*" class="form-input" (change)="onBhavanImageSelected(2, $event)" /></div>
+              <div class="form-row span-two"><label>Address</label><textarea [(ngModel)]="bhavanContent.address" class="form-input form-textarea" rows="4"></textarea></div>
+              <div class="form-row"><label>Phone</label><input [(ngModel)]="bhavanContent.phone" class="form-input" /></div>
+              <div class="form-row"><label>Email</label><input [(ngModel)]="bhavanContent.email" class="form-input" /></div>
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'past-presidents') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Past President Cards</h3>
+                <p>These cards are shown on the public timeline grid.</p>
+              </div>
+              <button class="btn-add" (click)="showPastPresidentAdd.set(!showPastPresidentAdd())">+ Add Record</button>
+            </div>
+
+            @if (showPastPresidentAdd()) {
+              <div class="form-section-block">
+                <div class="form-grid-2">
+                  <div class="form-row"><label>Name</label><input [(ngModel)]="newPastPresident.name" class="form-input" /></div>
+                  <div class="form-row"><label>Tenure</label><input [(ngModel)]="newPastPresident.tenure" class="form-input" /></div>
+                  <div class="form-row span-two"><label>Photo *</label><input type="file" accept="image/*" class="form-input" (change)="onNewPastPresidentFileSelected($event)" /></div>
+                </div>
+                @if (selectedFileName(newPastPresidentFile)) {
+                  <div class="field-key">Selected: {{ selectedFileName(newPastPresidentFile) }}</div>
+                }
+                <div class="form-actions">
+                  <button class="btn-save" (click)="addPastPresident()">Save Record</button>
+                  <button class="btn-cancel" (click)="showPastPresidentAdd.set(false)">Cancel</button>
+                </div>
+              </div>
+            }
+
+            <div class="items-list">
+              @for (president of pastPresidentItems(); track president.id) {
+                <div class="item-row">
+                  @if (editingPastPresidentId() === president.id) {
+                    <img class="founder-thumb" [src]="editPastPresident.img || president.img" />
+                    <div class="item-edit-fields">
+                      <div class="form-grid-2">
+                        <div class="form-row"><label>Name</label><input [(ngModel)]="editPastPresident.name" class="form-input" /></div>
+                        <div class="form-row"><label>Tenure</label><input [(ngModel)]="editPastPresident.tenure" class="form-input" /></div>
+                        <div class="form-row span-two"><label>Replace Photo</label><input type="file" accept="image/*" class="form-input" (change)="onEditPastPresidentFileSelected($event)" /></div>
+                      </div>
+                      @if (selectedFileName(editPastPresidentFile)) {
+                        <div class="field-key">Selected: {{ selectedFileName(editPastPresidentFile) }}</div>
+                      }
+                      <div class="form-actions">
+                        <button class="btn-save sm" (click)="savePastPresident(president.id)">Save</button>
+                        <button class="btn-cancel sm" (click)="editingPastPresidentId.set(null)">Cancel</button>
+                      </div>
+                    </div>
+                  } @else {
+                    <img class="founder-thumb" [src]="president.img" />
+                    <div class="item-info">
+                      <div class="item-title">{{ president.name }}</div>
+                      <div class="item-sub">{{ president.tenure }}</div>
+                    </div>
+                    <div class="item-actions">
+                      <button class="btn-edit" (click)="startEditPastPresident(president)">Edit</button>
+                      <button class="btn-delete" (click)="deletePastPresident(president.id)">Delete</button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'events') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Event Cards</h3>
+                <p>Manage upcoming, past, and president event cards.</p>
+              </div>
+              <button class="btn-add" (click)="showEventAdd.set(!showEventAdd())">+ Add Event</button>
+            </div>
+
+            @if (showEventAdd()) {
+              <div class="form-section-block">
+                <div class="form-grid-2">
+                  <div class="form-row">
+                    <label>Category</label>
+                    <select [(ngModel)]="newEvent.category" class="form-input">
+                      @for (category of eventCategories; track category) {
+                        <option [value]="category">{{ category }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-row">
+                    <label>Badge</label>
+                    <select [(ngModel)]="newEvent.badgeClass" class="form-input">
+                      @for (badge of eventBadges; track badge) {
+                        <option [value]="badge">{{ badge }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-row"><label>Date</label><input [(ngModel)]="newEvent.date" class="form-input" /></div>
+                  <div class="form-row"><label>Title</label><input [(ngModel)]="newEvent.title" class="form-input" /></div>
+                  <div class="form-row span-two"><label>Event Image *</label><input type="file" accept="image/*" class="form-input" (change)="onNewEventFileSelected($event)" /></div>
+                  <div class="form-row span-two"><label>Link</label><input [(ngModel)]="newEvent.link" class="form-input" /></div>
+                  <div class="form-row span-two"><label>Description</label><textarea [(ngModel)]="newEvent.description" class="form-input form-textarea" rows="3"></textarea></div>
+                </div>
+                @if (selectedFileName(newEventFile)) {
+                  <div class="field-key">Selected: {{ selectedFileName(newEventFile) }}</div>
+                }
+                <div class="form-actions">
+                  <button class="btn-save" (click)="addEvent()">Save Event</button>
+                  <button class="btn-cancel" (click)="showEventAdd.set(false)">Cancel</button>
+                </div>
+              </div>
+            }
+
+            <div class="items-list">
+              @for (event of eventItems(); track event.id) {
+                <div class="item-row">
+                  @if (editingEventId() === event.id) {
+                    <img class="item-thumb" [src]="editEvent.img || event.img" />
+                    <div class="item-edit-fields">
+                      <div class="form-grid-2">
+                        <div class="form-row">
+                          <label>Category</label>
+                          <select [(ngModel)]="editEvent.category" class="form-input">
+                            @for (category of eventCategories; track category) {
+                              <option [value]="category">{{ category }}</option>
+                            }
+                          </select>
+                        </div>
+                        <div class="form-row">
+                          <label>Badge</label>
+                          <select [(ngModel)]="editEvent.badgeClass" class="form-input">
+                            @for (badge of eventBadges; track badge) {
+                              <option [value]="badge">{{ badge }}</option>
+                            }
+                          </select>
+                        </div>
+                        <div class="form-row"><label>Date</label><input [(ngModel)]="editEvent.date" class="form-input" /></div>
+                        <div class="form-row"><label>Title</label><input [(ngModel)]="editEvent.title" class="form-input" /></div>
+                        <div class="form-row span-two"><label>Replace Image</label><input type="file" accept="image/*" class="form-input" (change)="onEditEventFileSelected($event)" /></div>
+                        <div class="form-row span-two"><label>Link</label><input [(ngModel)]="editEvent.link" class="form-input" /></div>
+                        <div class="form-row span-two"><label>Description</label><textarea [(ngModel)]="editEvent.description" class="form-input form-textarea" rows="3"></textarea></div>
+                      </div>
+                      @if (selectedFileName(editEventFile)) {
+                        <div class="field-key">Selected: {{ selectedFileName(editEventFile) }}</div>
+                      }
+                      <div class="form-actions">
+                        <button class="btn-save sm" (click)="saveEvent(event.id)">Save</button>
+                        <button class="btn-cancel sm" (click)="editingEventId.set(null)">Cancel</button>
+                      </div>
+                    </div>
+                  } @else {
+                    <img class="item-thumb" [src]="event.img" />
+                    <div class="item-info">
+                      <div class="item-title">{{ event.title }}</div>
+                      <div class="item-sub">{{ event.date }} | {{ event.category }} | {{ event.badgeClass }}</div>
+                      <div class="item-bio">{{ truncate(event.description, 140) }}</div>
+                    </div>
+                    <div class="item-actions">
+                      <button class="btn-edit" (click)="startEditEvent(event)">Edit</button>
+                      <button class="btn-delete" (click)="deleteEvent(event.id)">Delete</button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'gallery') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Gallery Images</h3>
+                <p>Manage the slideshow and gallery thumbnails on the homepage. Uploaded files are stored in public/uploads/gallery.</p>
+              </div>
+              <button class="btn-add" (click)="showGalleryAdd.set(!showGalleryAdd())">+ Add Image</button>
+            </div>
+
+            @if (galleryError()) {
+              <div class="gallery-status gallery-error">{{ galleryError() }}</div>
+            }
+
+            @if (galleryBusy()) {
+              <div class="gallery-status">Processing gallery request...</div>
+            }
+
+            @if (showGalleryAdd()) {
+              <div class="form-section-block">
+                <div class="form-row">
+                  <label>Image File *</label>
+                  <input type="file" accept="image/*" class="form-input" (change)="onNewGalleryFileSelected($event)" />
+                </div>
+                <div class="form-row">
+                  <label>Caption</label>
+                  <input [(ngModel)]="newGallery.caption" placeholder="Enter caption" class="form-input" />
+                </div>
+                <div class="form-actions">
+                  <button class="btn-save" [disabled]="galleryBusy()" (click)="addGallery()">Add Image</button>
+                  <button class="btn-cancel" [disabled]="galleryBusy()" (click)="cancelGalleryAdd()">Cancel</button>
+                </div>
+              </div>
+            }
+
+            <div class="items-list">
+              @for (item of galleryItems(); track item.id) {
+                <div class="item-row">
+                  @if (editingGalleryId() === item.id) {
+                    <img class="item-thumb" [src]="editGallery.src || item.src" loading="lazy" />
+                    <div class="item-edit-fields">
+                      <div class="form-row"><label>Replace Image</label><input type="file" accept="image/*" class="form-input" (change)="onEditGalleryFileSelected($event)" /></div>
+                      <div class="form-row"><label>Caption</label><input [(ngModel)]="editGallery.caption" class="form-input" /></div>
+                      <div class="form-actions">
+                        <button class="btn-save sm" [disabled]="galleryBusy()" (click)="saveGallery(item.id)">Save</button>
+                        <button class="btn-cancel sm" [disabled]="galleryBusy()" (click)="cancelGalleryEdit()">Cancel</button>
+                      </div>
+                    </div>
+                  } @else {
+                    <img class="item-thumb" [src]="item.src" loading="lazy" />
+                    <div class="item-info">
+                      <div class="item-title">{{ item.caption || '(no caption)' }}</div>
+                      <div class="item-sub">{{ item.src }}</div>
+                    </div>
+                    <div class="item-actions">
+                      <button class="btn-edit" [disabled]="galleryBusy()" (click)="startEditGallery(item)">Edit</button>
+                      <button class="btn-delete" [disabled]="galleryBusy()" (click)="deleteGallery(item.id)">Delete</button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'directory') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Directory Entries</h3>
+                <p>Manage public hostel and crematory directory entries shown in the directory section.</p>
+              </div>
+              <button class="btn-add" (click)="showDirectoryAdd.set(!showDirectoryAdd())">+ Add Entry</button>
+            </div>
+
+            @if (showDirectoryAdd()) {
+              <div class="form-section-block">
+                <div class="form-grid-2">
+                  <div class="form-row"><label>Name</label><input [(ngModel)]="newDirectoryEntry.name" class="form-input" /></div>
+                  <div class="form-row">
+                    <label>Type</label>
+                    <select [(ngModel)]="newDirectoryEntry.type" class="form-input">
+                      <option value="hostel">hostel</option>
+                      <option value="crematory">crematory</option>
+                    </select>
+                  </div>
+                  <div class="form-row"><label>State</label><input [(ngModel)]="newDirectoryEntry.state" class="form-input" /></div>
+                  <div class="form-row"><label>District</label><input [(ngModel)]="newDirectoryEntry.district" class="form-input" /></div>
+                  <div class="form-row span-two"><label>Address</label><textarea [(ngModel)]="newDirectoryEntry.address" class="form-input form-textarea" rows="3"></textarea></div>
+                  <div class="form-row span-two"><label>Contact</label><input [(ngModel)]="newDirectoryEntry.contact" class="form-input" /></div>
+                </div>
+                <div class="form-actions">
+                  <button class="btn-save" (click)="addDirectoryEntry()">Save Entry</button>
+                  <button class="btn-cancel" (click)="showDirectoryAdd.set(false)">Cancel</button>
+                </div>
+              </div>
+            }
+
+            <div class="items-list">
+              @for (entry of directoryItems(); track entry.id) {
+                <div class="item-row">
+                  @if (editingDirectoryId() === entry.id) {
+                    <div class="item-edit-fields">
+                      <div class="form-grid-2">
+                        <div class="form-row"><label>Name</label><input [(ngModel)]="editDirectoryEntry.name" class="form-input" /></div>
+                        <div class="form-row">
+                          <label>Type</label>
+                          <select [(ngModel)]="editDirectoryEntry.type" class="form-input">
+                            <option value="hostel">hostel</option>
+                            <option value="crematory">crematory</option>
+                          </select>
+                        </div>
+                        <div class="form-row"><label>State</label><input [(ngModel)]="editDirectoryEntry.state" class="form-input" /></div>
+                        <div class="form-row"><label>District</label><input [(ngModel)]="editDirectoryEntry.district" class="form-input" /></div>
+                        <div class="form-row span-two"><label>Address</label><textarea [(ngModel)]="editDirectoryEntry.address" class="form-input form-textarea" rows="3"></textarea></div>
+                        <div class="form-row span-two"><label>Contact</label><input [(ngModel)]="editDirectoryEntry.contact" class="form-input" /></div>
+                      </div>
+                      <div class="form-actions">
+                        <button class="btn-save sm" (click)="saveDirectoryEntry(entry.id)">Save</button>
+                        <button class="btn-cancel sm" (click)="editingDirectoryId.set(null)">Cancel</button>
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="item-info">
+                      <div class="item-title">{{ entry.name }}</div>
+                      <div class="item-sub">{{ entry.type }} | {{ entry.state }} | {{ entry.district }}</div>
+                      <div class="item-bio">{{ truncate(entry.address, 140) }}</div>
+                    </div>
+                    <div class="item-actions">
+                      <button class="btn-edit" (click)="startEditDirectoryEntry(entry)">Edit</button>
+                      <button class="btn-delete" (click)="deleteDirectoryEntry(entry.id)">Delete</button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'ticker') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Announcements</h3>
+                <p>Items here scroll in the announcement ticker on the homepage.</p>
+              </div>
+              <button class="btn-add" (click)="showTickerAdd.set(!showTickerAdd())">+ Add Announcement</button>
+            </div>
+
+            @if (showTickerAdd()) {
+              <div class="form-section-block">
+                <div class="form-row">
+                  <label>Announcement Text</label>
+                  <input [(ngModel)]="newTickerText" placeholder="Enter announcement text..." class="form-input" />
+                </div>
+                <div class="form-actions">
+                  <button class="btn-save" (click)="addTicker()">Add</button>
+                  <button class="btn-cancel" (click)="showTickerAdd.set(false)">Cancel</button>
+                </div>
+              </div>
+            }
+
+            @if (tickerItems().length === 0) {
+              <div class="empty-state"><span>📢</span><p>No announcements yet.</p></div>
+            }
+
+            <div class="items-list">
+              @for (t of tickerItems(); track t.id) {
+                <div class="item-row ticker-row">
+                  @if (editingTickerId() === t.id) {
+                    <div class="item-edit-fields full-width-edit">
+                      <div class="form-row"><label>Announcement</label><input [(ngModel)]="editTickerText" class="form-input" /></div>
+                      <div class="form-actions">
+                        <button class="btn-save sm" (click)="saveTicker(t.id)">Save</button>
+                        <button class="btn-cancel sm" (click)="editingTickerId.set(null)">Cancel</button>
+                      </div>
+                    </div>
+                  } @else {
+                    <span class="ticker-icon">📢</span>
+                    <div class="item-info"><div class="item-title">{{ t.text }}</div></div>
+                    <div class="item-actions">
+                      <button class="btn-edit" (click)="startEditTicker(t)">Edit</button>
+                      <button class="btn-delete" (click)="deleteTicker(t.id)">Delete</button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'scholarships') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>All Scholarship Applications</h3>
+                <p>Review submitted applications with pagination, export the list to Excel, or download all uploaded files as a ZIP named with student name and Aadhaar number.</p>
+              </div>
+              <div class="form-actions compact-actions">
+                <button class="btn-save" [disabled]="scholarshipLoading()" (click)="loadScholarshipApplications(scholarshipPage())">Refresh</button>
+                <button class="btn-add" [disabled]="scholarshipExporting()" (click)="exportScholarshipsToExcel()">
+                  @if (scholarshipExporting()) { Exporting... } @else { Download Excel }
+                </button>
+                <button class="btn-add" [disabled]="scholarshipZipExporting()" (click)="downloadScholarshipUploadsZip()">
+                  @if (scholarshipZipExporting()) { Preparing ZIP... } @else { Download ZIP }
+                </button>
+              </div>
+            </div>
+
+            @if (scholarshipError()) {
+              <div class="gallery-status gallery-error">{{ scholarshipError() }}</div>
+            }
+
+            @if (scholarshipLoading()) {
+              <div class="gallery-status">Loading scholarship applications...</div>
+            }
+
+            @if (!scholarshipLoading() && scholarshipSummary().totalApplications > 0) {
+              <div class="scholarship-dashboard">
+                <div class="scholarship-summary-top-grid">
+                  <article class="scholarship-summary-card scholarship-summary-card--accent">
+                    <span class="scholarship-card-label">Total No. of Applications Received</span>
+                    <strong class="scholarship-card-value">{{ scholarshipSummary().totalApplications }}</strong>
+                  </article>
+
+                  <article class="scholarship-summary-card scholarship-summary-card--pill">
+                    <span class="scholarship-card-label">Total No. of Boys</span>
+                    <strong class="scholarship-card-value">{{ scholarshipSummary().boys }}</strong>
+                  </article>
+
+                  <article class="scholarship-summary-card scholarship-summary-card--pill">
+                    <span class="scholarship-card-label">Total No. of Girls</span>
+                    <strong class="scholarship-card-value">{{ scholarshipSummary().girls }}</strong>
+                  </article>
+
+                  <article class="scholarship-summary-card scholarship-summary-card--compact scholarship-summary-card--board">
+                    <span class="scholarship-card-label">Board Wise</span>
+                    <div class="scholarship-board-list">
+                      @for (board of scholarshipSummary().boards; track board.key) {
+                        <div class="scholarship-board-row">
+                          <span>{{ board.label }}</span>
+                          <span>B: {{ board.boys }}</span>
+                          <span>G: {{ board.girls }}</span>
+                          <strong>Total: {{ board.total }}</strong>
+                        </div>
+                      }
+                    </div>
+                  </article>
+                </div>
+
+                <div class="scholarship-summary-mid-grid">
+                  <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--detail">
+                    <span class="scholarship-card-label">10th Std</span>
+                    <div class="scholarship-card-lines">
+                      <span>Boys: {{ scholarshipSummary().tenth.boys }}</span>
+                      <span>Girls: {{ scholarshipSummary().tenth.girls }}</span>
+                      <span>Total: {{ scholarshipSummary().tenth.total }}</span>
+                    </div>
+                  </article>
+
+                  <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--detail">
+                    <span class="scholarship-card-label">12th Std</span>
+                    <div class="scholarship-card-lines">
+                      <span>Boys: {{ scholarshipSummary().twelfth.boys }}</span>
+                      <span>Girls: {{ scholarshipSummary().twelfth.girls }}</span>
+                      <span>Total: {{ scholarshipSummary().twelfth.total }}</span>
+                    </div>
+                  </article>
+
+                  <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--detail">
+                    <span class="scholarship-card-label">Out of Out</span>
+                    <div class="scholarship-card-lines">
+                      <span>10th: {{ scholarshipSummary().outOfOut.tenth }}</span>
+                      <span>12th: {{ scholarshipSummary().outOfOut.twelfth }}</span>
+                      <span>Total: {{ scholarshipSummary().outOfOut.total }}</span>
+                    </div>
+                  </article>
+                </div>
+
+                <div class="scholarship-range-grid">
+                  @for (range of scholarshipSummary().ranges; track range.key) {
+                    <article class="scholarship-range-card">
+                      <h4>{{ range.label }}</h4>
+                      <div class="scholarship-range-lines">
+                        <span>10th B: {{ range.tenth.boys }} G: {{ range.tenth.girls }}</span>
+                        <span>12th B: {{ range.twelfth.boys }} G: {{ range.twelfth.girls }}</span>
+                      </div>
+                    </article>
+                  }
+                </div>
+
+                <!-- <div class="scholarship-dump-strip">
+                  <span class="scholarship-dump-label">Excel or CSV Dump</span>
+                  <div class="scholarship-dump-tags">
+                    <span>District wise</span>
+                    <span>Taluk wise</span>
+                    <span>Income wise</span>
+                  </div>
+                  @if (scholarshipSummary().others > 0) {
+                    <p>{{ scholarshipSummary().others }} applications use a gender value outside the boys and girls counters.</p>
+                  }
+                </div> -->
+              </div>
+            }
+
+            @if (!scholarshipLoading() && scholarshipApplications().length === 0) {
+              <div class="empty-state"><span>🎓</span><p>No scholarship applications found.</p></div>
+            }
+
+            @if (scholarshipApplications().length > 0) {
+              <div class="scholarship-meta">Showing page {{ scholarshipPage() }} of {{ scholarshipTotalPages() || 1 }} | Total {{ scholarshipTotalItems() }} applications</div>
+
+              <div class="scholarship-table-wrap">
+                <table class="scholarship-table">
+                  <thead>
+                    <tr>
+                      <th>App No</th>
+                      <th>Student</th>
+                      <th>Registration</th>
+                      <th>Mobile</th>
+                      <th>Address</th>
+                      <th>Academic</th>
+                      <th>Submitted</th>
+                      <th>Images</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (item of scholarshipApplications(); track item._id) {
+                      <tr>
+                        <td>
+                          <div class="td-title">{{ item.applicationNumber }}</div>
+                          <div class="td-sub">{{ item.status }}</div>
+                        </td>
+                        <td>
+                          <div class="td-title">{{ item.firstName }} {{ item.middleName }} {{ item.lastName }}</div>
+                          <div class="td-sub">{{ item.gender }} | {{ item.registrationNo }}</div>
+                          <div class="td-sub">Father: {{ item.fatherName }}</div>
+                          <div class="td-sub">Mother: {{ item.motherName }}</div>
+                          <div class="td-sub">Aadhaar: {{ item.aadhaarNumber }}</div>
+                        </td>
+                        <td>{{ item.registrationNo }}</td>
+                        <td>{{ item.mobile }}</td>
+                        <td>{{ item.village }}, {{ item.taluk }}, {{ item.district }}, {{ item.state }} - {{ item.pinCode }}</td>
+                        <td>
+                          <div class="td-title">{{ item.board }} | {{ item.standard }}</div>
+                          <div class="td-sub">{{ item.marksObtained }}/{{ item.totalMarks }} ({{ item.percentage }}%)</div>
+                        </td>
+                        <td>{{ item.submittedAt | date:'medium' }}</td>
+                        <td>
+                          <div class="scholarship-image-grid">
+                            <a [href]="imageUrl(item.profilePhotoUrl)" target="_blank" rel="noopener noreferrer" title="Open profile photo">
+                              <img [src]="imageUrl(item.profilePhotoUrl)" alt="Profile" />
+                              <span>Photo</span>
+                            </a>
+                            <a [href]="imageUrl(item.casteCertificateUrl)" target="_blank" rel="noopener noreferrer" title="Open caste certificate">
+                              <img [src]="imageUrl(item.casteCertificateUrl)" alt="Caste certificate" />
+                              <span>Caste</span>
+                            </a>
+                            <a [href]="imageUrl(item.marksCardUrl)" target="_blank" rel="noopener noreferrer" title="Open marks card">
+                              <img [src]="imageUrl(item.marksCardUrl)" alt="Marks card" />
+                              <span>Marks</span>
+                            </a>
+                            <a [href]="imageUrl(item.aadhaarOfflineFileUrl)" target="_blank" rel="noopener noreferrer" title="Open Aadhaar offline file" class="scholarship-file-tile">
+                              <strong>Aadhaar</strong>
+                              <span>XML/ZIP</span>
+                            </a>
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="pager-row">
+                <button class="btn-cancel" [disabled]="scholarshipPage() <= 1 || scholarshipLoading()" (click)="goToScholarshipPage(scholarshipPage() - 1)">Previous</button>
+                <span>Page {{ scholarshipPage() }} / {{ scholarshipTotalPages() || 1 }}</span>
+                <button class="btn-cancel" [disabled]="scholarshipPage() >= scholarshipTotalPages() || scholarshipLoading()" (click)="goToScholarshipPage(scholarshipPage() + 1)">Next</button>
+              </div>
+            }
+          </section>
+        }
+
+        @if (activeTab() === 'founders') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Founder Cards</h3>
+                <p>Manage founder and key person cards shown in the about section.</p>
+              </div>
+              <button class="btn-add" (click)="showFounderAdd.set(!showFounderAdd())">+ Add Person</button>
+            </div>
+
+            @if (showFounderAdd()) {
+              <div class="form-section-block">
+                <div class="form-grid-2">
+                  <div class="form-row"><label>Name *</label><input [(ngModel)]="newFounder.name" placeholder="Full name" class="form-input" /></div>
+                  <div class="form-row"><label>Title / Role</label><input [(ngModel)]="newFounder.title" placeholder="e.g. National President" class="form-input" /></div>
+                  <div class="form-row span-two"><label>Photo *</label><input type="file" accept="image/*" class="form-input" (change)="onNewFounderFileSelected($event)" /></div>
+                </div>
+                @if (selectedFileName(newFounderFile)) {
+                  <div class="field-key">Selected: {{ selectedFileName(newFounderFile) }}</div>
+                }
+                <div class="form-row"><label>Biography</label><textarea [(ngModel)]="newFounder.bio" placeholder="Brief biography..." class="form-input form-textarea" rows="3"></textarea></div>
+                <div class="form-actions">
+                  <button class="btn-save" (click)="addFounder()">Add Person</button>
+                  <button class="btn-cancel" (click)="showFounderAdd.set(false)">Cancel</button>
+                </div>
+              </div>
+            }
+
+            <div class="items-list">
+              @for (f of founderItems(); track f.id) {
+                <div class="item-row founder-row">
+                  @if (editingFounderId() === f.id) {
+                    <img class="founder-thumb" [src]="editFounder.img || f.img" />
+                    <div class="item-edit-fields">
+                      <div class="form-grid-2">
+                        <div class="form-row"><label>Name</label><input [(ngModel)]="editFounder.name" class="form-input" /></div>
+                        <div class="form-row"><label>Title</label><input [(ngModel)]="editFounder.title" class="form-input" /></div>
+                        <div class="form-row span-two"><label>Replace Photo</label><input type="file" accept="image/*" class="form-input" (change)="onEditFounderFileSelected($event)" /></div>
+                      </div>
+                      @if (selectedFileName(editFounderFile)) {
+                        <div class="field-key">Selected: {{ selectedFileName(editFounderFile) }}</div>
+                      }
+                      <div class="form-row"><label>Bio</label><textarea [(ngModel)]="editFounder.bio" class="form-input form-textarea" rows="3"></textarea></div>
+                      <div class="form-actions">
+                        <button class="btn-save sm" (click)="saveFounder(f.id)">Save</button>
+                        <button class="btn-cancel sm" (click)="editingFounderId.set(null)">Cancel</button>
+                      </div>
+                    </div>
+                  } @else {
+                    <img class="founder-thumb" [src]="f.img" />
+                    <div class="item-info">
+                      <div class="item-title">{{ f.name }}</div>
+                      <div class="item-sub">{{ f.title }}</div>
+                      @if (f.bio) { <div class="item-bio">{{ truncate(f.bio) }}</div> }
+                    </div>
+                    <div class="item-actions">
+                      <button class="btn-edit" (click)="startEditFounder(f)">Edit</button>
+                      <button class="btn-delete" (click)="deleteFounder(f.id)">Delete</button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'hostels') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Community Hostels</h3>
+                <p>Hostels added here appear in the dedicated public hostel section on the website.</p>
+              </div>
+              <button class="btn-add" (click)="showHostelAdd.set(!showHostelAdd())">+ Add Hostel</button>
+            </div>
+
+            @if (showHostelAdd()) {
+              <div class="form-section-block">
+                <div class="form-grid-2">
+                  <div class="form-row"><label>Hostel Name *</label><input [(ngModel)]="newHostel.name" placeholder="Sri Basaveshwara Hostel" class="form-input" /></div>
+                  <div class="form-row"><label>Location</label><input [(ngModel)]="newHostel.location" placeholder="City, State" class="form-input" /></div>
+                  <div class="form-row"><label>Capacity</label><input [(ngModel)]="newHostel.capacity" placeholder="e.g. 120 students" class="form-input" /></div>
+                  <div class="form-row"><label>Contact</label><input [(ngModel)]="newHostel.contact" placeholder="+91 XXXXX XXXXX" class="form-input" /></div>
+                  <div class="form-row span-two"><label>Photo *</label><input type="file" accept="image/*" class="form-input" (change)="onNewHostelFileSelected($event)" /></div>
+                </div>
+                @if (selectedFileName(newHostelFile)) {
+                  <div class="field-key">Selected: {{ selectedFileName(newHostelFile) }}</div>
+                }
+                <div class="form-row"><label>Description</label><textarea [(ngModel)]="newHostel.description" placeholder="Brief description..." class="form-input form-textarea" rows="3"></textarea></div>
+                <div class="form-actions">
+                  <button class="btn-save" (click)="addHostel()">Add Hostel</button>
+                  <button class="btn-cancel" (click)="showHostelAdd.set(false)">Cancel</button>
+                </div>
+              </div>
+            }
+
+            @if (hostelItems().length === 0) {
+              <div class="empty-state">
+                <span>🏨</span>
+                <p>No hostels added yet.</p>
+              </div>
+            }
+
+            <div class="items-list">
+              @for (h of hostelItems(); track h.id) {
+                <div class="item-row hostel-row">
+                  @if (editingHostelId() === h.id) {
+                    @if (editHostel.img) { <img class="founder-thumb" [src]="editHostel.img" /> }
+                    <div class="item-edit-fields">
+                      <div class="form-grid-2">
+                        <div class="form-row"><label>Name</label><input [(ngModel)]="editHostel.name" class="form-input" /></div>
+                        <div class="form-row"><label>Location</label><input [(ngModel)]="editHostel.location" class="form-input" /></div>
+                        <div class="form-row"><label>Capacity</label><input [(ngModel)]="editHostel.capacity" class="form-input" /></div>
+                        <div class="form-row"><label>Contact</label><input [(ngModel)]="editHostel.contact" class="form-input" /></div>
+                        <div class="form-row span-two"><label>Replace Photo</label><input type="file" accept="image/*" class="form-input" (change)="onEditHostelFileSelected($event)" /></div>
+                      </div>
+                      @if (selectedFileName(editHostelFile)) {
+                        <div class="field-key">Selected: {{ selectedFileName(editHostelFile) }}</div>
+                      }
+                      <div class="form-row"><label>Description</label><textarea [(ngModel)]="editHostel.description" class="form-input form-textarea" rows="3"></textarea></div>
+                      <div class="form-actions">
+                        <button class="btn-save sm" (click)="saveHostel(h.id)">Save</button>
+                        <button class="btn-cancel sm" (click)="editingHostelId.set(null)">Cancel</button>
+                      </div>
+                    </div>
+                  } @else {
+                    @if (h.img) { <img class="founder-thumb" [src]="h.img" /> }
+                    <div class="item-info">
+                      <div class="item-title">{{ h.name }}</div>
+                      <div class="item-sub">
+                        @if (h.location) { 📍 {{ h.location }} }
+                        @if (h.capacity) { | 👥 {{ h.capacity }} }
+                      </div>
+                      @if (h.contact) { <div class="item-sub">📞 {{ h.contact }}</div> }
+                      @if (h.description) { <div class="item-bio">{{ truncate(h.description) }}</div> }
+                    </div>
+                    <div class="item-actions">
+                      <button class="btn-edit" (click)="startEditHostel(h)">Edit</button>
+                      <button class="btn-delete" (click)="deleteHostel(h.id)">Delete</button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'footer') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Footer Details</h3>
+                <p>Update the footer organisation block, links, and contact information.</p>
+              </div>
+              <button class="btn-save" (click)="saveFooterContent()">Save Footer</button>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-row"><label>Logo Symbol</label><input [(ngModel)]="footerContent.logoSymbol" class="form-input" /></div>
+              <div class="form-row"><label>Organisation Name Kannada</label><input [(ngModel)]="footerContent.orgNameKn" class="form-input" /></div>
+              <div class="form-row span-two"><label>Organisation Name English</label><input [(ngModel)]="footerContent.orgNameEn" class="form-input" /></div>
+              <div class="form-row"><label>Facebook URL</label><input [(ngModel)]="footerContent.facebookUrl" class="form-input" /></div>
+              <div class="form-row"><label>Twitter URL</label><input [(ngModel)]="footerContent.twitterUrl" class="form-input" /></div>
+              <div class="form-row"><label>YouTube URL</label><input [(ngModel)]="footerContent.youtubeUrl" class="form-input" /></div>
+              <div class="form-row"><label>Instagram URL</label><input [(ngModel)]="footerContent.instagramUrl" class="form-input" /></div>
+              <div class="form-row span-two"><label>Address</label><textarea [(ngModel)]="footerContent.address" class="form-input form-textarea" rows="4"></textarea></div>
+              <div class="form-row"><label>Phone</label><input [(ngModel)]="footerContent.phone" class="form-input" /></div>
+              <div class="form-row"><label>Email</label><input [(ngModel)]="footerContent.email" class="form-input" /></div>
+            </div>
+          </section>
+        }
+      </div>
+    </div>
+  </main>
+</div>

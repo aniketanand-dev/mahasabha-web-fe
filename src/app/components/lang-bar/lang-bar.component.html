@@ -1,0 +1,17 @@
+<div class="lang-bar">
+  <span>{{ lang.t('langbar.tagline') }}</span>
+  <div class="langs">
+    @for (item of languages; track item.code) {
+      <button class="lang-btn" [class.active]="lang.current() === item.code" (click)="setLang(item.code)">
+        {{ item.label }}
+      </button>
+    }
+    <span class="lang-divider">|</span>
+    <select class="all-lang-select" (change)="onAllLangChange($event)">
+      <option value="">🌐 All Languages</option>
+      @for (item of allLanguages; track item.code) {
+        <option [value]="item.code">{{ item.label }}</option>
+      }
+    </select>
+  </div>
+</div>

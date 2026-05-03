@@ -1,0 +1,12 @@
+.bhavan-section { background: white; }
+.bhavan-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
+.bhavan-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+  img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 2px; }
+  img:first-child { grid-column: 1/-1; aspect-ratio: 16/7; }
+}
+.bhavan-info {
+  h3 { font-family: 'Cinzel', serif; font-size: 1.3rem; color: var(--maroon); margin-bottom: 1rem; }
+  p { font-size: 0.88rem; color: var(--text-light); line-height: 1.8; margin-bottom: 1rem; }
+}
+.bhavan-address { background: var(--ivory); border-left: 3px solid var(--gold); padding: 1rem 1.2rem; font-size: 0.83rem; color: var(--text-mid); line-height: 1.8; }
+@media (max-width: 900px) { .bhavan-inner { grid-template-columns: 1fr; } }

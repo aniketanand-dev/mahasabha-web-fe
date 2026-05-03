@@ -1,0 +1,24 @@
+<section class="bhavan-section">
+  <div class="container">
+    <h2 class="section-title">{{ lang.t('bhavan.title') }}</h2>
+    <p class="section-subtitle">{{ lang.t('bhavan.subtitle') }}</p>
+    <div class="ornament">✦ ✦ ✦</div>
+    <div class="bhavan-inner">
+      <div class="bhavan-photos">
+        <img [src]="data.bhavanContent().imageUrls[0]" alt="Bhavan Front View">
+        <img [src]="data.bhavanContent().imageUrls[1]" alt="Bhavan Hall">
+        <img [src]="data.bhavanContent().imageUrls[2]" alt="Bhavan Interior">
+      </div>
+      <div class="bhavan-info">
+        <h3>{{ lang.t('bhavan.infoTitle') }}</h3>
+        <p>{{ lang.t('bhavan.info1') }}</p>
+        <p>{{ lang.t('bhavan.info2') }}</p>
+        <div class="bhavan-address">
+          📍 <strong>{{ lang.t('bhavan.addressLabel') }}</strong><br>
+          <span [innerHTML]="data.bhavanContent().address.replaceAll('\n', '<br>')"></span><br><br>
+          📞 {{ data.bhavanContent().phone }} &nbsp;|&nbsp; 📧 {{ data.bhavanContent().email }}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
