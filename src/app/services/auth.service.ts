@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { buildApiUrl } from './api-base';
 
 interface AuthApiResponse<T> {
   success: boolean;
@@ -29,7 +30,7 @@ interface SignupResponse {
 
 const AUTH_TOKEN_STORAGE_KEY = 'admin_auth_token';
 const AUTH_USER_STORAGE_KEY = 'admin_auth_user';
-const AUTH_API_BASE = '/api/v1/auth';
+const AUTH_API_BASE = buildApiUrl('/api/v1/auth');
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {

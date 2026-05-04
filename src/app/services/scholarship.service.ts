@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { buildApiUrl } from './api-base';
 
 export interface ScholarshipApplicationPayload {
   academicYearId: string;
@@ -101,7 +102,7 @@ interface ScholarshipAcademicYearsApiResponse {
   data: ScholarshipAcademicYearsApiData;
 }
 
-const SCHOLARSHIP_API_BASE = '/api/v1/scholarships';
+const SCHOLARSHIP_API_BASE = buildApiUrl('/api/v1/scholarships');
 
 @Injectable({ providedIn: 'root' })
 export class ScholarshipService {

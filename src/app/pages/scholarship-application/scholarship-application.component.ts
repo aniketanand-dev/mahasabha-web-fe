@@ -447,6 +447,10 @@ export class ScholarshipApplicationComponent {
   }
 
   async fetchAadhaarData(): Promise<void> {
+    if (this.aadhaarLoading()) {
+      return;
+    }
+
     const aadhaarFile = this.uploads.aadhaarOfflineFile.file;
     const aadhaarShareCode = String(this.form.controls.aadhaarShareCode.value || '').trim();
 

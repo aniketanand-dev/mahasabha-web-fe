@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
+import { buildApiUrl, buildManagedAssetUrl } from './api-base';
 
 interface AdminApiErrorResponse {
   success?: boolean;
@@ -556,7 +557,7 @@ export class AdminDataService {
   }
 
   private uploadApiUrl(path: string) {
-    return path;
+    return buildApiUrl(path);
   }
 
   private authHeaders(): Record<string, string> | undefined {
@@ -583,7 +584,7 @@ export class AdminDataService {
 
   private toManagedAssetUrl(src: string) {
     const managedPath = this.toManagedPath(src);
-    return managedPath ?? src;
+    return managedPath ? buildManagedAssetUrl(managedPath) : src;
   }
 
   private normalizeGallery(items: AdminGalleryItem[]) {
@@ -1019,7 +1020,7 @@ export class AdminDataService {
     const search = params.search?.trim() || '';
 
     const response = await firstValueFrom(this.http.get<ScholarshipListApiResponse>(
-      '/api/v1/scholarships/applications',
+      buildApiUrl('/api/v1/scholarships/applications'),
       {
         params: {
           page: String(page),
@@ -1042,7 +1043,7 @@ export class AdminDataService {
     let response: ScholarshipAcademicYearsApiResponse;
     try {
       response = await firstValueFrom(this.http.get<ScholarshipAcademicYearsApiResponse>(
-        '/api/v1/scholarships/academic-years',
+        buildApiUrl('/api/v1/scholarships/academic-years'),
         {
           headers: this.authHeaders(),
         },
@@ -1055,7 +1056,7 @@ export class AdminDataService {
   }
 
   async downloadScholarshipUploadsZip(academicYearId?: string) {
-    return firstValueFrom(this.http.get('/api/v1/scholarships/applications/export-zip', {
+    return firstValueFrom(this.http.get(buildApiUrl('/api/v1/scholarships/applications/export-zip'), {
       params: {
         academicYearId: academicYearId?.trim() || '',
       },
@@ -1066,7 +1067,7 @@ export class AdminDataService {
 
   async updateScholarshipApplicationStatus(id: string, status: ScholarshipStatus, rejectionComment = '') {
     const response = await firstValueFrom(this.http.patch<ScholarshipStatusUpdateApiResponse>(
-      `/api/v1/scholarships/applications/${id}/status`,
+      buildApiUrl(`/api/v1/scholarships/applications/${id}/status`),
       {
         status,
         rejectionComment,

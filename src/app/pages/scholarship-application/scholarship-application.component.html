@@ -140,7 +140,7 @@
 
           <div class="section-heading address-head">
             <p>Address Details</p>
-            <span>Village, taluk, district, state and PIN</span>
+            <span>Address, taluk, district, state and PIN</span>
           </div>
 
           <!-- <div class="address-example">
@@ -179,9 +179,9 @@
 
           <div class="form-grid two-cols">
             <label class="field">
-              <span>Village *</span>
-              <input type="text" formControlName="village" placeholder="Enter village" />
-              @if (controlHasError('village')) { <small>Village is required.</small> }
+              <span>Address *</span>
+              <input type="text" formControlName="village" placeholder="Flat No, Building, Village" />
+              @if (controlHasError('village')) { <small>Address is required.</small> }
             </label>
 
             <label class="field">
@@ -422,7 +422,7 @@
                 </label>
 
                 <button type="button" class="secondary-btn fetch-btn" [disabled]="aadhaarLoading()" (click)="fetchAadhaarData()">
-                  @if (aadhaarLoading()) { Fetching Aadhaar Data... } @else { Fetch Aadhaar Data }
+                  <span>{{ aadhaarLoading() ? 'Fetching Aadhaar Data...' : 'Fetch Aadhaar Data' }}</span>
                 </button>
               </div>
 

@@ -460,6 +460,10 @@
 .fetch-btn {
   justify-self: start;
   min-width: 190px;
+
+  span {
+    white-space: nowrap;
+  }
 }
 
 .aadhaar-card,

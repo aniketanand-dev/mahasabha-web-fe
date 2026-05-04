@@ -38,7 +38,7 @@
       }
 
       <button type="submit" class="btn-login" [disabled]="loading()">
-        @if (loading()) { Signing in… } @else { Sign In }
+        <span>{{ loading() ? 'Signing in...' : 'Sign In' }}</span>
       </button>
 
       <div class="auth-links">

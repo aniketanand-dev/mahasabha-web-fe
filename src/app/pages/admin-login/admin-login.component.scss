@@ -76,6 +76,10 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s, opacity 0.2s;
+  span {
+    display: inline-block;
+    white-space: nowrap;
+  }
   &:hover:not(:disabled) { background: #5a0b1a; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 }
