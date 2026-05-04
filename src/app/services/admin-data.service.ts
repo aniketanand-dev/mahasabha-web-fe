@@ -3,6 +3,11 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 
+interface AdminApiErrorResponse {
+  success?: boolean;
+  message?: string;
+}
+
 export interface AdminGalleryItem {
   id: number;
   src: string;
@@ -127,6 +132,7 @@ export interface AdminOrgNode {
 export interface AdminScholarshipApplication {
   _id: string;
   applicationNumber: string;
+  academicYearId: string;
   academicYear: string;
   registrationNo: string;
   firstName: string;
@@ -136,6 +142,7 @@ export interface AdminScholarshipApplication {
   fatherName: string;
   motherName: string;
   mobile: string;
+  emailId: string;
   village: string;
   taluk: string;
   district: string;
@@ -152,6 +159,8 @@ export interface AdminScholarshipApplication {
   marksCardUrl: string;
   aadhaarOfflineFileUrl: string;
   status: string;
+  rejectionComment?: string;
+  reviewedAt?: string | null;
   submittedAt: string;
 }
 
@@ -162,9 +171,21 @@ export interface AdminScholarshipPagination {
   totalPages: number;
 }
 
+export interface ScholarshipAcademicYearOption {
+  _id: string;
+  label: string;
+  startYear: number;
+}
+
+type ScholarshipStatus = 'pending' | 'accepted' | 'rejected';
+
 interface ScholarshipListApiData {
   items: AdminScholarshipApplication[];
   pagination: AdminScholarshipPagination;
+}
+
+interface ScholarshipAcademicYearsApiData {
+  items: ScholarshipAcademicYearOption[];
 }
 
 interface ScholarshipListApiResponse {
@@ -172,6 +193,37 @@ interface ScholarshipListApiResponse {
   message: string;
   data: ScholarshipListApiData;
 }
+
+interface ScholarshipAcademicYearsApiResponse {
+  success: boolean;
+  message: string;
+  data: ScholarshipAcademicYearsApiData;
+}
+
+interface ScholarshipStatusUpdateApiResponse {
+  success: boolean;
+  message: string;
+  data: AdminScholarshipApplication;
+}
+
+const normalizeScholarshipStatus = (status: string): ScholarshipStatus => {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'accepted' || normalized === 'rejected') {
+    return normalized;
+  }
+
+  return 'pending';
+};
+
+const normalizeScholarshipApplication = (item: AdminScholarshipApplication): AdminScholarshipApplication => {
+  const status = normalizeScholarshipStatus(item.status);
+
+  return {
+    ...item,
+    status,
+    rejectionComment: status === 'rejected' ? item.rejectionComment || '' : '',
+  };
+};
 
 export type AdminTextOverrides = Record<string, string>;
 
@@ -472,6 +524,12 @@ function saveValue<T>(key: string, data: T): void {
 export class AdminDataService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
+
+  private errorMessageFromApi(error: unknown, fallback: string): string {
+    const maybeError = error as { error?: AdminApiErrorResponse };
+    const message = maybeError?.error?.message;
+    return typeof message === 'string' && message.trim() ? message : fallback;
+  }
 
   textOverrides = signal<AdminTextOverrides>(loadValue('adm_text_overrides', {}));
   heroContent = signal<AdminHeroContent>(this.normalizeHeroContent(loadValue('adm_hero_content', DEFAULT_HERO_CONTENT)));
@@ -953,10 +1011,12 @@ export class AdminDataService {
     this.saveHostels(this.hostels().filter(item => item.id !== id));
   }
 
-  async getScholarshipApplications(params: { page?: number; limit?: number; all?: boolean } = {}) {
+  async getScholarshipApplications(params: { page?: number; limit?: number; all?: boolean; academicYearId?: string; search?: string } = {}) {
     const page = params.page ?? 1;
     const limit = params.limit ?? 10;
     const all = params.all === true;
+    const academicYearId = params.academicYearId?.trim() || '';
+    const search = params.search?.trim() || '';
 
     const response = await firstValueFrom(this.http.get<ScholarshipListApiResponse>(
       '/api/v1/scholarships/applications',
@@ -965,18 +1025,57 @@ export class AdminDataService {
           page: String(page),
           limit: String(limit),
           all: String(all),
+          academicYearId,
+          search,
         },
         headers: this.authHeaders(),
       },
     ));
 
-    return response.data;
+    return {
+      ...response.data,
+      items: response.data.items.map(normalizeScholarshipApplication),
+    };
   }
 
-  async downloadScholarshipUploadsZip() {
+  async getScholarshipAcademicYears() {
+    let response: ScholarshipAcademicYearsApiResponse;
+    try {
+      response = await firstValueFrom(this.http.get<ScholarshipAcademicYearsApiResponse>(
+        '/api/v1/scholarships/academic-years',
+        {
+          headers: this.authHeaders(),
+        },
+      ));
+    } catch (error) {
+      throw new Error(this.errorMessageFromApi(error, 'Unable to load academic years right now.'));
+    }
+
+    return response.data.items;
+  }
+
+  async downloadScholarshipUploadsZip(academicYearId?: string) {
     return firstValueFrom(this.http.get('/api/v1/scholarships/applications/export-zip', {
+      params: {
+        academicYearId: academicYearId?.trim() || '',
+      },
       headers: this.authHeaders(),
       responseType: 'blob',
     }));
+  }
+
+  async updateScholarshipApplicationStatus(id: string, status: ScholarshipStatus, rejectionComment = '') {
+    const response = await firstValueFrom(this.http.patch<ScholarshipStatusUpdateApiResponse>(
+      `/api/v1/scholarships/applications/${id}/status`,
+      {
+        status,
+        rejectionComment,
+      },
+      {
+        headers: this.authHeaders(),
+      },
+    ));
+
+    return normalizeScholarshipApplication(response.data);
   }
 }

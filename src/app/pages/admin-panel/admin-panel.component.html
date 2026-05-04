@@ -602,7 +602,7 @@
             <div class="card-head">
               <div>
                 <h3>Gallery Images</h3>
-                <p>Manage the slideshow and gallery thumbnails on the homepage. Uploaded files are stored in public/uploads/gallery.</p>
+                <p>Manage the slideshow and gallery thumbnails on the homepage. Uploaded files are stored in the backend uploads/gallery folder.</p>
               </div>
               <button class="btn-add" (click)="showGalleryAdd.set(!showGalleryAdd())">+ Add Image</button>
             </div>
@@ -796,6 +796,14 @@
                 <p>Review submitted applications with pagination, export the list to Excel, or download all uploaded files as a ZIP named with student name and Aadhaar number.</p>
               </div>
               <div class="form-actions compact-actions">
+                <label class="scholarship-filter-field">
+                  <span>Academic Year</span>
+                  <select [ngModel]="scholarshipSelectedAcademicYearId()" (ngModelChange)="onScholarshipAcademicYearChanged($event)" class="form-input scholarship-filter-select">
+                    @for (year of scholarshipAcademicYearOptions(); track year._id) {
+                      <option [value]="year._id">{{ year.label }}</option>
+                    }
+                  </select>
+                </label>
                 <button class="btn-save" [disabled]="scholarshipLoading()" (click)="loadScholarshipApplications(scholarshipPage())">Refresh</button>
                 <button class="btn-add" [disabled]="scholarshipExporting()" (click)="exportScholarshipsToExcel()">
                   @if (scholarshipExporting()) { Exporting... } @else { Download Excel }
@@ -816,38 +824,22 @@
 
             @if (!scholarshipLoading() && scholarshipSummary().totalApplications > 0) {
               <div class="scholarship-dashboard">
-                <div class="scholarship-summary-top-grid">
-                  <article class="scholarship-summary-card scholarship-summary-card--accent">
+                <div class="scholarship-kpi-grid">
+                  <article class="scholarship-summary-card scholarship-summary-card--accent scholarship-summary-card--kpi">
                     <span class="scholarship-card-label">Total No. of Applications Received</span>
                     <strong class="scholarship-card-value">{{ scholarshipSummary().totalApplications }}</strong>
                   </article>
 
-                  <article class="scholarship-summary-card scholarship-summary-card--pill">
+                  <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--kpi">
                     <span class="scholarship-card-label">Total No. of Boys</span>
                     <strong class="scholarship-card-value">{{ scholarshipSummary().boys }}</strong>
                   </article>
 
-                  <article class="scholarship-summary-card scholarship-summary-card--pill">
+                  <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--kpi">
                     <span class="scholarship-card-label">Total No. of Girls</span>
                     <strong class="scholarship-card-value">{{ scholarshipSummary().girls }}</strong>
                   </article>
 
-                  <article class="scholarship-summary-card scholarship-summary-card--compact scholarship-summary-card--board">
-                    <span class="scholarship-card-label">Board Wise</span>
-                    <div class="scholarship-board-list">
-                      @for (board of scholarshipSummary().boards; track board.key) {
-                        <div class="scholarship-board-row">
-                          <span>{{ board.label }}</span>
-                          <span>B: {{ board.boys }}</span>
-                          <span>G: {{ board.girls }}</span>
-                          <strong>Total: {{ board.total }}</strong>
-                        </div>
-                      }
-                    </div>
-                  </article>
-                </div>
-
-                <div class="scholarship-summary-mid-grid">
                   <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--detail">
                     <span class="scholarship-card-label">10th Std</span>
                     <div class="scholarship-card-lines">
@@ -876,16 +868,41 @@
                   </article>
                 </div>
 
-                <div class="scholarship-range-grid">
-                  @for (range of scholarshipSummary().ranges; track range.key) {
-                    <article class="scholarship-range-card">
-                      <h4>{{ range.label }}</h4>
-                      <div class="scholarship-range-lines">
-                        <span>10th B: {{ range.tenth.boys }} G: {{ range.tenth.girls }}</span>
-                        <span>12th B: {{ range.twelfth.boys }} G: {{ range.twelfth.girls }}</span>
-                      </div>
-                    </article>
-                  }
+                <div class="scholarship-insights-grid">
+                  <article class="scholarship-panel scholarship-panel--board">
+                    <div class="scholarship-panel-head">
+                      <h4>Board Wise</h4>
+                      <span>{{ scholarshipSummary().boards.length }} boards</span>
+                    </div>
+                    <div class="scholarship-board-list">
+                      @for (board of scholarshipSummary().boards; track board.key) {
+                        <div class="scholarship-board-row">
+                          <span class="scholarship-board-name">{{ board.label }}</span>
+                          <span>B: {{ board.boys }}</span>
+                          <span>G: {{ board.girls }}</span>
+                          <strong>{{ board.total }}</strong>
+                        </div>
+                      }
+                    </div>
+                  </article>
+
+                  <article class="scholarship-panel scholarship-panel--ranges">
+                    <div class="scholarship-panel-head">
+                      <h4>Percentage Distribution</h4>
+                      <span>{{ scholarshipSummary().ranges.length }} slabs</span>
+                    </div>
+                    <div class="scholarship-range-grid">
+                      @for (range of scholarshipSummary().ranges; track range.key) {
+                        <article class="scholarship-range-card">
+                          <h4>{{ range.label }}</h4>
+                          <div class="scholarship-range-lines">
+                            <span>10th B: {{ range.tenth.boys }} G: {{ range.tenth.girls }}</span>
+                            <span>12th B: {{ range.twelfth.boys }} G: {{ range.twelfth.girls }}</span>
+                          </div>
+                        </article>
+                      }
+                    </div>
+                  </article>
                 </div>
 
                 <!-- <div class="scholarship-dump-strip">
@@ -902,13 +919,36 @@
               </div>
             }
 
+            @if (!scholarshipLoading()) {
+              <div class="scholarship-table-toolbar">
+                <label class="scholarship-filter-field scholarship-search-field">
+                  <span>Search Student</span>
+                  <input
+                    class="form-input scholarship-filter-select"
+                    type="text"
+                    placeholder="Registration No or Aadhaar No"
+                    [ngModel]="scholarshipSearchDraft()"
+                    (ngModelChange)="onScholarshipSearchDraftChanged($event)"
+                  />
+                  <small class="scholarship-search-hint">Search starts after 3 characters.</small>
+                </label>
+                <div class="scholarship-table-toolbar-actions">
+                  @if (scholarshipSearchTerm()) {
+                    <button class="btn-cancel" [disabled]="scholarshipLoading()" (click)="clearScholarshipSearch()">Clear</button>
+                  }
+                </div>
+              </div>
+              <div class="scholarship-meta">Academic Year {{ scholarshipSelectedAcademicYearLabel() }} | Showing page {{ scholarshipPage() }} of {{ scholarshipTotalPages() || 1 }} | Total {{ scholarshipTotalItems() }} applications</div>
+              @if (scholarshipSearchTerm()) {
+                <div class="scholarship-search-meta">Search active for: <strong>{{ scholarshipSearchTerm() }}</strong></div>
+              }
+            }
+
             @if (!scholarshipLoading() && scholarshipApplications().length === 0) {
               <div class="empty-state"><span>🎓</span><p>No scholarship applications found.</p></div>
             }
 
             @if (scholarshipApplications().length > 0) {
-              <div class="scholarship-meta">Showing page {{ scholarshipPage() }} of {{ scholarshipTotalPages() || 1 }} | Total {{ scholarshipTotalItems() }} applications</div>
-
               <div class="scholarship-table-wrap">
                 <table class="scholarship-table">
                   <thead>
@@ -929,12 +969,14 @@
                         <td>
                           <div class="td-title">{{ item.applicationNumber }}</div>
                           <div class="td-sub">{{ item.status }}</div>
+                          <div class="td-sub">{{ item.academicYear }}</div>
                         </td>
                         <td>
                           <div class="td-title">{{ item.firstName }} {{ item.middleName }} {{ item.lastName }}</div>
                           <div class="td-sub">{{ item.gender }} | {{ item.registrationNo }}</div>
                           <div class="td-sub">Father: {{ item.fatherName }}</div>
                           <div class="td-sub">Mother: {{ item.motherName }}</div>
+                          <div class="td-sub">Email: {{ item.emailId }}</div>
                           <div class="td-sub">Aadhaar: {{ item.aadhaarNumber }}</div>
                         </td>
                         <td>{{ item.registrationNo }}</td>
@@ -942,27 +984,29 @@
                         <td>{{ item.village }}, {{ item.taluk }}, {{ item.district }}, {{ item.state }} - {{ item.pinCode }}</td>
                         <td>
                           <div class="td-title">{{ item.board }} | {{ item.standard }}</div>
-                          <div class="td-sub">{{ item.marksObtained }}/{{ item.totalMarks }} ({{ item.percentage }}%)</div>
+                          <div class="td-sub">Marks card verification available in image section</div>
                         </td>
                         <td>{{ item.submittedAt | date:'medium' }}</td>
                         <td>
-                          <div class="scholarship-image-grid">
-                            <a [href]="imageUrl(item.profilePhotoUrl)" target="_blank" rel="noopener noreferrer" title="Open profile photo">
-                              <img [src]="imageUrl(item.profilePhotoUrl)" alt="Profile" />
-                              <span>Photo</span>
-                            </a>
-                            <a [href]="imageUrl(item.casteCertificateUrl)" target="_blank" rel="noopener noreferrer" title="Open caste certificate">
-                              <img [src]="imageUrl(item.casteCertificateUrl)" alt="Caste certificate" />
-                              <span>Caste</span>
-                            </a>
-                            <a [href]="imageUrl(item.marksCardUrl)" target="_blank" rel="noopener noreferrer" title="Open marks card">
-                              <img [src]="imageUrl(item.marksCardUrl)" alt="Marks card" />
-                              <span>Marks</span>
-                            </a>
-                            <a [href]="imageUrl(item.aadhaarOfflineFileUrl)" target="_blank" rel="noopener noreferrer" title="Open Aadhaar offline file" class="scholarship-file-tile">
-                              <strong>Aadhaar</strong>
-                              <span>XML/ZIP</span>
-                            </a>
+                          <div class="scholarship-image-section">
+                            <div class="scholarship-image-grid">
+                              <button type="button" title="Open profile photo preview" (click)="openScholarshipApplicationImagePreview(item, 0)">
+                                <img [src]="imageUrl(item.profilePhotoUrl)" alt="Profile" />
+                                <span>Photo</span>
+                              </button>
+                              <button type="button" title="Open caste certificate preview" (click)="openScholarshipApplicationImagePreview(item, 1)">
+                                <img [src]="imageUrl(item.casteCertificateUrl)" alt="Caste certificate" />
+                                <span>Caste</span>
+                              </button>
+                              <button type="button" title="Open marks card preview" (click)="openScholarshipApplicationImagePreview(item, 2)">
+                                <img [src]="imageUrl(item.marksCardUrl)" alt="Marks card" />
+                                <span>Marks</span>
+                              </button>
+                              <a [href]="imageUrl(item.aadhaarOfflineFileUrl)" target="_blank" rel="noopener noreferrer" title="Open Aadhaar offline file" class="scholarship-file-tile">
+                                <strong>Aadhaar</strong>
+                                <span>XML/ZIP</span>
+                              </a>
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -975,6 +1019,122 @@
                 <button class="btn-cancel" [disabled]="scholarshipPage() <= 1 || scholarshipLoading()" (click)="goToScholarshipPage(scholarshipPage() - 1)">Previous</button>
                 <span>Page {{ scholarshipPage() }} / {{ scholarshipTotalPages() || 1 }}</span>
                 <button class="btn-cancel" [disabled]="scholarshipPage() >= scholarshipTotalPages() || scholarshipLoading()" (click)="goToScholarshipPage(scholarshipPage() + 1)">Next</button>
+              </div>
+            }
+
+            @if (scholarshipImagePreviewSrc()) {
+              <div class="scholarship-image-lightbox" (click)="closeScholarshipImagePreview()">
+                <div class="scholarship-image-lightbox-content" (click)="$event.stopPropagation()">
+                  <div class="scholarship-image-preview-head">
+                    <div>
+                      <h4>{{ scholarshipImagePreviewDetails()?.title || scholarshipImagePreviewAlt() }}</h4>
+                      @if (scholarshipImagePreviewDetails()?.registrationNo || scholarshipImagePreviewDetails()?.percentage !== undefined) {
+                        <div class="scholarship-image-preview-meta">
+                          @if (scholarshipImagePreviewDetails()?.registrationNo) {
+                            <div class="scholarship-image-preview-chip scholarship-image-preview-chip--wide">
+                              <span>Registration No</span>
+                              <strong>{{ scholarshipImagePreviewDetails()?.registrationNo }}</strong>
+                            </div>
+                          }
+                          @if (scholarshipImagePreviewDetails()?.percentage !== undefined) {
+                          <div class="scholarship-image-preview-chip">
+                            <span>Total</span>
+                            <strong>{{ scholarshipImagePreviewDetails()?.totalMarks }}</strong>
+                          </div>
+                          <div class="scholarship-image-preview-chip">
+                            <span>Obtained</span>
+                            <strong>{{ scholarshipImagePreviewDetails()?.marksObtained }}</strong>
+                          </div>
+                          <div class="scholarship-image-preview-chip">
+                            <span>Percentage</span>
+                            <strong>{{ scholarshipImagePreviewDetails()?.percentage }}%</strong>
+                          </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                  <div class="scholarship-image-toolbar">
+                    <span>{{ scholarshipImagePreviewIndex() + 1 }} / {{ scholarshipImagePreviewItems().length }}</span>
+                    <span>{{ (scholarshipImageZoom() * 100).toFixed(0) }}%</span>
+                    <button type="button" class="scholarship-image-toolbar-btn" [disabled]="scholarshipImageZoom() <= 0.5" (click)="zoomOutScholarshipImage()">-</button>
+                    <button type="button" class="scholarship-image-toolbar-btn" [disabled]="scholarshipImageZoom() >= 3" (click)="zoomInScholarshipImage()">+</button>
+                    <button type="button" class="scholarship-image-toolbar-btn" [disabled]="scholarshipImageZoom() === 1" (click)="resetScholarshipImageZoom()">Reset</button>
+                    <button type="button" class="scholarship-image-toolbar-btn scholarship-image-toolbar-btn-primary" (click)="downloadScholarshipPreviewImage()">Download</button>
+                  </div>
+                  <button type="button" class="scholarship-image-lightbox-close" aria-label="Close image preview" (click)="closeScholarshipImagePreview()">×</button>
+                  <div
+                    #scholarshipImageStage
+                    class="scholarship-image-lightbox-stage"
+                    [class.is-draggable]="scholarshipImageZoom() > 1"
+                    [class.is-panning]="isScholarshipImagePanning"
+                    (mousedown)="startScholarshipImagePan($event, scholarshipImageStage)"
+                  >
+                    <button
+                      type="button"
+                      class="scholarship-image-nav scholarship-image-nav--prev"
+                      aria-label="Show previous image"
+                      [disabled]="scholarshipImagePreviewIndex() <= 0"
+                      (click)="$event.stopPropagation(); showPreviousScholarshipImage()"
+                    >
+                      ‹
+                    </button>
+                    <img [src]="scholarshipImagePreviewSrc()" [alt]="scholarshipImagePreviewAlt()" [style.transform]="'scale(' + scholarshipImageZoom() + ')'" />
+                    <button
+                      type="button"
+                      class="scholarship-image-nav scholarship-image-nav--next"
+                      aria-label="Show next image"
+                      [disabled]="scholarshipImagePreviewIndex() >= scholarshipImagePreviewItems().length - 1"
+                      (click)="$event.stopPropagation(); showNextScholarshipImage()"
+                    >
+                      ›
+                    </button>
+                  </div>
+                  @if (scholarshipPreviewApplication(); as previewApplication) {
+                    <div class="scholarship-popup-review-panel">
+                      <div class="scholarship-popup-review-head">
+                        <div>
+                          <p class="scholarship-popup-review-eyebrow">Application Review</p>
+                          <strong>Update scholarship request status</strong>
+                        </div>
+                        <span class="scholarship-status-badge" [class.is-pending]="previewApplication.status === 'pending'" [class.is-accepted]="previewApplication.status === 'accepted'" [class.is-rejected]="previewApplication.status === 'rejected'">
+                          {{ scholarshipStatusLabel(previewApplication.status) }}
+                        </span>
+                      </div>
+                      <div class="scholarship-popup-review-grid" [class.has-rejection-comment]="scholarshipStatusDraft(previewApplication._id) === 'rejected'">
+                        <div class="scholarship-popup-review-field">
+                          <label>Decision</label>
+                          <select class="form-input scholarship-status-select scholarship-popup-status-select" [ngModel]="scholarshipStatusDraft(previewApplication._id)" (ngModelChange)="onScholarshipStatusDraftChanged(previewApplication._id, $event)">
+                            <option value="pending">Pending</option>
+                            <option value="accepted">Accepted</option>
+                            <option value="rejected">Rejected</option>
+                          </select>
+                        </div>
+                        @if (scholarshipStatusDraft(previewApplication._id) === 'rejected') {
+                          <div class="scholarship-popup-review-field scholarship-popup-review-field--comment">
+                            <label>Rejection Comment</label>
+                            <textarea
+                              class="form-input form-textarea scholarship-reject-textarea scholarship-popup-review-textarea"
+                              rows="3"
+                              placeholder="Enter a clear reason for rejection"
+                              [ngModel]="scholarshipCommentDraft(previewApplication._id)"
+                              (ngModelChange)="onScholarshipCommentDraftChanged(previewApplication._id, $event)"
+                            ></textarea>
+                          </div>
+                        }
+                        <div class="scholarship-popup-review-field scholarship-popup-review-field--action">
+                          <label>Apply Change</label>
+                          <button class="btn-save sm scholarship-popup-update-btn" [disabled]="scholarshipStatusUpdating()[previewApplication._id]" (click)="updateScholarshipStatus(previewApplication)">
+                            @if (scholarshipStatusUpdating()[previewApplication._id]) { Saving... } @else { Save Status }
+                          </button>
+                        </div>
+                      </div>
+                      @if (scholarshipStatusDraft(previewApplication._id) !== 'rejected' && previewApplication.rejectionComment) {
+                        <div class="scholarship-status-note scholarship-status-note--review">Previous rejection note: {{ previewApplication.rejectionComment }}</div>
+                      }
+                    </div>
+                  }
+                </div>
               </div>
             }
           </section>

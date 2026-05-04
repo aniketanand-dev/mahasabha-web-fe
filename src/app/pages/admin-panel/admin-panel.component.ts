@@ -1,4 +1,4 @@
-import { Component, computed, signal, inject } from '@angular/core';
+import { Component, HostListener, computed, signal, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -22,6 +22,7 @@ import {
   AdminPresidentNoteContent,
   AdminScholarshipApplication,
   AdminTicker,
+  ScholarshipAcademicYearOption,
 } from '../../services/admin-data.service';
 import { translations } from '../../i18n/translations';
 
@@ -146,6 +147,32 @@ type ScholarshipSummary = {
   ranges: ScholarshipRangeSummary[];
 };
 
+type ScholarshipPreviewDetails = {
+  title: string;
+  registrationNo?: string;
+  totalMarks?: number;
+  marksObtained?: number;
+  percentage?: number;
+};
+
+type ScholarshipPreviewItem = {
+  src: string;
+  alt: string;
+  details: ScholarshipPreviewDetails;
+};
+
+type ScholarshipStatus = 'pending' | 'accepted' | 'rejected';
+
+const createAcademicYearLabel = (startYear: number): string => `AY-${startYear}-${startYear + 1}`;
+
+const getDefaultAcademicYearLabel = (referenceDate = new Date()): string => {
+  const startYear = referenceDate.getMonth() < 5
+    ? referenceDate.getFullYear() - 1
+    : referenceDate.getFullYear();
+
+  return createAcademicYearLabel(startYear);
+};
+
 const SCHOLARSHIP_PERCENTAGE_BUCKETS = [
   { key: '90-91', label: '>=90% <91%', min: 90, max: 91 },
   { key: '91-92', label: '>=91% <92%', min: 91, max: 92 },
@@ -167,6 +194,9 @@ const SCHOLARSHIP_PERCENTAGE_BUCKETS = [
   styleUrl: './admin-panel.component.scss'
 })
 export class AdminPanelComponent {
+  private static readonly SCHOLARSHIP_SEARCH_DEBOUNCE_MS = 700;
+  private static readonly SCHOLARSHIP_SEARCH_MIN_LENGTH = 3;
+
   auth   = inject(AuthService);
   data   = inject(AdminDataService);
   router = inject(Router);
@@ -507,7 +537,35 @@ export class AdminPanelComponent {
   scholarshipLimit = 10;
   scholarshipTotalItems = signal(0);
   scholarshipTotalPages = signal(0);
+  scholarshipAcademicYearOptions = signal<ScholarshipAcademicYearOption[]>([]);
+  scholarshipSelectedAcademicYearId = signal('');
+  readonly scholarshipSelectedAcademicYearLabel = computed(() => {
+    const selectedAcademicYear = this.scholarshipAcademicYearOptions()
+      .find((year) => year._id === this.scholarshipSelectedAcademicYearId());
+
+    return selectedAcademicYear?.label || getDefaultAcademicYearLabel();
+  });
+  scholarshipSearchDraft = signal('');
+  scholarshipSearchTerm = signal('');
+  scholarshipStatusDrafts = signal<Record<string, ScholarshipStatus>>({});
+  scholarshipCommentDrafts = signal<Record<string, string>>({});
+  scholarshipStatusUpdating = signal<Record<string, boolean>>({});
+  scholarshipPreviewApplication = signal<AdminScholarshipApplication | null>(null);
+  scholarshipImagePreviewSrc = signal('');
+  scholarshipImagePreviewAlt = signal('Scholarship document preview');
+  scholarshipImagePreviewDetails = signal<ScholarshipPreviewDetails | null>(null);
+  scholarshipImagePreviewItems = signal<ScholarshipPreviewItem[]>([]);
+  scholarshipImagePreviewIndex = signal(0);
+  scholarshipImageZoom = signal(1);
   readonly scholarshipSummary = computed(() => this.buildScholarshipSummary(this.scholarshipSummaryItems()));
+  private scholarshipSearchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private scholarshipLoadRequestId = 0;
+  private scholarshipImagePanStage: HTMLDivElement | null = null;
+  private scholarshipImagePanOriginX = 0;
+  private scholarshipImagePanOriginY = 0;
+  private scholarshipImagePanScrollLeft = 0;
+  private scholarshipImagePanScrollTop = 0;
+  isScholarshipImagePanning = false;
 
   constructor() {
     this.seedTextDrafts();
@@ -522,29 +580,63 @@ export class AdminPanelComponent {
     this.activeTab.set(tab);
 
     if (tab === 'scholarships') {
+      await this.loadScholarshipAcademicYears();
       await this.loadScholarshipApplications(1);
     }
   }
 
+  async loadScholarshipAcademicYears() {
+    try {
+      const years = await this.data.getScholarshipAcademicYears();
+      this.scholarshipAcademicYearOptions.set(years);
+
+      const preferredAcademicYear = years.find((year) => year.label === getDefaultAcademicYearLabel()) || years[0] || null;
+      const selectedAcademicYearId = this.scholarshipSelectedAcademicYearId();
+      const hasSelectedAcademicYear = years.some((year) => year._id === selectedAcademicYearId);
+
+      if (!hasSelectedAcademicYear) {
+        this.scholarshipSelectedAcademicYearId.set(preferredAcademicYear?._id || '');
+      }
+    } catch {
+      this.scholarshipAcademicYearOptions.set([]);
+      this.scholarshipSelectedAcademicYearId.set('');
+      this.scholarshipError.set('Unable to load academic year right now.');
+    }
+  }
+
   async loadScholarshipApplications(page = 1) {
+    const requestId = ++this.scholarshipLoadRequestId;
     this.scholarshipLoading.set(true);
     this.scholarshipError.set('');
+    const academicYearId = this.scholarshipSelectedAcademicYearId();
+    const search = this.scholarshipSearchTerm();
 
     try {
       const [result, summaryResult] = await Promise.all([
-        this.data.getScholarshipApplications({ page, limit: this.scholarshipLimit }),
-        this.data.getScholarshipApplications({ all: true }).catch(() => null),
+        this.data.getScholarshipApplications({ page, limit: this.scholarshipLimit, academicYearId, search }),
+        this.data.getScholarshipApplications({ all: true, academicYearId }).catch(() => null),
       ]);
+
+      if (requestId !== this.scholarshipLoadRequestId) {
+        return;
+      }
 
       this.scholarshipApplications.set(result.items);
       this.scholarshipSummaryItems.set(summaryResult?.items ?? result.items);
+      this.initializeScholarshipStatusDrafts(summaryResult?.items ?? result.items);
       this.scholarshipPage.set(result.pagination.page);
       this.scholarshipTotalItems.set(result.pagination.totalItems);
       this.scholarshipTotalPages.set(result.pagination.totalPages);
     } catch {
+      if (requestId !== this.scholarshipLoadRequestId) {
+        return;
+      }
+
       this.scholarshipError.set('Unable to load scholarship applications. Please login again and retry.');
     } finally {
-      this.scholarshipLoading.set(false);
+      if (requestId === this.scholarshipLoadRequestId) {
+        this.scholarshipLoading.set(false);
+      }
     }
   }
 
@@ -567,7 +659,9 @@ export class AdminPanelComponent {
 
     try {
       const { utils, writeFile } = await import('xlsx');
-      const result = await this.data.getScholarshipApplications({ all: true });
+      const academicYearId = this.scholarshipSelectedAcademicYearId();
+      const academicYearLabel = this.scholarshipSelectedAcademicYearLabel();
+      const result = await this.data.getScholarshipApplications({ all: true, academicYearId });
       const origin = window.location.origin;
 
       const rows = result.items.map((item: AdminScholarshipApplication, index: number) => ({
@@ -580,6 +674,7 @@ export class AdminPanelComponent {
         'Father Name': item.fatherName,
         'Mother Name': item.motherName,
         Mobile: item.mobile,
+        'Email ID': item.emailId,
         Village: item.village,
         Taluk: item.taluk,
         District: item.district,
@@ -603,7 +698,8 @@ export class AdminPanelComponent {
       const workbook = utils.book_new();
       utils.book_append_sheet(workbook, worksheet, 'Scholarships');
 
-      writeFile(workbook, `scholarship-applications-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      const safeYear = academicYearLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      writeFile(workbook, `scholarship-applications-${safeYear}-${new Date().toISOString().slice(0, 10)}.xlsx`);
     } catch {
       this.scholarshipError.set('Excel export failed. Please retry.');
     } finally {
@@ -618,19 +714,124 @@ export class AdminPanelComponent {
 
     this.scholarshipZipExporting.set(true);
     this.scholarshipError.set('');
+    const academicYearId = this.scholarshipSelectedAcademicYearId();
+    const academicYearLabel = this.scholarshipSelectedAcademicYearLabel();
 
     try {
-      const zipBlob = await this.data.downloadScholarshipUploadsZip();
+      const zipBlob = await this.data.downloadScholarshipUploadsZip(academicYearId);
       const blobUrl = URL.createObjectURL(zipBlob);
       const anchor = document.createElement('a');
       anchor.href = blobUrl;
-      anchor.download = `scholarship-uploads-${new Date().toISOString().slice(0, 10)}.zip`;
+      anchor.download = `scholarship-uploads-${academicYearLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${new Date().toISOString().slice(0, 10)}.zip`;
       anchor.click();
       URL.revokeObjectURL(blobUrl);
     } catch {
       this.scholarshipError.set('ZIP export failed. Please retry.');
     } finally {
       this.scholarshipZipExporting.set(false);
+    }
+  }
+
+  async onScholarshipAcademicYearChanged(academicYearId: string) {
+    this.scholarshipSelectedAcademicYearId.set(academicYearId);
+    await this.loadScholarshipApplications(1);
+  }
+
+  onScholarshipSearchDraftChanged(value: string) {
+    this.scholarshipSearchDraft.set(value);
+
+    if (this.scholarshipSearchDebounceTimer) {
+      clearTimeout(this.scholarshipSearchDebounceTimer);
+    }
+
+    this.scholarshipSearchDebounceTimer = setTimeout(() => {
+      this.scholarshipSearchDebounceTimer = null;
+      void this.applyScholarshipSearch();
+    }, AdminPanelComponent.SCHOLARSHIP_SEARCH_DEBOUNCE_MS);
+  }
+
+  async applyScholarshipSearch() {
+    const nextSearchTerm = this.scholarshipSearchDraft().trim();
+    if (nextSearchTerm && nextSearchTerm.length < AdminPanelComponent.SCHOLARSHIP_SEARCH_MIN_LENGTH) {
+      return;
+    }
+
+    if (nextSearchTerm === this.scholarshipSearchTerm()) {
+      return;
+    }
+
+    this.scholarshipSearchTerm.set(nextSearchTerm);
+    await this.loadScholarshipApplications(1);
+  }
+
+  async clearScholarshipSearch() {
+    if (this.scholarshipSearchDebounceTimer) {
+      clearTimeout(this.scholarshipSearchDebounceTimer);
+      this.scholarshipSearchDebounceTimer = null;
+    }
+
+    this.scholarshipSearchDraft.set('');
+    this.scholarshipSearchTerm.set('');
+    await this.loadScholarshipApplications(1);
+  }
+
+  scholarshipStatusLabel(status: string) {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'accepted') {
+      return 'Accepted';
+    }
+
+    if (normalized === 'rejected') {
+      return 'Rejected';
+    }
+
+    return 'Pending';
+  }
+
+  scholarshipStatusDraft(id: string) {
+    return this.scholarshipStatusDrafts()[id] || 'pending';
+  }
+
+  scholarshipCommentDraft(id: string) {
+    return this.scholarshipCommentDrafts()[id] || '';
+  }
+
+  onScholarshipStatusDraftChanged(id: string, status: ScholarshipStatus) {
+    this.scholarshipStatusDrafts.update((drafts) => ({ ...drafts, [id]: status }));
+
+    if (status !== 'rejected') {
+      this.scholarshipCommentDrafts.update((drafts) => ({ ...drafts, [id]: '' }));
+    }
+  }
+
+  onScholarshipCommentDraftChanged(id: string, comment: string) {
+    this.scholarshipCommentDrafts.update((drafts) => ({ ...drafts, [id]: comment }));
+  }
+
+  async updateScholarshipStatus(item: AdminScholarshipApplication) {
+    const nextStatus = this.scholarshipStatusDraft(item._id);
+    const rejectionComment = this.scholarshipCommentDraft(item._id).trim();
+
+    if (nextStatus === 'rejected' && !rejectionComment) {
+      this.scholarshipError.set('Rejection comment is required when rejecting an application.');
+      return;
+    }
+
+    this.scholarshipStatusUpdating.update((drafts) => ({ ...drafts, [item._id]: true }));
+    this.scholarshipError.set('');
+
+    try {
+      const updated = await this.data.updateScholarshipApplicationStatus(item._id, nextStatus, rejectionComment);
+      this.scholarshipApplications.update((items) => items.map((entry) => entry._id === updated._id ? updated : entry));
+      this.scholarshipSummaryItems.update((items) => items.map((entry) => entry._id === updated._id ? updated : entry));
+      if (this.scholarshipPreviewApplication()?._id === updated._id) {
+        this.scholarshipPreviewApplication.set(updated);
+      }
+      this.initializeScholarshipStatusDrafts(this.scholarshipSummaryItems());
+    } catch {
+      this.scholarshipError.set('Unable to update scholarship status. Please retry.');
+    } finally {
+      this.scholarshipStatusUpdating.update((drafts) => ({ ...drafts, [item._id]: false }));
     }
   }
 
@@ -644,6 +845,180 @@ export class AdminPanelComponent {
     }
 
     return `${window.location.origin}${path}`;
+  }
+
+  openScholarshipApplicationImagePreview(item: AdminScholarshipApplication, startIndex: number) {
+    const previewItems: ScholarshipPreviewItem[] = [
+      {
+        src: this.imageUrl(item.profilePhotoUrl),
+        alt: 'Profile photo',
+        details: { title: 'Profile photo' },
+      },
+      {
+        src: this.imageUrl(item.casteCertificateUrl),
+        alt: 'Caste certificate',
+        details: { title: 'Caste certificate' },
+      },
+      {
+        src: this.imageUrl(item.marksCardUrl),
+        alt: 'Marks card',
+        details: {
+          title: 'Marks card verification',
+          registrationNo: item.registrationNo,
+          totalMarks: item.totalMarks,
+          marksObtained: item.marksObtained,
+          percentage: item.percentage,
+        },
+      },
+    ].filter((entry) => !!entry.src);
+
+    if (!previewItems.length) {
+      return;
+    }
+
+    const safeIndex = Math.min(Math.max(startIndex, 0), previewItems.length - 1);
+    this.scholarshipPreviewApplication.set(item);
+    this.scholarshipImagePreviewItems.set(previewItems);
+    this.setScholarshipPreviewIndex(safeIndex);
+    document.body.style.overflow = 'hidden';
+  }
+
+  openScholarshipImagePreview(path: string, alt: string, details?: ScholarshipPreviewDetails) {
+    const resolvedUrl = this.imageUrl(path);
+    if (!resolvedUrl) {
+      return;
+    }
+
+    this.scholarshipImagePreviewItems.set([
+      {
+        src: resolvedUrl,
+        alt: alt || 'Scholarship document preview',
+        details: details ?? { title: alt || 'Scholarship document preview' },
+      },
+    ]);
+    this.scholarshipPreviewApplication.set(null);
+    this.setScholarshipPreviewIndex(0);
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeScholarshipImagePreview() {
+    this.scholarshipPreviewApplication.set(null);
+    this.scholarshipImagePreviewSrc.set('');
+    this.scholarshipImagePreviewDetails.set(null);
+    this.scholarshipImagePreviewItems.set([]);
+    this.scholarshipImagePreviewIndex.set(0);
+    this.scholarshipImageZoom.set(1);
+    this.scholarshipImagePanStage = null;
+    this.isScholarshipImagePanning = false;
+    document.body.style.overflow = '';
+  }
+
+  showPreviousScholarshipImage() {
+    const items = this.scholarshipImagePreviewItems();
+    const index = this.scholarshipImagePreviewIndex();
+    if (items.length <= 1 || index <= 0) {
+      return;
+    }
+
+    this.setScholarshipPreviewIndex(index - 1);
+  }
+
+  showNextScholarshipImage() {
+    const items = this.scholarshipImagePreviewItems();
+    const index = this.scholarshipImagePreviewIndex();
+    if (items.length <= 1 || index >= items.length - 1) {
+      return;
+    }
+
+    this.setScholarshipPreviewIndex(index + 1);
+  }
+
+  zoomInScholarshipImage() {
+    this.scholarshipImageZoom.update((zoom) => Math.min(zoom + 0.25, 3));
+  }
+
+  zoomOutScholarshipImage() {
+    this.scholarshipImageZoom.update((zoom) => Math.max(zoom - 0.25, 0.5));
+  }
+
+  resetScholarshipImageZoom() {
+    this.scholarshipImageZoom.set(1);
+  }
+
+  private setScholarshipPreviewIndex(index: number) {
+    const items = this.scholarshipImagePreviewItems();
+    const current = items[index];
+    if (!current) {
+      return;
+    }
+
+    this.scholarshipImagePreviewIndex.set(index);
+    this.scholarshipImagePreviewSrc.set(current.src);
+    this.scholarshipImagePreviewAlt.set(current.alt);
+    this.scholarshipImagePreviewDetails.set(current.details);
+    this.scholarshipImageZoom.set(1);
+    if (this.scholarshipImagePanStage) {
+      this.scholarshipImagePanStage.scrollLeft = 0;
+      this.scholarshipImagePanStage.scrollTop = 0;
+    }
+  }
+
+  startScholarshipImagePan(event: MouseEvent, stage: HTMLDivElement) {
+    if (this.scholarshipImageZoom() <= 1) {
+      return;
+    }
+
+    event.preventDefault();
+    this.scholarshipImagePanStage = stage;
+    this.scholarshipImagePanOriginX = event.clientX;
+    this.scholarshipImagePanOriginY = event.clientY;
+    this.scholarshipImagePanScrollLeft = stage.scrollLeft;
+    this.scholarshipImagePanScrollTop = stage.scrollTop;
+    this.isScholarshipImagePanning = true;
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  onScholarshipImagePan(event: MouseEvent) {
+    if (!this.isScholarshipImagePanning || !this.scholarshipImagePanStage) {
+      return;
+    }
+
+    const deltaX = event.clientX - this.scholarshipImagePanOriginX;
+    const deltaY = event.clientY - this.scholarshipImagePanOriginY;
+    this.scholarshipImagePanStage.scrollLeft = this.scholarshipImagePanScrollLeft - deltaX;
+    this.scholarshipImagePanStage.scrollTop = this.scholarshipImagePanScrollTop - deltaY;
+  }
+
+  @HostListener('document:mouseup')
+  stopScholarshipImagePan() {
+    this.isScholarshipImagePanning = false;
+    this.scholarshipImagePanStage = null;
+  }
+
+  downloadScholarshipPreviewImage() {
+    const src = this.scholarshipImagePreviewSrc();
+    if (!src) {
+      return;
+    }
+
+    const anchor = document.createElement('a');
+    anchor.href = src;
+    anchor.download = this.scholarshipImagePreviewAlt().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'scholarship-document';
+    anchor.click();
+  }
+
+  private initializeScholarshipStatusDrafts(items: AdminScholarshipApplication[]) {
+    const statusDrafts: Record<string, ScholarshipStatus> = {};
+    const commentDrafts: Record<string, string> = {};
+
+    for (const item of items) {
+      const normalizedStatus = String(item.status || 'pending').toLowerCase();
+      statusDrafts[item._id] = (normalizedStatus === 'accepted' || normalizedStatus === 'rejected' ? normalizedStatus : 'pending');
+      commentDrafts[item._id] = item.rejectionComment || '';
+    }
+
+    this.scholarshipStatusDrafts.set(statusDrafts);
+    this.scholarshipCommentDrafts.set(commentDrafts);
   }
 
   clone<T>(value: T): T {

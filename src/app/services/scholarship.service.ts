@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
 export interface ScholarshipApplicationPayload {
-  academicYear: string;
+  academicYearId: string;
   registrationNo: string;
   firstName: string;
   middleName: string;
@@ -12,6 +12,7 @@ export interface ScholarshipApplicationPayload {
   fatherName: string;
   motherName: string;
   mobile: string;
+  emailId: string;
   village: string;
   taluk: string;
   district: string;
@@ -77,9 +78,27 @@ export interface ScholarshipSummaryResponse {
 }
 
 export interface RegistrationAvailabilityResponse {
+  academicYearId: string;
+  academicYear: string;
   registrationNo: string;
   available: boolean;
   message: string;
+}
+
+export interface ScholarshipAcademicYearOption {
+  _id: string;
+  label: string;
+  startYear: number;
+}
+
+interface ScholarshipAcademicYearsApiData {
+  items: ScholarshipAcademicYearOption[];
+}
+
+interface ScholarshipAcademicYearsApiResponse {
+  success: boolean;
+  message: string;
+  data: ScholarshipAcademicYearsApiData;
 }
 
 const SCHOLARSHIP_API_BASE = '/api/v1/scholarships';
@@ -129,14 +148,29 @@ export class ScholarshipService {
     return response.data;
   }
 
-  async checkRegistrationAvailability(registrationNo: string): Promise<RegistrationAvailabilityResponse> {
+  async getAcademicYears(): Promise<ScholarshipAcademicYearOption[]> {
+    let response: ScholarshipAcademicYearsApiResponse;
+    try {
+      response = await firstValueFrom(
+        this.http.get<ScholarshipAcademicYearsApiResponse>(
+          `${SCHOLARSHIP_API_BASE}/academic-years`,
+        ),
+      );
+    } catch (error) {
+      throw new Error(this.errorMessageFromApi(error, 'Unable to load academic years right now.'));
+    }
+
+    return response.data.items;
+  }
+
+  async checkRegistrationAvailability(registrationNo: string, academicYearId: string): Promise<RegistrationAvailabilityResponse> {
     let response: ScholarshipApiResponse<RegistrationAvailabilityResponse>;
     try {
       response = await firstValueFrom(
         this.http.get<ScholarshipApiResponse<RegistrationAvailabilityResponse>>(
           `${SCHOLARSHIP_API_BASE}/registration-status`,
           {
-            params: { registrationNo },
+            params: { registrationNo, academicYearId },
           },
         ),
       );

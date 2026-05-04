@@ -5,7 +5,7 @@
     <div class="page-head">
       <a routerLink="/" class="back-link">Back to Home</a>
       <p class="eyebrow">Scholarship Application Portal</p>
-      <h1>prathibha puraskara scholarships for AY-2025-2026</h1>
+      <h1>prathibha puraskara scholarships for {{ selectedAcademicYearLabel }}</h1>
       <p class="intro">
         Fill in the student details, upload the required documents, review everything in preview, and then submit.
       </p>
@@ -34,7 +34,22 @@
         <div class="form-card">
           <div class="section-heading">
             <p>Student Details</p>
-            <span>Academic Year {{ academicYearLabel }}</span>
+            <span>Academic Year {{ selectedAcademicYearLabel }}</span>
+          </div>
+
+          <div class="form-grid three-cols">
+            <label class="field">
+              <span>Academic Year *</span>
+              <select formControlName="academicYearId" (change)="onAcademicYearChanged()">
+                <option value="">Select academic year</option>
+                @for (year of academicYearOptions(); track year._id) {
+                  <option [value]="year._id">{{ year.label }}</option>
+                }
+              </select>
+              @if (controlHasError('academicYearId')) { <small>Please select a valid academic year.</small> }
+            </label>
+            <div class="field-spacer" aria-hidden="true"></div>
+            <div class="field-spacer" aria-hidden="true"></div>
           </div>
 
           <div class="form-grid three-cols">
@@ -113,20 +128,30 @@
             </label>
           </div>
 
+          <div class="form-grid three-cols">
+            <label class="field">
+              <span>Email ID *</span>
+              <input type="email" formControlName="emailId" placeholder="Enter email address" />
+              @if (controlHasError('emailId')) { <small>Enter a valid email address.</small> }
+            </label>
+            <div class="field-spacer" aria-hidden="true"></div>
+            <div class="field-spacer" aria-hidden="true"></div>
+          </div>
+
           <div class="section-heading address-head">
             <p>Address Details</p>
             <span>Village, taluk, district, state and PIN</span>
           </div>
 
-          <div class="address-example">
+          <!-- <div class="address-example">
             <p><strong>Example:</strong> Village: Angondhalli, Taluk: Hosakote, District: Bengaluru Rural / Bengaluru Urban, State: Karnataka, PIN Code: XXXXX</p>
-          </div>
+          </div> -->
 
           <div class="form-grid three-cols">
             <label class="field">
               <span>State *</span>
               <input type="text" formControlName="state" value="Karnataka" readonly />
-              <small>Scholarship applications are accepted only from Karnataka.</small>
+              <!-- <small>Scholarship applications are accepted only from Karnataka.</small> -->
             </label>
 
             <label class="field">
@@ -183,13 +208,7 @@
                 </label>
               }
             </div>
-            @if (selectedBoard === 'Other') {
-              <label class="field inline-field">
-                <span>Other Board Name *</span>
-                <input type="text" formControlName="otherBoard" placeholder="Enter board name" />
-              </label>
-            }
-            @if (controlHasError('board') || groupHasError('otherBoard')) { <small>Please select the board.</small> }
+            @if (controlHasError('board')) { <small>Please select the board.</small> }
           </div>
 
           <div class="choice-group">
@@ -227,6 +246,9 @@
           @if (groupHasError('marksExceeded')) {
             <small class="full-error">Marks obtained cannot be greater than total marks.</small>
           }
+          @if (groupHasError('minimumPercentage')) {
+            <small class="full-error">Only students with {{ minimumPercentage }}% or above are eligible to submit this scholarship application.</small>
+          }
         </div>
 
         <div class="form-card">
@@ -240,7 +262,7 @@
             <span>I came to know about the Mahasabha through a family member / relative / friend / neighbour who is already enrolled as a member.</span>
           </label>
 
-          <div class="terms-box membership-box">
+          <!-- <div class="terms-box membership-box">
             <p><strong>Membership / Contribution Categories</strong></p>
             <p>Life Member - Rs250</p>
             <p>Ashrayadataru - Rs1,000</p>
@@ -253,7 +275,7 @@
             <p>Mahadasohigalu - Rs10,00,000</p>
             <p>Paramadasohigalu - Rs25,00,000</p>
             <p>Institutional Member - Rs5,000</p>
-          </div>
+          </div> -->
 
           @if (heardFromMemberSelected) {
             <div class="choice-group member-category-group">
@@ -291,9 +313,9 @@
             <span>Photo, certificates, Aadhaar offline package</span>
           </div>
 
-          <div class="upload-note upload-note-compact">
+          <!-- <div class="upload-note upload-note-compact">
             <strong>UIDAI offline eKYC:</strong> upload the ZIP or XML, enter the same share code, then fetch the resident details.
-          </div>
+          </div> -->
 
           <div class="upload-groups">
             <div class="upload-panel">
@@ -307,6 +329,11 @@
                 <input type="file" accept="image/*" (change)="onFileSelected('profilePhoto', $event)" />
                 @if (fileName('profilePhoto')) { <strong>{{ fileName('profilePhoto') }}</strong> }
                 @if (hasUploadError('profilePhoto')) { <small>Profile photo is required.</small> }
+                @if (previewUrl('profilePhoto'); as profilePreview) {
+                  <button type="button" class="image-preview-trigger upload-image-preview" (click)="openImagePreview(profilePreview, 'Profile photo preview')">
+                    <img [src]="profilePreview" alt="Profile photo preview" />
+                  </button>
+                }
               </label>
             </div>
 
@@ -322,6 +349,11 @@
                   <input type="file" accept="image/*" (change)="onFileSelected('casteCertificate', $event)" />
                   @if (fileName('casteCertificate')) { <strong>{{ fileName('casteCertificate') }}</strong> }
                   @if (hasUploadError('casteCertificate')) { <small>Caste certificate is required.</small> }
+                  @if (previewUrl('casteCertificate'); as castePreview) {
+                    <button type="button" class="image-preview-trigger upload-image-preview" (click)="openImagePreview(castePreview, 'Caste certificate preview')">
+                      <img [src]="castePreview" alt="Caste certificate preview" />
+                    </button>
+                  }
                 </label>
 
                 <label class="field upload-field">
@@ -329,6 +361,11 @@
                   <input type="file" accept="image/*" (change)="onFileSelected('marksCard', $event)" />
                   @if (fileName('marksCard')) { <strong>{{ fileName('marksCard') }}</strong> }
                   @if (hasUploadError('marksCard')) { <small>Marks card is required.</small> }
+                  @if (previewUrl('marksCard'); as marksCardPreview) {
+                    <button type="button" class="image-preview-trigger upload-image-preview" (click)="openImagePreview(marksCardPreview, 'Marks card preview')">
+                      <img [src]="marksCardPreview" alt="Marks card preview" />
+                    </button>
+                  }
                 </label>
               </div>
             </div>
@@ -407,7 +444,9 @@
                       <h3>{{ aadhaar.name }}</h3>
                     </div>
                     @if (aadhaar.photoDataUrl) {
-                      <img [src]="aadhaar.photoDataUrl" alt="Aadhaar resident photo" />
+                      <button type="button" class="image-preview-trigger aadhaar-image-preview" (click)="openImagePreview(aadhaar.photoDataUrl, 'Aadhaar resident photo')">
+                        <img [src]="aadhaar.photoDataUrl" alt="Aadhaar resident photo" />
+                      </button>
                     }
                   </div>
 
@@ -482,12 +521,14 @@
         <div class="preview-grid">
           <div class="preview-block">
             <h3>Student Details</h3>
+            <p><strong>Academic Year:</strong> {{ selectedAcademicYearLabel }}</p>
             <p><strong>Registration No:</strong> {{ form.controls.registrationNo.value }}</p>
             <p><strong>Name:</strong> {{ form.controls.firstName.value }} {{ form.controls.middleName.value }} {{ form.controls.lastName.value }}</p>
             <p><strong>Gender:</strong> {{ form.controls.gender.value }}</p>
             <p><strong>Father Name:</strong> {{ form.controls.fatherName.value }}</p>
             <p><strong>Mother Name:</strong> {{ form.controls.motherName.value }}</p>
             <p><strong>Mobile:</strong> {{ form.controls.mobile.value }}</p>
+            <p><strong>Email ID:</strong> {{ form.controls.emailId.value }}</p>
             <p><strong>Aadhaar No:</strong> {{ form.controls.aadhaarNumber.value }}</p>
             <p><strong>Address:</strong> {{ form.controls.village.value }}, {{ form.controls.taluk.value }}, {{ form.controls.district.value }}, {{ form.controls.state.value }} - {{ form.controls.pinCode.value }}</p>
             @if (aadhaarPreview(); as aadhaar) {

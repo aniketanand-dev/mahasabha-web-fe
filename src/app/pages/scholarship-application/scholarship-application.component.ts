@@ -6,6 +6,7 @@ import { NavbarComponent } from '../../components/navbar/navbar.component';
 import { FooterComponent } from '../../components/footer/footer.component';
 import {
   AadhaarPreviewResponse,
+  ScholarshipAcademicYearOption,
   ScholarshipApplicationFiles,
   ScholarshipApplicationPayload,
   ScholarshipService,
@@ -49,6 +50,30 @@ const marksValidator: ValidatorFn = (control: AbstractControl): ValidationErrors
   }
 
   return null;
+};
+
+const createAcademicYearLabel = (startYear: number): string => `AY-${startYear}-${startYear + 1}`;
+
+const getDefaultAcademicYearLabel = (referenceDate = new Date()): string => {
+  const startYear = referenceDate.getMonth() < 5
+    ? referenceDate.getFullYear() - 1
+    : referenceDate.getFullYear();
+
+  return createAcademicYearLabel(startYear);
+};
+
+const minimumPercentageValidator = (minimumPercentage: number): ValidatorFn => {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const marksObtained = Number(control.get('marksObtained')?.value);
+    const totalMarks = Number(control.get('totalMarks')?.value);
+
+    if (!Number.isFinite(marksObtained) || !Number.isFinite(totalMarks) || totalMarks <= 0 || marksObtained > totalMarks) {
+      return null;
+    }
+
+    const percentage = (marksObtained / totalMarks) * 100;
+    return percentage < minimumPercentage ? { minimumPercentage: true } : null;
+  };
 };
 
 const KARNATAKA_DISTRICTS = [
@@ -141,12 +166,15 @@ const MEMBER_CATEGORY_OPTIONS = [
   styleUrl: './scholarship-application.component.scss'
 })
 export class ScholarshipApplicationComponent {
+  private static readonly MINIMUM_PERCENTAGE = 90;
+
   private readonly fb = inject(FormBuilder);
   private readonly scholarshipService = inject(ScholarshipService);
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly academicYearLabel = 'AY-2025-2026';
-  readonly boardOptions = ['state', 'ICSE', 'CBSE', 'Other'];
+  readonly fallbackAcademicYearLabel = getDefaultAcademicYearLabel();
+  readonly academicYearOptions = signal<ScholarshipAcademicYearOption[]>([]);
+  readonly boardOptions = ['state', 'ICSE', 'CBSE'];
   readonly standardOptions = ['10th', '12th'];
   readonly genderOptions = ['Male', 'Female', 'Other'];
   readonly districtOptions = [...KARNATAKA_DISTRICTS];
@@ -154,6 +182,7 @@ export class ScholarshipApplicationComponent {
 
   readonly form = this.fb.group(
     {
+      academicYearId: ['', [Validators.required]],
       registrationNo: ['', [Validators.required, Validators.maxLength(40)]],
       firstName: ['', [Validators.required, Validators.maxLength(60)]],
       middleName: ['', [Validators.maxLength(60)]],
@@ -162,6 +191,7 @@ export class ScholarshipApplicationComponent {
       fatherName: ['', [Validators.required, Validators.maxLength(120)]],
       motherName: ['', [Validators.required, Validators.maxLength(120)]],
       mobile: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
+      emailId: ['', [Validators.required, Validators.email, Validators.maxLength(120)]],
       village: ['', [Validators.required, Validators.maxLength(120)]],
       taluk: ['', [Validators.required, Validators.maxLength(120)]],
       district: ['', [Validators.required, Validators.maxLength(120)]],
@@ -185,6 +215,7 @@ export class ScholarshipApplicationComponent {
       validators: [
         otherValueRequiredValidator('board', 'Other', 'otherBoard'),
         marksValidator,
+        minimumPercentageValidator(ScholarshipApplicationComponent.MINIMUM_PERCENTAGE),
       ],
     },
   );
@@ -214,6 +245,7 @@ export class ScholarshipApplicationComponent {
   constructor() {
     this.onStateChanged();
     this.onHeardFromMemberChanged();
+    void this.loadAcademicYears();
     this.destroyRef.onDestroy(() => {
       this.revokeAllObjectUrls();
     });
@@ -221,6 +253,15 @@ export class ScholarshipApplicationComponent {
 
   get selectedBoard(): string {
     return String(this.form.controls.board.value || '');
+  }
+
+  get selectedAcademicYearId(): string {
+    return String(this.form.controls.academicYearId.value || '').trim();
+  }
+
+  get selectedAcademicYearLabel(): string {
+    const selectedAcademicYear = this.academicYearOptions().find((year) => year._id === this.selectedAcademicYearId);
+    return selectedAcademicYear?.label || this.fallbackAcademicYearLabel;
   }
 
   get selectedStandard(): string {
@@ -257,6 +298,10 @@ export class ScholarshipApplicationComponent {
       && this.percentage() !== null
       && this.aadhaarPreview() !== null
       && !this.hasAadhaarMismatch;
+  }
+
+  get minimumPercentage(): number {
+    return ScholarshipApplicationComponent.MINIMUM_PERCENTAGE;
   }
 
   updatePercentage(): void {
@@ -330,6 +375,10 @@ export class ScholarshipApplicationComponent {
     this.registrationStatusMessage.set('');
     this.clearControlError(this.form.controls.registrationNo, 'registrationUnavailable');
     this.submitError.set('');
+  }
+
+  onAcademicYearChanged(): void {
+    this.onRegistrationNumberChanged();
   }
 
   async onRegistrationNumberBlur(): Promise<void> {
@@ -435,6 +484,12 @@ export class ScholarshipApplicationComponent {
     this.form.markAllAsTouched();
     this.updatePercentage();
 
+    if (this.form.errors?.['minimumPercentage']) {
+      this.submitError.set(`Only students with ${this.minimumPercentage}% or above are eligible to submit this scholarship application.`);
+      this.scrollToFirstError();
+      return;
+    }
+
     if (this.hasAadhaarMismatch) {
       this.submitError.set('Please enter the correct Aadhaar number. It must match the uploaded offline eKYC reference before submission.');
       this.scrollToFirstError();
@@ -462,6 +517,13 @@ export class ScholarshipApplicationComponent {
   }
 
   async submitApplication(): Promise<void> {
+    this.updatePercentage();
+
+    if (this.form.errors?.['minimumPercentage']) {
+      this.submitError.set(`Only students with ${this.minimumPercentage}% or above are eligible to submit this scholarship application.`);
+      return;
+    }
+
     if (!this.isReadyForPreview) {
       return;
     }
@@ -530,7 +592,7 @@ export class ScholarshipApplicationComponent {
 
   private buildPayload(): ScholarshipApplicationPayload {
     return {
-      academicYear: this.academicYearLabel,
+      academicYearId: this.selectedAcademicYearId,
       registrationNo: String(this.form.controls.registrationNo.value || '').trim(),
       firstName: String(this.form.controls.firstName.value || '').trim(),
       middleName: String(this.form.controls.middleName.value || '').trim(),
@@ -539,6 +601,7 @@ export class ScholarshipApplicationComponent {
       fatherName: String(this.form.controls.fatherName.value || '').trim(),
       motherName: String(this.form.controls.motherName.value || '').trim(),
       mobile: String(this.form.controls.mobile.value || '').trim(),
+      emailId: String(this.form.controls.emailId.value || '').trim(),
       village: String(this.form.controls.village.value || '').trim(),
       taluk: String(this.form.controls.taluk.value || '').trim(),
       district: String(this.form.controls.district.value || '').trim(),
@@ -621,20 +684,22 @@ export class ScholarshipApplicationComponent {
   }
 
   private async checkRegistrationAvailability(): Promise<boolean> {
+    const academicYearControl = this.form.controls.academicYearId;
     const control = this.form.controls.registrationNo;
+    const academicYearId = this.selectedAcademicYearId;
     const registrationNo = String(control.value || '').trim();
 
     this.registrationStatusMessage.set('');
     this.clearControlError(control, 'registrationUnavailable');
 
-    if (!registrationNo || control.hasError('required') || control.hasError('maxlength')) {
+    if (!academicYearId || academicYearControl.invalid || !registrationNo || control.hasError('required') || control.hasError('maxlength')) {
       return false;
     }
 
     this.registrationChecking.set(true);
 
     try {
-      const response = await this.scholarshipService.checkRegistrationAvailability(registrationNo);
+      const response = await this.scholarshipService.checkRegistrationAvailability(registrationNo, academicYearId);
       if (!response.available) {
         this.registrationStatusMessage.set(response.message);
         this.setControlError(control, 'registrationUnavailable');
@@ -651,6 +716,20 @@ export class ScholarshipApplicationComponent {
       return false;
     } finally {
       this.registrationChecking.set(false);
+    }
+  }
+
+  private async loadAcademicYears(): Promise<void> {
+    try {
+      const academicYears = await this.scholarshipService.getAcademicYears();
+      this.academicYearOptions.set(academicYears);
+
+      const preferredAcademicYear = academicYears.find((year) => year.label === this.fallbackAcademicYearLabel) || academicYears[0] || null;
+      this.form.controls.academicYearId.setValue(preferredAcademicYear?._id || '');
+      this.onAcademicYearChanged();
+    } catch {
+      this.academicYearOptions.set([]);
+      this.form.controls.academicYearId.setValue('');
     }
   }
 
