@@ -12,6 +12,8 @@ ng serve
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
+The app uses relative `/api` and `/uploads` paths. During local development, Angular proxies those requests to `http://localhost:5000` using `proxy.conf.json`.
+
 ## Code scaffolding
 
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
@@ -35,6 +37,16 @@ ng build
 ```
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+
+## Nginx Deployment
+
+For production, serve the Angular build and proxy backend requests through the same Nginx host.
+
+- Serve `dist/veerashiva-mahasabha/browser`
+- Proxy `/api/` to the backend Node process on `http://127.0.0.1:5000`
+- Proxy `/uploads/` to the same backend so images stay same-origin
+
+Example config is available in `nginx.conf.example`.
 
 ## Running unit tests
 
