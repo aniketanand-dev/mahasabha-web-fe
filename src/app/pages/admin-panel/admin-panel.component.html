@@ -926,17 +926,30 @@
                   <input
                     class="form-input scholarship-filter-select"
                     type="text"
-                    placeholder="Registration No or Aadhaar No"
+                    placeholder="Name, application no, registration, Aadhaar, mobile"
                     [ngModel]="scholarshipSearchDraft()"
                     (ngModelChange)="onScholarshipSearchDraftChanged($event)"
                   />
-                  <small class="scholarship-search-hint">Search starts after 3 characters.</small>
+                  <small class="scholarship-search-hint">Search starts after 3 characters and works across all admin scholarship lists.</small>
                 </label>
                 <div class="scholarship-table-toolbar-actions">
                   @if (scholarshipSearchTerm()) {
                     <button class="btn-cancel" [disabled]="scholarshipLoading()" (click)="clearScholarshipSearch()">Clear</button>
                   }
                 </div>
+              </div>
+              <div class="scholarship-status-tabs" role="tablist" aria-label="Scholarship status filters">
+                @for (tab of scholarshipListTabs; track tab.key) {
+                  <button
+                    type="button"
+                    class="scholarship-status-tab"
+                    [class.is-active]="scholarshipActiveListTab() === tab.key"
+                    (click)="setScholarshipListTab(tab.key)"
+                  >
+                    <span>{{ tab.label }}</span>
+                    <strong>{{ scholarshipTabCounts()[tab.key] }}</strong>
+                  </button>
+                }
               </div>
               <div class="scholarship-meta">Academic Year {{ scholarshipSelectedAcademicYearLabel() }} | Showing page {{ scholarshipPage() }} of {{ scholarshipTotalPages() || 1 }} | Total {{ scholarshipTotalItems() }} applications</div>
               @if (scholarshipSearchTerm()) {

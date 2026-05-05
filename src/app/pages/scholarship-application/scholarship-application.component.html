@@ -150,13 +150,18 @@
           <div class="form-grid three-cols">
             <label class="field">
               <span>State *</span>
-              <input type="text" formControlName="state" value="Karnataka" readonly />
-              <!-- <small>Scholarship applications are accepted only from Karnataka.</small> -->
+              <select formControlName="state" (change)="onStateChanged()">
+                <option value="">Select state</option>
+                @for (state of stateOptions; track state) {
+                  <option [value]="state">{{ state }}</option>
+                }
+              </select>
+              @if (controlHasError('state')) { <small>State is required.</small> }
             </label>
 
             <label class="field">
               <span>District *</span>
-              <select formControlName="district" (change)="onDistrictChanged()">
+              <select formControlName="district" (change)="onDistrictChanged()" [disabled]="!selectedState">
                 <option value="">Select district</option>
                 @for (district of districtOptions; track district) {
                   <option [value]="district">{{ district }}</option>

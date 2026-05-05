@@ -525,6 +525,59 @@
   flex-wrap: wrap;
 }
 
+.scholarship-status-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.scholarship-status-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid rgba(122, 14, 34, 0.14);
+  border-radius: 999px;
+  background: #fffdfa;
+  color: #5f4b2f;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+
+  span {
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  strong {
+    min-width: 1.4rem;
+    padding: 0.15rem 0.38rem;
+    border-radius: 999px;
+    background: #f5ede0;
+    color: #7a0e22;
+    font-size: 0.73rem;
+    line-height: 1;
+  }
+
+  &:hover {
+    border-color: rgba(122, 14, 34, 0.28);
+    background: #fff7ea;
+  }
+
+  &.is-active {
+    border-color: rgba(122, 14, 34, 0.3);
+    background: linear-gradient(180deg, #fff4dc 0%, #fde9c8 100%);
+    color: #3a0810;
+    box-shadow: 0 8px 18px rgba(122, 14, 34, 0.08);
+
+    strong {
+      background: #7a0e22;
+      color: #fff8ef;
+    }
+  }
+}
+
 .scholarship-dashboard {
   display: flex;
   flex-direction: column;

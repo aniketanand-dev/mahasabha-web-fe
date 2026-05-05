@@ -12,6 +12,7 @@ import {
   ScholarshipService,
   ScholarshipSubmissionResponse,
 } from '../../services/scholarship.service';
+import { STATE_DISTRICT_TALUKS, STATE_OPTIONS } from '../../data/address-data';
 
 type UploadField = 'profilePhoto' | 'casteCertificate' | 'marksCard' | 'aadhaarOfflineFile';
 
@@ -76,74 +77,6 @@ const minimumPercentageValidator = (minimumPercentage: number): ValidatorFn => {
   };
 };
 
-const KARNATAKA_DISTRICTS = [
-  'Bagalkote',
-  'Ballari',
-  'Belagavi',
-  'Bengaluru Rural',
-  'Bengaluru Urban',
-  'Bidar',
-  'Chamarajanagara',
-  'Chikkaballapura',
-  'Chikkamagaluru',
-  'Chitradurga',
-  'Dakshina Kannada',
-  'Davanagere',
-  'Dharwad',
-  'Gadag',
-  'Hassan',
-  'Haveri',
-  'Kalaburagi',
-  'Kodagu',
-  'Kolar',
-  'Koppal',
-  'Mandya',
-  'Mysuru',
-  'Raichur',
-  'Ramanagara',
-  'Shivamogga',
-  'Tumakuru',
-  'Udupi',
-  'Uttara Kannada',
-  'Vijayapura',
-  'Yadgir',
-  'Vijayanagara',
-] as const;
-
-const KARNATAKA_TALUKS: Record<string, string[]> = {
-  Bagalkote: ['Bagalkote', 'Badami', 'Bilgi', 'Hungund', 'Jamakhandi', 'Mudhol', 'Rabkavi Banhatti'],
-  Ballari: ['Ballari', 'Hadagali', 'Kampli', 'Kurugodu', 'Sanduru', 'Hagaribommanahalli', 'Harapanahalli'],
-  Belagavi: ['Athani', 'Bailahongal', 'Belagavi', 'Chikkodi', 'Gokak', 'Khanapur', 'Kittur', 'Mudalgi', 'Nipani', 'Ramdurg', 'Saundatti'],
-  'Bengaluru Rural': ['Devanahalli', 'Doddaballapur', 'Hoskote', 'Nelamangala', 'Sidlaghatta'],
-  'Bengaluru Urban': ['Anekal', 'Bangalore East', 'Bangalore North', 'Bangalore South', 'Bangalore West', 'Chickpet', 'Dasarahalli', 'Kengeri', 'Krishnarajapura', 'Yelahanka'],
-  Bidar: ['Aurad', 'Bidar', 'Bhalki', 'Humnabad', 'Kamalnagar', 'Basavakalyan'],
-  Chamarajanagara: ['Chamarajanagar', 'Gundlupet', 'Kollegal', 'Yelandur', 'Nanjangud'],
-  Chikkaballapura: ['Bagepalli', 'Chikkaballapura', 'Chintamani', 'Gowribidanur', 'Gudibanda', 'Sidlaghatta'],
-  Chikkamagaluru: ['Chikkamagaluru', 'Kadur', 'Koppa', 'Mudigere', 'Narasimharajapura', 'Sringeri', 'Tarikere'],
-  Chitradurga: ['Challakere', 'Chitradurga', 'Hiriyur', 'Holalkere', 'Hosadurga', 'Molakalmuru'],
-  'Dakshina Kannada': ['Mangaluru', 'Bantwal', 'Puttur', 'Sullia', 'Belthangady'],
-  Davanagere: ['Channagiri', 'Davanagere', 'Harihar', 'Honnali', 'Jagalur', 'Nyamathi'],
-  Dharwad: ['Dharwad', 'Hubli', 'Kalghatgi', 'Kundgol', 'Navalgund'],
-  Gadag: ['Gadag', 'Nargund', 'Ron', 'Shirhatti', 'Lakshmeshwar'],
-  Hassan: ['Arsikere', 'Belur', 'Channarayapatna', 'Hassan', 'Holenarasipura', 'Sakleshpura', 'Shravanabelagola', 'Arkalgud'],
-  Haveri: ['Byadgi', 'Haveri', 'Hirekerur', 'Hanagal', 'Ranebennur', 'Savanur'],
-  Kalaburagi: ['Afzalpur', 'Aland', 'Chincholi', 'Kalaburagi', 'Jevargi', 'Sedam', 'Shahabad'],
-  Kodagu: ['Madikeri', 'Somvarpet', 'Virajpet'],
-  Kolar: ['Bangarapet', 'Kolar', 'Malur', 'Mulbagal', 'Srinivaspur', 'Vemagal', 'KGF'],
-  Koppal: ['Koppal', 'Gangavati', 'Yelburga', 'Kustagi'],
-  Mandya: ['Krishnarajpet', 'Maddur', 'Malavalli', 'Mandya', 'Nagamangala', 'Pandavapura', 'Srirangapatna'],
-  Mysuru: ['Hunsur', 'H.D. Kote', 'Krishnarajanagara', 'Mysuru', 'Nanjangud', 'Periyapatna', 'Tirumakudalu Narasipura'],
-  Raichur: ['Deodurg', 'Lingsugur', 'Manvi', 'Raichur', 'Sindhanur', 'Devadurga'],
-  Ramanagara: ['Channapatna', 'Kanakapura', 'Magadi', 'Ramanagara'],
-  Shivamogga: ['Bhadravati', 'Hosanagara', 'Sagar', 'Shikarpur', 'Shivamogga', 'Sorab', 'Thirthahalli'],
-  Tumakuru: ['Chikkanayakanahalli', 'Gubbi', 'Koratagere', 'Kunigal', 'Madhugiri', 'Pavagada', 'Sira', 'Tiptur', 'Tumakuru', 'Turuvekere'],
-  Udupi: ['Byndoor', 'Karkala', 'Kundapura', 'Udupi', 'Brahmavar'],
-  'Uttara Kannada': ['Karwar', 'Ankola', 'Bhatkal', 'Honnavar', 'Kumta', 'Sirsi', 'Siddapur', 'Yellapur', 'Haliyal', 'Mundgod', 'Joida'],
-  Vijayapura: ['Vijayapura', 'Basavan Bagevadi', 'Muddebihal', 'Sindgi', 'Indi'],
-  Yadgir: ['Shorapur', 'Yadgir', 'Shahpur', 'Surpur'],
-  Vijayanagara: ['Hospet', 'Hagaribommanahalli', 'Harapanahalli', 'Kudligi'],
-};
-
 const MEMBER_CATEGORY_OPTIONS = [
   { value: 'Life Member', label: 'Life Member - Rs250' },
   { value: 'Ashrayadataru', label: 'Ashrayadataru - Rs1,000' },
@@ -177,7 +110,7 @@ export class ScholarshipApplicationComponent {
   readonly boardOptions = ['state', 'ICSE', 'CBSE'];
   readonly standardOptions = ['10th', '12th'];
   readonly genderOptions = ['Male', 'Female', 'Other'];
-  readonly districtOptions = [...KARNATAKA_DISTRICTS];
+  readonly stateOptions = [...STATE_OPTIONS];
   readonly memberCategoryOptions = [...MEMBER_CATEGORY_OPTIONS];
 
   readonly form = this.fb.group(
@@ -195,7 +128,7 @@ export class ScholarshipApplicationComponent {
       village: ['', [Validators.required, Validators.maxLength(120)]],
       taluk: ['', [Validators.required, Validators.maxLength(120)]],
       district: ['', [Validators.required, Validators.maxLength(120)]],
-      state: ['Karnataka', [Validators.required, Validators.maxLength(120)]],
+      state: ['', [Validators.required, Validators.maxLength(120)]],
       pinCode: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
       aadhaarNumber: ['', [Validators.required, Validators.pattern(/^\d{12}$/)]],
       aadhaarShareCode: ['', [Validators.required, Validators.pattern(/^\S{4,32}$/)]],
@@ -272,8 +205,12 @@ export class ScholarshipApplicationComponent {
     return String(this.form.controls.district.value || '');
   }
 
-  get shouldUseKarnatakaAddressData(): boolean {
-    return true;
+  get selectedState(): string {
+    return String(this.form.controls.state.value || '');
+  }
+
+  get districtOptions(): string[] {
+    return Object.keys(STATE_DISTRICT_TALUKS[this.selectedState] || {});
   }
 
   get heardFromMemberSelected(): boolean {
@@ -281,11 +218,7 @@ export class ScholarshipApplicationComponent {
   }
 
   get talukOptions(): string[] {
-    if (!this.shouldUseKarnatakaAddressData) {
-      return [];
-    }
-
-    return KARNATAKA_TALUKS[this.selectedDistrict] || [];
+    return STATE_DISTRICT_TALUKS[this.selectedState]?.[this.selectedDistrict] || [];
   }
 
   get hasAadhaarMismatch(): boolean {
@@ -364,11 +297,11 @@ export class ScholarshipApplicationComponent {
 
   onDistrictChanged(): void {
     this.form.controls.taluk.setValue('');
-    this.form.controls.taluk.markAsTouched();
   }
 
   onStateChanged(): void {
-    this.form.controls.state.setValue('Karnataka');
+    this.form.controls.district.setValue('');
+    this.form.controls.taluk.setValue('');
   }
 
   onRegistrationNumberChanged(): void {

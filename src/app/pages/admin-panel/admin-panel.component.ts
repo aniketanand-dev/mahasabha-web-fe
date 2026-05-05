@@ -162,6 +162,7 @@ type ScholarshipPreviewItem = {
 };
 
 type ScholarshipStatus = 'pending' | 'accepted' | 'rejected';
+type ScholarshipListTab = 'all' | ScholarshipStatus;
 
 const createAcademicYearLabel = (startYear: number): string => `AY-${startYear}-${startYear + 1}`;
 
@@ -196,6 +197,12 @@ const SCHOLARSHIP_PERCENTAGE_BUCKETS = [
 export class AdminPanelComponent {
   private static readonly SCHOLARSHIP_SEARCH_DEBOUNCE_MS = 700;
   private static readonly SCHOLARSHIP_SEARCH_MIN_LENGTH = 3;
+  readonly scholarshipListTabs: Array<{ key: ScholarshipListTab; label: string }> = [
+    { key: 'all', label: 'All' },
+    { key: 'pending', label: 'Pending' },
+    { key: 'accepted', label: 'Accepted' },
+    { key: 'rejected', label: 'Rejected' },
+  ];
 
   auth   = inject(AuthService);
   data   = inject(AdminDataService);
@@ -539,6 +546,7 @@ export class AdminPanelComponent {
   scholarshipTotalPages = signal(0);
   scholarshipAcademicYearOptions = signal<ScholarshipAcademicYearOption[]>([]);
   scholarshipSelectedAcademicYearId = signal('');
+  scholarshipActiveListTab = signal<ScholarshipListTab>('all');
   readonly scholarshipSelectedAcademicYearLabel = computed(() => {
     const selectedAcademicYear = this.scholarshipAcademicYearOptions()
       .find((year) => year._id === this.scholarshipSelectedAcademicYearId());
@@ -558,6 +566,27 @@ export class AdminPanelComponent {
   scholarshipImagePreviewIndex = signal(0);
   scholarshipImageZoom = signal(1);
   readonly scholarshipSummary = computed(() => this.buildScholarshipSummary(this.scholarshipSummaryItems()));
+  readonly scholarshipTabCounts = computed(() => {
+    const counts: Record<ScholarshipListTab, number> = {
+      all: 0,
+      pending: 0,
+      accepted: 0,
+      rejected: 0,
+    };
+
+    for (const item of this.scholarshipSummaryItems()) {
+      const normalizedStatus = String(item.status || '').toLowerCase();
+      counts.all += 1;
+
+      if (normalizedStatus === 'accepted' || normalizedStatus === 'rejected') {
+        counts[normalizedStatus] += 1;
+      } else {
+        counts.pending += 1;
+      }
+    }
+
+    return counts;
+  });
   private scholarshipSearchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private scholarshipLoadRequestId = 0;
   private scholarshipImagePanStage: HTMLDivElement | null = null;
@@ -610,10 +639,11 @@ export class AdminPanelComponent {
     this.scholarshipError.set('');
     const academicYearId = this.scholarshipSelectedAcademicYearId();
     const search = this.scholarshipSearchTerm();
+    const status = this.scholarshipActiveListTab() === 'all' ? '' : this.scholarshipActiveListTab();
 
     try {
       const [result, summaryResult] = await Promise.all([
-        this.data.getScholarshipApplications({ page, limit: this.scholarshipLimit, academicYearId, search }),
+        this.data.getScholarshipApplications({ page, limit: this.scholarshipLimit, academicYearId, search, status }),
         this.data.getScholarshipApplications({ all: true, academicYearId }).catch(() => null),
       ]);
 
@@ -737,6 +767,15 @@ export class AdminPanelComponent {
     await this.loadScholarshipApplications(1);
   }
 
+  async setScholarshipListTab(tab: ScholarshipListTab) {
+    if (this.scholarshipActiveListTab() === tab) {
+      return;
+    }
+
+    this.scholarshipActiveListTab.set(tab);
+    await this.loadScholarshipApplications(1);
+  }
+
   onScholarshipSearchDraftChanged(value: string) {
     this.scholarshipSearchDraft.set(value);
 
@@ -822,12 +861,13 @@ export class AdminPanelComponent {
 
     try {
       const updated = await this.data.updateScholarshipApplicationStatus(item._id, nextStatus, rejectionComment);
-      this.scholarshipApplications.update((items) => items.map((entry) => entry._id === updated._id ? updated : entry));
-      this.scholarshipSummaryItems.update((items) => items.map((entry) => entry._id === updated._id ? updated : entry));
       if (this.scholarshipPreviewApplication()?._id === updated._id) {
         this.scholarshipPreviewApplication.set(updated);
       }
-      this.initializeScholarshipStatusDrafts(this.scholarshipSummaryItems());
+      if (this.scholarshipActiveListTab() !== 'all' && this.scholarshipActiveListTab() !== updated.status) {
+        this.closeScholarshipImagePreview();
+      }
+      await this.loadScholarshipApplications(this.scholarshipPage());
     } catch {
       this.scholarshipError.set('Unable to update scholarship status. Please retry.');
     } finally {

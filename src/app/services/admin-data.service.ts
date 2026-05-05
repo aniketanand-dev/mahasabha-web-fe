@@ -1012,12 +1012,13 @@ export class AdminDataService {
     this.saveHostels(this.hostels().filter(item => item.id !== id));
   }
 
-  async getScholarshipApplications(params: { page?: number; limit?: number; all?: boolean; academicYearId?: string; search?: string } = {}) {
+  async getScholarshipApplications(params: { page?: number; limit?: number; all?: boolean; academicYearId?: string; search?: string; status?: string } = {}) {
     const page = params.page ?? 1;
     const limit = params.limit ?? 10;
     const all = params.all === true;
     const academicYearId = params.academicYearId?.trim() || '';
     const search = params.search?.trim() || '';
+    const status = params.status?.trim().toLowerCase() || '';
 
     const response = await firstValueFrom(this.http.get<ScholarshipListApiResponse>(
       buildApiUrl('/api/v1/scholarships/applications'),
@@ -1028,6 +1029,7 @@ export class AdminDataService {
           all: String(all),
           academicYearId,
           search,
+          status,
         },
         headers: this.authHeaders(),
       },
