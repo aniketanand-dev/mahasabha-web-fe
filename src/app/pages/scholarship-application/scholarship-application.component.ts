@@ -23,11 +23,7 @@ interface UploadState {
 
 const IMAGE_UPLOAD_MIN_BYTES = 200 * 1024;
 const IMAGE_UPLOAD_MAX_BYTES = 1024 * 1024;
-const IMAGE_UPLOAD_MIN_WIDTH = 1200;
-const IMAGE_UPLOAD_MAX_WIDTH = 1600;
-const IMAGE_UPLOAD_MIN_HEIGHT = 900;
-const IMAGE_UPLOAD_MAX_HEIGHT = 1200;
-const IMAGE_UPLOAD_REQUIREMENTS_MESSAGE = 'Upload an image between 200 KB and 1 MB with resolution from 1200 x 900 px to 1600 x 1200 px. If scanned, use 150-300 DPI so the text stays readable.';
+const IMAGE_UPLOAD_REQUIREMENTS_MESSAGE = 'Upload an image file up to 1 MB.';
 
 const otherValueRequiredValidator = (
   selectorControlName: string,
@@ -569,50 +565,11 @@ export class ScholarshipApplicationComponent {
   }
 
   private async validateImageUpload(file: File): Promise<string> {
-    if (file.size < IMAGE_UPLOAD_MIN_BYTES || file.size > IMAGE_UPLOAD_MAX_BYTES) {
+    if (file.size > IMAGE_UPLOAD_MAX_BYTES) {
       return IMAGE_UPLOAD_REQUIREMENTS_MESSAGE;
     }
 
-    try {
-      const { width, height } = await this.readImageDimensions(file);
-
-      if (
-        width < IMAGE_UPLOAD_MIN_WIDTH
-        || width > IMAGE_UPLOAD_MAX_WIDTH
-        || height < IMAGE_UPLOAD_MIN_HEIGHT
-        || height > IMAGE_UPLOAD_MAX_HEIGHT
-      ) {
-        return IMAGE_UPLOAD_REQUIREMENTS_MESSAGE;
-      }
-    } catch {
-      return 'Unable to read the selected image. Please upload a valid image file.';
-    }
-
     return '';
-  }
-
-  private readImageDimensions(file: File): Promise<{ width: number; height: number }> {
-    return new Promise((resolve, reject) => {
-      const objectUrl = URL.createObjectURL(file);
-      const image = new Image();
-
-      image.onload = () => {
-        const dimensions = {
-          width: image.naturalWidth,
-          height: image.naturalHeight,
-        };
-
-        URL.revokeObjectURL(objectUrl);
-        resolve(dimensions);
-      };
-
-      image.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        reject(new Error('Invalid image'));
-      };
-
-      image.src = objectUrl;
-    });
   }
 
   private setUploadTypeError(field: UploadField, message: string): void {

@@ -254,6 +254,32 @@ interface UploadResponse {
   src: string;
 }
 
+interface SiteContentListApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    items: Record<string, unknown>;
+  };
+}
+
+type SiteContentKey =
+  | 'adm_text_overrides'
+  | 'adm_hero_content'
+  | 'adm_president_note_content'
+  | 'adm_bhavan_content'
+  | 'adm_navbar_content'
+  | 'adm_footer_content'
+  | 'adm_cm_leaders'
+  | 'adm_past_presidents'
+  | 'adm_events'
+  | 'adm_directory_entries'
+  | 'adm_org_nodes'
+  | 'adm_founders'
+  | 'adm_tickers'
+  | 'adm_hostels';
+
+const SITE_CONTENT_API_BASE = buildApiUrl('/api/v1/site-content');
+
 const MANAGED_UPLOAD_PREFIX = '/uploads/';
 const DEFAULT_ICON_IMAGE = '/uploads/placeholders/default-icon.svg';
 const DEFAULT_SQUARE_IMAGE = '/uploads/placeholders/default-square.svg';
@@ -509,28 +535,6 @@ function cloneData<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function loadArray<T>(key: string, fallback: T[]): T[] {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : cloneData(fallback);
-  } catch {
-    return cloneData(fallback);
-  }
-}
-
-function loadValue<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : cloneData(fallback);
-  } catch {
-    return cloneData(fallback);
-  }
-}
-
-function saveValue<T>(key: string, data: T): void {
-  localStorage.setItem(key, JSON.stringify(data));
-}
-
 @Injectable({ providedIn: 'root' })
 export class AdminDataService {
   private readonly http = inject(HttpClient);
@@ -542,24 +546,122 @@ export class AdminDataService {
     return typeof message === 'string' && message.trim() ? message : fallback;
   }
 
-  textOverrides = signal<AdminTextOverrides>(loadValue('adm_text_overrides', {}));
-  heroContent = signal<AdminHeroContent>(this.normalizeHeroContent(loadValue('adm_hero_content', DEFAULT_HERO_CONTENT)));
-  presidentNoteContent = signal<AdminPresidentNoteContent>(this.normalizePresidentNoteContent(loadValue('adm_president_note_content', DEFAULT_PRESIDENT_NOTE_CONTENT)));
-  bhavanContent = signal<AdminBhavanContent>(this.normalizeBhavanContent(loadValue('adm_bhavan_content', DEFAULT_BHAVAN_CONTENT)));
-  navbarContent = signal<AdminNavbarContent>(this.normalizeNavbarContent(loadValue('adm_navbar_content', DEFAULT_NAVBAR_CONTENT)));
-  footerContent = signal<AdminFooterContent>(loadValue('adm_footer_content', DEFAULT_FOOTER_CONTENT));
-  cmLeaders = signal<AdminCmLeader[]>(this.normalizeCmLeaders(loadArray('adm_cm_leaders', DEFAULT_CM_LEADERS)));
-  pastPresidents = signal<AdminPastPresident[]>(this.normalizePastPresidents(loadArray('adm_past_presidents', DEFAULT_PAST_PRESIDENTS)));
-  events = signal<AdminEvent[]>(this.normalizeEvents(loadArray('adm_events', DEFAULT_EVENTS)));
-  directoryEntries = signal<AdminDirectoryEntry[]>(loadArray('adm_directory_entries', DEFAULT_DIRECTORY_ENTRIES));
-  orgNodes = signal<AdminOrgNode[]>(this.normalizeOrgNodes(loadArray('adm_org_nodes', DEFAULT_ORG_NODES)));
-  gallery = signal<AdminGalleryItem[]>(this.normalizeGallery(loadArray('adm_gallery', DEFAULT_GALLERY)));
-  founders = signal<AdminFounder[]>(this.normalizeFounders(loadArray('adm_founders', DEFAULT_FOUNDERS)));
-  tickers = signal<AdminTicker[]>(loadArray('adm_tickers', DEFAULT_TICKERS));
-  hostels = signal<AdminHostel[]>(this.normalizeHostels(loadArray('adm_hostels', [])));
+  textOverrides = signal<AdminTextOverrides>({});
+  heroContent = signal<AdminHeroContent>(this.normalizeHeroContent(cloneData(DEFAULT_HERO_CONTENT)));
+  presidentNoteContent = signal<AdminPresidentNoteContent>(this.normalizePresidentNoteContent(cloneData(DEFAULT_PRESIDENT_NOTE_CONTENT)));
+  bhavanContent = signal<AdminBhavanContent>(this.normalizeBhavanContent(cloneData(DEFAULT_BHAVAN_CONTENT)));
+  navbarContent = signal<AdminNavbarContent>(this.normalizeNavbarContent(cloneData(DEFAULT_NAVBAR_CONTENT)));
+  footerContent = signal<AdminFooterContent>(cloneData(DEFAULT_FOOTER_CONTENT));
+  cmLeaders = signal<AdminCmLeader[]>(this.normalizeCmLeaders(cloneData(DEFAULT_CM_LEADERS)));
+  pastPresidents = signal<AdminPastPresident[]>(this.normalizePastPresidents(cloneData(DEFAULT_PAST_PRESIDENTS)));
+  events = signal<AdminEvent[]>(this.normalizeEvents(cloneData(DEFAULT_EVENTS)));
+  directoryEntries = signal<AdminDirectoryEntry[]>(cloneData(DEFAULT_DIRECTORY_ENTRIES));
+  orgNodes = signal<AdminOrgNode[]>(this.normalizeOrgNodes(cloneData(DEFAULT_ORG_NODES)));
+  gallery = signal<AdminGalleryItem[]>(this.normalizeGallery(cloneData(DEFAULT_GALLERY)));
+  founders = signal<AdminFounder[]>(this.normalizeFounders(cloneData(DEFAULT_FOUNDERS)));
+  tickers = signal<AdminTicker[]>(cloneData(DEFAULT_TICKERS));
+  hostels = signal<AdminHostel[]>(this.normalizeHostels([]));
 
   constructor() {
+    void this.hydrateContentFromApi();
     void this.refreshGalleryFromApi();
+  }
+
+  private async hydrateContentFromApi() {
+    try {
+      const response = await firstValueFrom(this.http.get<SiteContentListApiResponse>(SITE_CONTENT_API_BASE));
+      const items = response?.data?.items || {};
+      this.applyContentFromApi(items);
+    } catch {
+      // Keep local cache when API is unavailable.
+    }
+  }
+
+  private applyContentFromApi(items: Record<string, unknown>) {
+    if (items['adm_text_overrides'] !== undefined) {
+      const next = cloneData(items['adm_text_overrides'] as AdminTextOverrides);
+      this.textOverrides.set(next);
+    }
+
+    if (items['adm_hero_content'] !== undefined) {
+      const next = this.normalizeHeroContent(cloneData(items['adm_hero_content'] as AdminHeroContent));
+      this.heroContent.set(next);
+    }
+
+    if (items['adm_president_note_content'] !== undefined) {
+      const next = this.normalizePresidentNoteContent(cloneData(items['adm_president_note_content'] as AdminPresidentNoteContent));
+      this.presidentNoteContent.set(next);
+    }
+
+    if (items['adm_bhavan_content'] !== undefined) {
+      const next = this.normalizeBhavanContent(cloneData(items['adm_bhavan_content'] as AdminBhavanContent));
+      this.bhavanContent.set(next);
+    }
+
+    if (items['adm_navbar_content'] !== undefined) {
+      const next = this.normalizeNavbarContent(cloneData(items['adm_navbar_content'] as AdminNavbarContent));
+      this.navbarContent.set(next);
+    }
+
+    if (items['adm_footer_content'] !== undefined) {
+      const next = cloneData(items['adm_footer_content'] as AdminFooterContent);
+      this.footerContent.set(next);
+    }
+
+    if (items['adm_cm_leaders'] !== undefined) {
+      const next = this.normalizeCmLeaders(cloneData(items['adm_cm_leaders'] as AdminCmLeader[]));
+      this.cmLeaders.set(next);
+    }
+
+    if (items['adm_past_presidents'] !== undefined) {
+      const next = this.normalizePastPresidents(cloneData(items['adm_past_presidents'] as AdminPastPresident[]));
+      this.pastPresidents.set(next);
+    }
+
+    if (items['adm_events'] !== undefined) {
+      const next = this.normalizeEvents(cloneData(items['adm_events'] as AdminEvent[]));
+      this.events.set(next);
+    }
+
+    if (items['adm_directory_entries'] !== undefined) {
+      const next = cloneData(items['adm_directory_entries'] as AdminDirectoryEntry[]);
+      this.directoryEntries.set(next);
+    }
+
+    if (items['adm_org_nodes'] !== undefined) {
+      const next = this.normalizeOrgNodes(cloneData(items['adm_org_nodes'] as AdminOrgNode[]));
+      this.orgNodes.set(next);
+    }
+
+    if (items['adm_founders'] !== undefined) {
+      const next = this.normalizeFounders(cloneData(items['adm_founders'] as AdminFounder[]));
+      this.founders.set(next);
+    }
+
+    if (items['adm_tickers'] !== undefined) {
+      const next = cloneData(items['adm_tickers'] as AdminTicker[]);
+      this.tickers.set(next);
+    }
+
+    if (items['adm_hostels'] !== undefined) {
+      const next = this.normalizeHostels(cloneData(items['adm_hostels'] as AdminHostel[]));
+      this.hostels.set(next);
+    }
+  }
+
+  private async persistContent(key: SiteContentKey, value: unknown) {
+    const headers = this.authHeaders();
+
+    if (!headers) {
+      console.warn(`[AdminDataService] Skipped DB save for ${key}: admin token not available.`);
+      return;
+    }
+
+    try {
+      await firstValueFrom(this.http.put(SITE_CONTENT_API_BASE + `/${key}`, { value }, { headers }));
+    } catch (error) {
+      console.error(`[AdminDataService] Failed DB save for ${key}.`, error);
+    }
   }
 
   private isManagedUpload(src: string | null | undefined) {
@@ -677,7 +779,6 @@ export class AdminDataService {
   private setGallery(items: AdminGalleryItem[]) {
     const next = this.normalizeGallery(cloneData(items));
     this.gallery.set(next);
-    saveValue('adm_gallery', next);
   }
 
   getTextOverride(key: string): string | undefined {
@@ -687,14 +788,14 @@ export class AdminDataService {
   setTextOverride(key: string, value: string) {
     const next = { ...this.textOverrides(), [key]: value };
     this.textOverrides.set(next);
-    saveValue('adm_text_overrides', next);
+    void this.persistContent('adm_text_overrides', next);
   }
 
   clearTextOverride(key: string) {
     const next = { ...this.textOverrides() };
     delete next[key];
     this.textOverrides.set(next);
-    saveValue('adm_text_overrides', next);
+    void this.persistContent('adm_text_overrides', next);
   }
 
   async saveHeroContent(content: AdminHeroContent, logoFile?: File | null) {
@@ -705,7 +806,7 @@ export class AdminDataService {
     }
 
     this.heroContent.set(next);
-    saveValue('adm_hero_content', next);
+    await this.persistContent('adm_hero_content', next);
   }
 
   async savePresidentNoteContent(content: AdminPresidentNoteContent, photoFile?: File | null) {
@@ -716,7 +817,7 @@ export class AdminDataService {
     }
 
     this.presidentNoteContent.set(next);
-    saveValue('adm_president_note_content', next);
+    await this.persistContent('adm_president_note_content', next);
   }
 
   async saveBhavanContent(content: AdminBhavanContent, imageFiles: Array<File | null> = []) {
@@ -731,7 +832,7 @@ export class AdminDataService {
     }
 
     this.bhavanContent.set(next);
-    saveValue('adm_bhavan_content', next);
+    await this.persistContent('adm_bhavan_content', next);
   }
 
   async saveNavbarContent(content: AdminNavbarContent, logoFile?: File | null) {
@@ -742,19 +843,19 @@ export class AdminDataService {
     }
 
     this.navbarContent.set(next);
-    saveValue('adm_navbar_content', next);
+    await this.persistContent('adm_navbar_content', next);
   }
 
   saveFooterContent(content: AdminFooterContent) {
     const next = cloneData(content);
     this.footerContent.set(next);
-    saveValue('adm_footer_content', next);
+    void this.persistContent('adm_footer_content', next);
   }
 
   private saveCmLeaders(items: AdminCmLeader[]) {
     const next = this.normalizeCmLeaders(cloneData(items));
     this.cmLeaders.set(next);
-    saveValue('adm_cm_leaders', next);
+    void this.persistContent('adm_cm_leaders', next);
   }
 
   async addCmLeader(item: Omit<AdminCmLeader, 'id' | 'img'>, file: File) {
@@ -785,7 +886,7 @@ export class AdminDataService {
   private savePastPresidents(items: AdminPastPresident[]) {
     const next = this.normalizePastPresidents(cloneData(items));
     this.pastPresidents.set(next);
-    saveValue('adm_past_presidents', next);
+    void this.persistContent('adm_past_presidents', next);
   }
 
   async addPastPresident(item: Omit<AdminPastPresident, 'id' | 'img'>, file: File) {
@@ -816,7 +917,7 @@ export class AdminDataService {
   private saveEvents(items: AdminEvent[]) {
     const next = this.normalizeEvents(cloneData(items));
     this.events.set(next);
-    saveValue('adm_events', next);
+    void this.persistContent('adm_events', next);
   }
 
   async addEvent(item: Omit<AdminEvent, 'id' | 'img'>, file: File) {
@@ -847,13 +948,13 @@ export class AdminDataService {
   saveDirectoryEntries(items: AdminDirectoryEntry[]) {
     const next = cloneData(items);
     this.directoryEntries.set(next);
-    saveValue('adm_directory_entries', next);
+    void this.persistContent('adm_directory_entries', next);
   }
 
   private saveOrgNodes(items: AdminOrgNode[]) {
     const next = this.normalizeOrgNodes(cloneData(items));
     this.orgNodes.set(next);
-    saveValue('adm_org_nodes', next);
+    void this.persistContent('adm_org_nodes', next);
   }
 
   addDirectoryEntry(item: Omit<AdminDirectoryEntry, 'id'>) {
@@ -945,7 +1046,7 @@ export class AdminDataService {
   private saveFounders(items: AdminFounder[]) {
     const next = this.normalizeFounders(cloneData(items));
     this.founders.set(next);
-    saveValue('adm_founders', next);
+    void this.persistContent('adm_founders', next);
   }
 
   async addFounder(item: Omit<AdminFounder, 'id' | 'img'>, file: File) {
@@ -976,7 +1077,7 @@ export class AdminDataService {
   saveTickers(items: AdminTicker[]) {
     const next = cloneData(items);
     this.tickers.set(next);
-    saveValue('adm_tickers', next);
+    void this.persistContent('adm_tickers', next);
   }
 
   addTicker(text: string) {
@@ -994,7 +1095,7 @@ export class AdminDataService {
   private saveHostels(items: AdminHostel[]) {
     const next = this.normalizeHostels(cloneData(items));
     this.hostels.set(next);
-    saveValue('adm_hostels', next);
+    void this.persistContent('adm_hostels', next);
   }
 
   async addHostel(item: Omit<AdminHostel, 'id' | 'img'>, file: File) {
