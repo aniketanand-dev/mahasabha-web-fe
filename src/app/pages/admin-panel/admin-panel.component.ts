@@ -24,6 +24,7 @@ import {
   AdminTicker,
   ScholarshipAcademicYearOption,
 } from '../../services/admin-data.service';
+import { buildManagedAssetUrl } from '../../services/api-base';
 import { translations } from '../../i18n/translations';
 
 type Tab =
@@ -155,9 +156,12 @@ type ScholarshipPreviewDetails = {
   percentage?: number;
 };
 
+type ScholarshipDocumentKind = 'image' | 'pdf' | 'file';
+
 type ScholarshipPreviewItem = {
   src: string;
   alt: string;
+  kind: ScholarshipDocumentKind;
   details: ScholarshipPreviewDetails;
 };
 
@@ -555,12 +559,17 @@ export class AdminPanelComponent {
   });
   scholarshipSearchDraft = signal('');
   scholarshipSearchTerm = signal('');
+  scholarshipRegionSeedItems = signal<AdminScholarshipApplication[]>([]);
+  scholarshipSelectedState = signal('');
+  scholarshipSelectedDistrict = signal('');
+  scholarshipSelectedTaluk = signal('');
   scholarshipStatusDrafts = signal<Record<string, ScholarshipStatus>>({});
   scholarshipCommentDrafts = signal<Record<string, string>>({});
   scholarshipStatusUpdating = signal<Record<string, boolean>>({});
   scholarshipPreviewApplication = signal<AdminScholarshipApplication | null>(null);
   scholarshipImagePreviewSrc = signal('');
   scholarshipImagePreviewAlt = signal('Scholarship document preview');
+  scholarshipImagePreviewKind = signal<ScholarshipDocumentKind>('image');
   scholarshipImagePreviewDetails = signal<ScholarshipPreviewDetails | null>(null);
   scholarshipImagePreviewItems = signal<ScholarshipPreviewItem[]>([]);
   scholarshipImagePreviewIndex = signal(0);
@@ -640,10 +649,14 @@ export class AdminPanelComponent {
     const academicYearId = this.scholarshipSelectedAcademicYearId();
     const search = this.scholarshipSearchTerm();
     const status = this.scholarshipActiveListTab() === 'all' ? '' : this.scholarshipActiveListTab();
+    const state = this.scholarshipSelectedState();
+    const district = this.scholarshipSelectedDistrict();
+    const taluk = this.scholarshipSelectedTaluk();
 
     try {
-      const [result, summaryResult] = await Promise.all([
-        this.data.getScholarshipApplications({ page, limit: this.scholarshipLimit, academicYearId, search, status }),
+      const [result, summaryResult, regionSeedResult] = await Promise.all([
+        this.data.getScholarshipApplications({ page, limit: this.scholarshipLimit, academicYearId, search, status, state, district, taluk }),
+        this.data.getScholarshipApplications({ all: true, academicYearId, search, status, state, district, taluk }).catch(() => null),
         this.data.getScholarshipApplications({ all: true, academicYearId }).catch(() => null),
       ]);
 
@@ -653,6 +666,7 @@ export class AdminPanelComponent {
 
       this.scholarshipApplications.set(result.items);
       this.scholarshipSummaryItems.set(summaryResult?.items ?? result.items);
+      this.scholarshipRegionSeedItems.set(regionSeedResult?.items ?? []);
       this.initializeScholarshipStatusDrafts(summaryResult?.items ?? result.items);
       this.scholarshipPage.set(result.pagination.page);
       this.scholarshipTotalItems.set(result.pagination.totalItems);
@@ -692,7 +706,6 @@ export class AdminPanelComponent {
       const academicYearId = this.scholarshipSelectedAcademicYearId();
       const academicYearLabel = this.scholarshipSelectedAcademicYearLabel();
       const result = await this.data.getScholarshipApplications({ all: true, academicYearId });
-      const origin = window.location.origin;
 
       const rows = result.items.map((item: AdminScholarshipApplication, index: number) => ({
         'Sl No': index + 1,
@@ -716,12 +729,17 @@ export class AdminPanelComponent {
         'Marks Obtained': item.marksObtained,
         'Total Marks': item.totalMarks,
         Percentage: item.percentage,
+        'Heard From Member': item.heardFromMember ? 'Yes' : 'No',
+        'Reference Member Category': item.referringMemberCategory,
+        'Reference Member Name': item.referringMemberName,
+        'Reference Member Registration No': item.referringMemberRegistrationNo,
         Status: item.status,
         'Submitted At': item.submittedAt,
-        'Profile Photo URL': `${origin}${item.profilePhotoUrl}`,
-        'Caste Certificate URL': `${origin}${item.casteCertificateUrl}`,
-        'Marks Card URL': `${origin}${item.marksCardUrl}`,
-        'Aadhaar Offline File URL': `${origin}${item.aadhaarOfflineFileUrl}`,
+        'Profile Photo URL': this.imageUrl(item.profilePhotoUrl),
+        'Caste Certificate URL': this.imageUrl(item.casteCertificateUrl),
+        'Marks Card URL': this.imageUrl(item.marksCardUrl),
+        'Aadhaar Copy URL': this.imageUrl(item.aadhaarCardUrl || ''),
+        'Aadhaar Offline File URL': item.aadhaarOfflineFileUrl ? this.imageUrl(item.aadhaarOfflineFileUrl) : '',
       }));
 
       const worksheet = utils.json_to_sheet(rows);
@@ -789,6 +807,15 @@ export class AdminPanelComponent {
     }, AdminPanelComponent.SCHOLARSHIP_SEARCH_DEBOUNCE_MS);
   }
 
+  async submitScholarshipSearchFromKeyboard(event: Event) {
+    event.preventDefault();
+    if (this.scholarshipSearchDebounceTimer) {
+      clearTimeout(this.scholarshipSearchDebounceTimer);
+      this.scholarshipSearchDebounceTimer = null;
+    }
+    await this.applyScholarshipSearch();
+  }
+
   async applyScholarshipSearch() {
     const nextSearchTerm = this.scholarshipSearchDraft().trim();
     if (nextSearchTerm && nextSearchTerm.length < AdminPanelComponent.SCHOLARSHIP_SEARCH_MIN_LENGTH) {
@@ -811,6 +838,52 @@ export class AdminPanelComponent {
 
     this.scholarshipSearchDraft.set('');
     this.scholarshipSearchTerm.set('');
+    await this.loadScholarshipApplications(1);
+  }
+
+  get scholarshipStateOptions(): string[] {
+    return [...new Set(this.scholarshipRegionSeedItems().map((item) => item.state).filter(Boolean))].sort((left, right) => left.localeCompare(right));
+  }
+
+  get scholarshipDistrictOptions(): string[] {
+    const selectedState = this.scholarshipSelectedState();
+    return [...new Set(this.scholarshipRegionSeedItems()
+      .filter((item) => !selectedState || item.state === selectedState)
+      .map((item) => item.district)
+      .filter(Boolean))].sort((left, right) => left.localeCompare(right));
+  }
+
+  get scholarshipTalukOptions(): string[] {
+    const selectedState = this.scholarshipSelectedState();
+    const selectedDistrict = this.scholarshipSelectedDistrict();
+    return [...new Set(this.scholarshipRegionSeedItems()
+      .filter((item) => (!selectedState || item.state === selectedState) && (!selectedDistrict || item.district === selectedDistrict))
+      .map((item) => item.taluk)
+      .filter(Boolean))].sort((left, right) => left.localeCompare(right));
+  }
+
+  async onScholarshipStateChanged(state: string) {
+    this.scholarshipSelectedState.set(state);
+    this.scholarshipSelectedDistrict.set('');
+    this.scholarshipSelectedTaluk.set('');
+    await this.loadScholarshipApplications(1);
+  }
+
+  async onScholarshipDistrictChanged(district: string) {
+    this.scholarshipSelectedDistrict.set(district);
+    this.scholarshipSelectedTaluk.set('');
+    await this.loadScholarshipApplications(1);
+  }
+
+  async onScholarshipTalukChanged(taluk: string) {
+    this.scholarshipSelectedTaluk.set(taluk);
+    await this.loadScholarshipApplications(1);
+  }
+
+  async clearScholarshipRegionFilters() {
+    this.scholarshipSelectedState.set('');
+    this.scholarshipSelectedDistrict.set('');
+    this.scholarshipSelectedTaluk.set('');
     await this.loadScholarshipApplications(1);
   }
 
@@ -884,7 +957,35 @@ export class AdminPanelComponent {
       return path;
     }
 
-    return `${window.location.origin}${path}`;
+    return buildManagedAssetUrl(path);
+  }
+
+  scholarshipStatusClass(status: string) {
+    const normalized = String(status || '').toLowerCase();
+
+    if (normalized === 'accepted') {
+      return 'is-accepted';
+    }
+
+    if (normalized === 'rejected') {
+      return 'is-rejected';
+    }
+
+    return 'is-pending';
+  }
+
+  scholarshipDocumentKind(path: string): ScholarshipDocumentKind {
+    const normalized = String(path || '').split('?')[0].toLowerCase();
+
+    if (/\.(png|jpe?g|webp|gif|bmp|svg)$/.test(normalized)) {
+      return 'image';
+    }
+
+    if (/\.pdf$/.test(normalized)) {
+      return 'pdf';
+    }
+
+    return 'file';
   }
 
   openScholarshipApplicationImagePreview(item: AdminScholarshipApplication, startIndex: number) {
@@ -892,16 +993,19 @@ export class AdminPanelComponent {
       {
         src: this.imageUrl(item.profilePhotoUrl),
         alt: 'Profile photo',
+        kind: this.scholarshipDocumentKind(item.profilePhotoUrl),
         details: { title: 'Profile photo' },
       },
       {
         src: this.imageUrl(item.casteCertificateUrl),
         alt: 'Caste certificate',
+        kind: this.scholarshipDocumentKind(item.casteCertificateUrl),
         details: { title: 'Caste certificate' },
       },
       {
         src: this.imageUrl(item.marksCardUrl),
         alt: 'Marks card',
+        kind: this.scholarshipDocumentKind(item.marksCardUrl),
         details: {
           title: 'Marks card verification',
           registrationNo: item.registrationNo,
@@ -909,6 +1013,12 @@ export class AdminPanelComponent {
           marksObtained: item.marksObtained,
           percentage: item.percentage,
         },
+      },
+      {
+        src: this.imageUrl(item.aadhaarCardUrl || ''),
+        alt: 'Aadhaar copy',
+        kind: this.scholarshipDocumentKind(item.aadhaarCardUrl || ''),
+        details: { title: 'Aadhaar copy' },
       },
     ].filter((entry) => !!entry.src);
 
@@ -929,10 +1039,13 @@ export class AdminPanelComponent {
       return;
     }
 
+    const kind = this.scholarshipDocumentKind(path);
+
     this.scholarshipImagePreviewItems.set([
       {
         src: resolvedUrl,
         alt: alt || 'Scholarship document preview',
+        kind,
         details: details ?? { title: alt || 'Scholarship document preview' },
       },
     ]);
@@ -945,6 +1058,7 @@ export class AdminPanelComponent {
     this.scholarshipPreviewApplication.set(null);
     this.scholarshipImagePreviewSrc.set('');
     this.scholarshipImagePreviewDetails.set(null);
+    this.scholarshipImagePreviewKind.set('image');
     this.scholarshipImagePreviewItems.set([]);
     this.scholarshipImagePreviewIndex.set(0);
     this.scholarshipImageZoom.set(1);
@@ -995,6 +1109,7 @@ export class AdminPanelComponent {
     this.scholarshipImagePreviewIndex.set(index);
     this.scholarshipImagePreviewSrc.set(current.src);
     this.scholarshipImagePreviewAlt.set(current.alt);
+    this.scholarshipImagePreviewKind.set(current.kind);
     this.scholarshipImagePreviewDetails.set(current.details);
     this.scholarshipImageZoom.set(1);
     if (this.scholarshipImagePanStage) {
@@ -1091,7 +1206,7 @@ export class AdminPanelComponent {
     return null;
   }
 
-  private scholarshipBoardKey(board: string): string {
+  private scholarshipBoardKey(board: string): string | null {
     const normalized = board.trim().toLowerCase();
 
     if (normalized === 'state' || normalized === 'state board' || normalized === 'sb' || normalized === 'sslc') {
@@ -1106,7 +1221,7 @@ export class AdminPanelComponent {
       return 'ICSE';
     }
 
-    return 'OTHERS';
+    return null;
   }
 
   private scholarshipStandardKey(standard: string): '10th' | '12th' | null {
@@ -1135,7 +1250,6 @@ export class AdminPanelComponent {
       { key: 'SB', label: 'SB', ...this.createScholarshipGenderCount() },
       { key: 'CBSE', label: 'CBSE', ...this.createScholarshipGenderCount() },
       { key: 'ICSE', label: 'ICSE', ...this.createScholarshipGenderCount() },
-      { key: 'OTHERS', label: 'Others', ...this.createScholarshipGenderCount() },
     ];
     const boardMap = new Map(boards.map(entry => [entry.key, entry]));
     const ranges: ScholarshipRangeSummary[] = SCHOLARSHIP_PERCENTAGE_BUCKETS.map(entry => ({
@@ -1152,7 +1266,8 @@ export class AdminPanelComponent {
 
     for (const item of items) {
       const gender = this.scholarshipGenderKey(item.gender);
-      const board = boardMap.get(this.scholarshipBoardKey(item.board));
+      const boardKey = this.scholarshipBoardKey(item.board);
+      const board = boardKey ? boardMap.get(boardKey) : undefined;
       const standard = this.scholarshipStandardKey(item.standard);
       const range = rangeMap.get(this.scholarshipRangeKey(item.percentage) ?? '');
 

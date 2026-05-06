@@ -5,7 +5,6 @@ import { RouterLink } from '@angular/router';
 import { NavbarComponent } from '../../components/navbar/navbar.component';
 import { FooterComponent } from '../../components/footer/footer.component';
 import {
-  AadhaarPreviewResponse,
   ScholarshipAcademicYearOption,
   ScholarshipApplicationFiles,
   ScholarshipApplicationPayload,
@@ -14,12 +13,21 @@ import {
 } from '../../services/scholarship.service';
 import { STATE_DISTRICT_TALUKS, STATE_OPTIONS } from '../../data/address-data';
 
-type UploadField = 'profilePhoto' | 'casteCertificate' | 'marksCard' | 'aadhaarOfflineFile';
+type UploadField = 'profilePhoto' | 'casteCertificate' | 'marksCard' | 'aadhaarCard';
+type UploadPreviewKind = 'image' | 'file';
 
 interface UploadState {
   file: File | null;
   previewUrl: string | null;
 }
+
+const IMAGE_UPLOAD_MIN_BYTES = 200 * 1024;
+const IMAGE_UPLOAD_MAX_BYTES = 1024 * 1024;
+const IMAGE_UPLOAD_MIN_WIDTH = 1200;
+const IMAGE_UPLOAD_MAX_WIDTH = 1600;
+const IMAGE_UPLOAD_MIN_HEIGHT = 900;
+const IMAGE_UPLOAD_MAX_HEIGHT = 1200;
+const IMAGE_UPLOAD_REQUIREMENTS_MESSAGE = 'Upload an image between 200 KB and 1 MB with resolution from 1200 x 900 px to 1600 x 1200 px. If scanned, use 150-300 DPI so the text stays readable.';
 
 const otherValueRequiredValidator = (
   selectorControlName: string,
@@ -82,13 +90,15 @@ const MEMBER_CATEGORY_OPTIONS = [
   { value: 'Ashrayadataru', label: 'Ashrayadataru - Rs1,000' },
   { value: 'Upaposhakaru', label: 'Upaposhakaru - Rs2,500' },
   { value: 'Sahaposhakaru', label: 'Sahaposhakaru - Rs5,000' },
-  { value: 'District Committee Member', label: 'District Committee Member' },
+  { value: 'Institutional Member', label: 'Institutional Member - Rs5,000' },
+  { value: 'Poshakaru', label: 'Poshakaru - Rs10,000' },
+  { value: 'Mahaposhakaru', label: 'Mahaposhakaru - Rs25,000' },
+  { value: 'Danigalu', label: 'Danigalu - Rs50,000' },
   { value: 'Mahadanigalu', label: 'Mahadanigalu - Rs1,00,000' },
   { value: 'Danashiromanigalu', label: 'Danashiromanigalu - Rs2,50,000' },
   { value: 'Dasohigalu', label: 'Dasohigalu - Rs5,00,000' },
   { value: 'Mahadasohigalu', label: 'Mahadasohigalu - Rs10,00,000' },
   { value: 'Paramadasohigalu', label: 'Paramadasohigalu - Rs25,00,000' },
-  { value: 'Institutional Member', label: 'Institutional Member - Rs5,000' },
 ] as const;
 
 @Component({
@@ -131,7 +141,6 @@ export class ScholarshipApplicationComponent {
       state: ['', [Validators.required, Validators.maxLength(120)]],
       pinCode: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
       aadhaarNumber: ['', [Validators.required, Validators.pattern(/^\d{12}$/)]],
-      aadhaarShareCode: ['', [Validators.required, Validators.pattern(/^\S{4,32}$/)]],
       board: ['', Validators.required],
       otherBoard: [''],
       standard: ['', Validators.required],
@@ -160,19 +169,21 @@ export class ScholarshipApplicationComponent {
   readonly percentage = signal<number | null>(null);
   readonly registrationChecking = signal(false);
   readonly registrationStatusMessage = signal('');
-  readonly aadhaarPreview = signal<AadhaarPreviewResponse | null>(null);
-  readonly aadhaarLoading = signal(false);
-  readonly aadhaarError = signal('');
-  readonly aadhaarWarning = signal('');
-  readonly aadhaarGuideOpen = signal(false);
   readonly imagePreviewSrc = signal<string | null>(null);
   readonly imagePreviewAlt = signal('Preview image');
+  readonly imagePreviewKind = signal<UploadPreviewKind>('image');
+  readonly uploadTypeErrors = signal<Record<UploadField, string>>({
+    profilePhoto: '',
+    casteCertificate: '',
+    marksCard: '',
+    aadhaarCard: '',
+  });
 
   readonly uploads: Record<UploadField, UploadState> = {
     profilePhoto: { file: null, previewUrl: null },
     casteCertificate: { file: null, previewUrl: null },
     marksCard: { file: null, previewUrl: null },
-    aadhaarOfflineFile: { file: null, previewUrl: null },
+    aadhaarCard: { file: null, previewUrl: null },
   };
 
   constructor() {
@@ -221,16 +232,10 @@ export class ScholarshipApplicationComponent {
     return STATE_DISTRICT_TALUKS[this.selectedState]?.[this.selectedDistrict] || [];
   }
 
-  get hasAadhaarMismatch(): boolean {
-    return !!this.aadhaarWarning();
-  }
-
   get isReadyForPreview(): boolean {
     return this.form.valid
       && this.hasAllUploads()
-      && this.percentage() !== null
-      && this.aadhaarPreview() !== null
-      && !this.hasAadhaarMismatch;
+      && this.percentage() !== null;
   }
 
   get minimumPercentage(): number {
@@ -249,17 +254,35 @@ export class ScholarshipApplicationComponent {
     this.percentage.set(Number(((marksObtained / totalMarks) * 100).toFixed(2)));
   }
 
-  onFileSelected(field: UploadField, event: Event): void {
+  async onFileSelected(field: UploadField, event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] || null;
 
     this.revokeObjectUrl(field);
-    this.uploads[field].file = file;
-    this.uploads[field].previewUrl = file && file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
 
-    if (field === 'aadhaarOfflineFile') {
-      this.clearAadhaarPreview();
+    if (file && !this.isImageFile(file)) {
+      this.uploads[field].file = null;
+      this.uploads[field].previewUrl = null;
+      this.setUploadTypeError(field, 'Only image files are allowed.');
+      input.value = '';
+      return;
     }
+
+    if (file) {
+      const imageValidationError = await this.validateImageUpload(file);
+
+      if (imageValidationError) {
+        this.uploads[field].file = null;
+        this.uploads[field].previewUrl = null;
+        this.setUploadTypeError(field, imageValidationError);
+        input.value = '';
+        return;
+      }
+    }
+
+    this.setUploadTypeError(field, '');
+    this.uploads[field].file = file;
+    this.uploads[field].previewUrl = file && this.fileSupportsPreview(file) ? URL.createObjectURL(file) : null;
   }
 
   fileName(field: UploadField): string {
@@ -268,6 +291,10 @@ export class ScholarshipApplicationComponent {
 
   previewUrl(field: UploadField): string | null {
     return this.uploads[field].previewUrl;
+  }
+
+  previewKind(field: UploadField): UploadPreviewKind {
+    return this.filePreviewKind(this.uploads[field].file);
   }
 
   controlHasError(controlName: keyof typeof this.form.controls): boolean {
@@ -283,16 +310,23 @@ export class ScholarshipApplicationComponent {
     return !this.uploads[field].file && (this.form.dirty || this.form.touched);
   }
 
-  onAadhaarShareCodeChanged(): void {
-    this.clearAadhaarPreview();
+  uploadTypeError(field: UploadField): string {
+    return this.uploadTypeErrors()[field] || '';
   }
 
-  onAadhaarNumberChanged(): void {
-    this.aadhaarWarning.set('');
+  imageUploadRequirementsMessage(): string {
+    return IMAGE_UPLOAD_REQUIREMENTS_MESSAGE;
+  }
 
-    if (this.aadhaarPreview()) {
-      this.updateAadhaarWarning(this.aadhaarPreview()!.referenceId);
+  onAadhaarNumberInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const normalizedValue = input.value.replace(/\D/g, '').slice(0, 12);
+
+    if (input.value !== normalizedValue) {
+      input.value = normalizedValue;
     }
+
+    this.form.controls.aadhaarNumber.setValue(normalizedValue, { emitEvent: false });
   }
 
   onDistrictChanged(): void {
@@ -353,22 +387,20 @@ export class ScholarshipApplicationComponent {
     this.updatePercentage();
   }
 
-  toggleAadhaarGuide(): void {
-    this.aadhaarGuideOpen.update((isOpen) => !isOpen);
-  }
-
-  openImagePreview(src: string, alt: string): void {
+  openImagePreview(src: string, alt: string, kind: UploadPreviewKind = 'image'): void {
     if (!src) {
       return;
     }
 
     this.imagePreviewSrc.set(src);
     this.imagePreviewAlt.set(alt || 'Preview image');
+    this.imagePreviewKind.set(kind);
     document.body.style.overflow = 'hidden';
   }
 
   closeImagePreview(): void {
     this.imagePreviewSrc.set(null);
+    this.imagePreviewKind.set('image');
     document.body.style.overflow = '';
   }
 
@@ -379,43 +411,6 @@ export class ScholarshipApplicationComponent {
     }
   }
 
-  async fetchAadhaarData(): Promise<void> {
-    if (this.aadhaarLoading()) {
-      return;
-    }
-
-    const aadhaarFile = this.uploads.aadhaarOfflineFile.file;
-    const aadhaarShareCode = String(this.form.controls.aadhaarShareCode.value || '').trim();
-
-    this.aadhaarError.set('');
-    this.aadhaarWarning.set('');
-    this.form.controls.aadhaarShareCode.markAsTouched();
-
-    if (!aadhaarFile) {
-      this.aadhaarError.set('Upload the UIDAI Aadhaar offline ZIP or XML file first.');
-      return;
-    }
-
-    if (this.form.controls.aadhaarShareCode.invalid) {
-      this.aadhaarError.set('Enter the Aadhaar share code exactly as used while downloading the file.');
-      return;
-    }
-
-    this.aadhaarLoading.set(true);
-
-    try {
-      const preview = await this.scholarshipService.previewAadhaarData(aadhaarFile, aadhaarShareCode);
-      this.aadhaarPreview.set(preview);
-      this.applyAadhaarName(preview.name);
-      this.updateAadhaarWarning(preview.referenceId);
-    } catch {
-      this.aadhaarPreview.set(null);
-      this.aadhaarError.set('Unable to fetch Aadhaar details. Please verify the share code and uploaded file.');
-    } finally {
-      this.aadhaarLoading.set(false);
-    }
-  }
-
   async goToPreview(): Promise<void> {
     this.submitError.set('');
     this.form.markAllAsTouched();
@@ -423,12 +418,6 @@ export class ScholarshipApplicationComponent {
 
     if (this.form.errors?.['minimumPercentage']) {
       this.submitError.set(`Only students with ${this.minimumPercentage}% or above are eligible to submit this scholarship application.`);
-      this.scrollToFirstError();
-      return;
-    }
-
-    if (this.hasAadhaarMismatch) {
-      this.submitError.set('Please enter the correct Aadhaar number. It must match the uploaded offline eKYC reference before submission.');
       this.scrollToFirstError();
       return;
     }
@@ -507,26 +496,6 @@ export class ScholarshipApplicationComponent {
     return this.selectedStandard;
   }
 
-  maskedReferenceId(): string {
-    const referenceId = this.aadhaarPreview()?.referenceId || '';
-
-    if (!referenceId) {
-      return '';
-    }
-
-    return `${referenceId.slice(0, 4)}-${referenceId.slice(4)}`;
-  }
-
-  formattedEnteredAadhaarNumber(): string {
-    const aadhaarNumber = String(this.form.controls.aadhaarNumber.value || '').replace(/\D/g, '');
-
-    if (!aadhaarNumber) {
-      return '';
-    }
-
-    return aadhaarNumber.replace(/(\d{4})(?=\d)/g, '$1 ');
-  }
-
   private buildPayload(): ScholarshipApplicationPayload {
     return {
       academicYearId: this.selectedAcademicYearId,
@@ -545,7 +514,6 @@ export class ScholarshipApplicationComponent {
       state: String(this.form.controls.state.value || '').trim(),
       pinCode: String(this.form.controls.pinCode.value || '').trim(),
       aadhaarNumber: String(this.form.controls.aadhaarNumber.value || '').trim(),
-      aadhaarShareCode: String(this.form.controls.aadhaarShareCode.value || '').trim(),
       board: this.selectedBoard,
       otherBoard: String(this.form.controls.otherBoard.value || '').trim(),
       standard: this.selectedStandard,
@@ -567,7 +535,7 @@ export class ScholarshipApplicationComponent {
       profilePhoto: this.uploads.profilePhoto.file as File,
       casteCertificate: this.uploads.casteCertificate.file as File,
       marksCard: this.uploads.marksCard.file as File,
-      aadhaarOfflineFile: this.uploads.aadhaarOfflineFile.file as File,
+      aadhaarCard: this.uploads.aadhaarCard.file as File,
     };
   }
 
@@ -575,45 +543,83 @@ export class ScholarshipApplicationComponent {
     return Object.values(this.uploads).every((upload) => !!upload.file);
   }
 
-  private clearAadhaarPreview(): void {
-    this.aadhaarPreview.set(null);
-    this.aadhaarError.set('');
-    this.aadhaarWarning.set('');
-  }
-
-  private applyAadhaarName(fullName: string): void {
-    const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
-    const firstName = parts[0] || '';
-    const lastName = parts.length > 1 ? parts[parts.length - 1] : '';
-    const middleName = parts.length > 2 ? parts.slice(1, -1).join(' ') : '';
-
-    this.form.patchValue({
-      firstName,
-      middleName,
-      lastName,
-    });
-  }
-
-  private updateAadhaarWarning(referenceId: string): void {
-    const aadhaarNumber = String(this.form.controls.aadhaarNumber.value || '').trim();
-
-    if (!referenceId || aadhaarNumber.length !== 12) {
-      return;
-    }
-
-    const aadhaarLastFourDigits = aadhaarNumber.slice(-4);
-    const referenceLastFourDigits = referenceId.slice(0, 4);
-
-    if (aadhaarLastFourDigits !== referenceLastFourDigits) {
-      this.aadhaarWarning.set('Please enter the correct Aadhaar number. The last 4 digits must match the uploaded offline eKYC reference.');
-    }
-  }
-
   private revokeObjectUrl(field: UploadField): void {
     const previewUrl = this.uploads[field].previewUrl;
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
     }
+  }
+
+  private fileSupportsPreview(file: File | null): boolean {
+    return this.filePreviewKind(file) !== 'file';
+  }
+
+  private filePreviewKind(file: File | null): UploadPreviewKind {
+    const mimeType = String(file?.type || '').toLowerCase();
+
+    if (mimeType.startsWith('image/')) {
+      return 'image';
+    }
+
+    return 'file';
+  }
+
+  private isImageFile(file: File | null): boolean {
+    return String(file?.type || '').toLowerCase().startsWith('image/');
+  }
+
+  private async validateImageUpload(file: File): Promise<string> {
+    if (file.size < IMAGE_UPLOAD_MIN_BYTES || file.size > IMAGE_UPLOAD_MAX_BYTES) {
+      return IMAGE_UPLOAD_REQUIREMENTS_MESSAGE;
+    }
+
+    try {
+      const { width, height } = await this.readImageDimensions(file);
+
+      if (
+        width < IMAGE_UPLOAD_MIN_WIDTH
+        || width > IMAGE_UPLOAD_MAX_WIDTH
+        || height < IMAGE_UPLOAD_MIN_HEIGHT
+        || height > IMAGE_UPLOAD_MAX_HEIGHT
+      ) {
+        return IMAGE_UPLOAD_REQUIREMENTS_MESSAGE;
+      }
+    } catch {
+      return 'Unable to read the selected image. Please upload a valid image file.';
+    }
+
+    return '';
+  }
+
+  private readImageDimensions(file: File): Promise<{ width: number; height: number }> {
+    return new Promise((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
+
+      image.onload = () => {
+        const dimensions = {
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+        };
+
+        URL.revokeObjectURL(objectUrl);
+        resolve(dimensions);
+      };
+
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('Invalid image'));
+      };
+
+      image.src = objectUrl;
+    });
+  }
+
+  private setUploadTypeError(field: UploadField, message: string): void {
+    this.uploadTypeErrors.update((current) => ({
+      ...current,
+      [field]: message,
+    }));
   }
 
   private revokeAllObjectUrls(): void {

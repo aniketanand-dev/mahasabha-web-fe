@@ -122,9 +122,8 @@
 
             <label class="field">
               <span>Aadhaar Number *</span>
-              <input type="text" formControlName="aadhaarNumber" maxlength="12" placeholder="12-digit Aadhaar number" (input)="onAadhaarNumberChanged()" />
+              <input type="text" formControlName="aadhaarNumber" maxlength="12" inputmode="numeric" placeholder="12-digit Aadhaar number" (input)="onAadhaarNumberInput($event)" />
               @if (controlHasError('aadhaarNumber')) { <small>Enter a valid 12-digit Aadhaar number.</small> }
-              @if (aadhaarWarning()) { <small class="field-error">{{ aadhaarWarning() }}</small> }
             </label>
           </div>
 
@@ -273,13 +272,15 @@
             <p>Ashrayadataru - Rs1,000</p>
             <p>Upaposhakaru - Rs2,500</p>
             <p>Sahaposhakaru - Rs5,000</p>
-            <p>District Committee Member</p>
+            <p>Institutional Member - Rs5,000</p>
+            <p>Poshakaru - Rs10,000</p>
+            <p>Mahaposhakaru - Rs25,000</p>
+            <p>Danigalu - Rs50,000</p>
             <p>Mahadanigalu - Rs1,00,000</p>
             <p>Danashiromanigalu - Rs2,50,000</p>
             <p>Dasohigalu - Rs5,00,000</p>
             <p>Mahadasohigalu - Rs10,00,000</p>
             <p>Paramadasohigalu - Rs25,00,000</p>
-            <p>Institutional Member - Rs5,000</p>
           </div> -->
 
           @if (heardFromMemberSelected) {
@@ -315,25 +316,23 @@
         <div class="form-card">
           <div class="section-heading">
             <p>Uploads and Verification</p>
-            <span>Photo, certificates, Aadhaar offline package</span>
+            <span>Photo and supporting documents</span>
           </div>
-
-          <!-- <div class="upload-note upload-note-compact">
-            <strong>UIDAI offline eKYC:</strong> upload the ZIP or XML, enter the same share code, then fetch the resident details.
-          </div> -->
 
           <div class="upload-groups">
             <div class="upload-panel">
               <div class="upload-panel-head">
                 <h3>Student Photo</h3>
                 <p>Upload a clear profile image of the student.</p>
+                <p>{{ imageUploadRequirementsMessage() }}</p>
               </div>
 
               <label class="field upload-field">
                 <span>Profile Photo *</span>
                 <input type="file" accept="image/*" (change)="onFileSelected('profilePhoto', $event)" />
                 @if (fileName('profilePhoto')) { <strong>{{ fileName('profilePhoto') }}</strong> }
-                @if (hasUploadError('profilePhoto')) { <small>Profile photo is required.</small> }
+                @if (uploadTypeError('profilePhoto')) { <small>{{ uploadTypeError('profilePhoto') }}</small> }
+                @else if (hasUploadError('profilePhoto')) { <small>Profile photo image is required.</small> }
                 @if (previewUrl('profilePhoto'); as profilePreview) {
                   <button type="button" class="image-preview-trigger upload-image-preview" (click)="openImagePreview(profilePreview, 'Profile photo preview')">
                     <img [src]="profilePreview" alt="Profile photo preview" />
@@ -346,6 +345,7 @@
               <div class="upload-panel-head">
                 <h3>Supporting Certificates</h3>
                 <p>Upload readable photo copies of both required documents.</p>
+                <p>{{ imageUploadRequirementsMessage() }}</p>
               </div>
 
               <div class="form-grid two-cols upload-subgrid">
@@ -353,9 +353,10 @@
                   <span>Caste Certificate Photo *</span>
                   <input type="file" accept="image/*" (change)="onFileSelected('casteCertificate', $event)" />
                   @if (fileName('casteCertificate')) { <strong>{{ fileName('casteCertificate') }}</strong> }
-                  @if (hasUploadError('casteCertificate')) { <small>Caste certificate is required.</small> }
+                  @if (uploadTypeError('casteCertificate')) { <small>{{ uploadTypeError('casteCertificate') }}</small> }
+                  @else if (hasUploadError('casteCertificate')) { <small>Caste certificate image is required.</small> }
                   @if (previewUrl('casteCertificate'); as castePreview) {
-                    <button type="button" class="image-preview-trigger upload-image-preview" (click)="openImagePreview(castePreview, 'Caste certificate preview')">
+                    <button type="button" class="image-preview-trigger upload-image-preview" (click)="openImagePreview(castePreview, 'Caste certificate preview', previewKind('casteCertificate'))">
                       <img [src]="castePreview" alt="Caste certificate preview" />
                     </button>
                   }
@@ -365,111 +366,28 @@
                   <span>Marks Card Photo *</span>
                   <input type="file" accept="image/*" (change)="onFileSelected('marksCard', $event)" />
                   @if (fileName('marksCard')) { <strong>{{ fileName('marksCard') }}</strong> }
-                  @if (hasUploadError('marksCard')) { <small>Marks card is required.</small> }
+                  @if (uploadTypeError('marksCard')) { <small>{{ uploadTypeError('marksCard') }}</small> }
+                  @else if (hasUploadError('marksCard')) { <small>Marks card image is required.</small> }
                   @if (previewUrl('marksCard'); as marksCardPreview) {
-                    <button type="button" class="image-preview-trigger upload-image-preview" (click)="openImagePreview(marksCardPreview, 'Marks card preview')">
+                    <button type="button" class="image-preview-trigger upload-image-preview" (click)="openImagePreview(marksCardPreview, 'Marks card preview', previewKind('marksCard'))">
                       <img [src]="marksCardPreview" alt="Marks card preview" />
                     </button>
                   }
                 </label>
-              </div>
-            </div>
-          </div>
 
-          <div class="aadhaar-layout">
-            <div class="aadhaar-form-panel">
-              <div class="upload-panel aadhaar-upload-panel">
-                <div class="upload-panel-head">
-                  <h3>Aadhaar Offline Verification</h3>
-                  <p>Use the same share code that was used while downloading the UIDAI offline file.</p>
-                </div>
-
-                <button
-                  type="button"
-                  class="guide-toggle-btn"
-                  [attr.aria-expanded]="aadhaarGuideOpen()"
-                  (click)="toggleAadhaarGuide()"
-                >
-                  @if (aadhaarGuideOpen()) {
-                    Hide Aadhaar KYC Guide
-                  } @else {
-                    Show Aadhaar KYC Guide
+                <label class="field upload-field">
+                  <span>Aadhaar Copy *</span>
+                  <input type="file" accept="image/*" (change)="onFileSelected('aadhaarCard', $event)" />
+                  @if (fileName('aadhaarCard')) { <strong>{{ fileName('aadhaarCard') }}</strong> }
+                  @if (uploadTypeError('aadhaarCard')) { <small>{{ uploadTypeError('aadhaarCard') }}</small> }
+                  @else if (hasUploadError('aadhaarCard')) { <small>Aadhaar copy image is required.</small> }
+                  @if (previewUrl('aadhaarCard'); as aadhaarCardPreview) {
+                    <button type="button" class="image-preview-trigger upload-image-preview" (click)="openImagePreview(aadhaarCardPreview, 'Aadhaar copy preview', previewKind('aadhaarCard'))">
+                      <img [src]="aadhaarCardPreview" alt="Aadhaar copy preview" />
+                    </button>
                   }
-                </button>
-
-                @if (aadhaarGuideOpen()) {
-                  <div class="aadhaar-guide">
-                    <p class="aadhaar-guide-title">Guide for students</p>
-                    <ol>
-                      <li>Open <a href="https://myaadhaar.uidai.gov.in/login" target="_blank" rel="noopener noreferrer">myaadhaar.uidai.gov.in/login</a>.</li>
-                      <li>Click `Login`.</li>
-                      <li>Enter Aadhaar number and captcha.</li>
-                      <li>Enter OTP.</li>
-                      <li>Below, click `Offline eKYC`.</li>
-                      <li>Enter a 4 digit code.</li>
-                      <li>Click `Download`.</li>
-                      <li>Upload that same downloaded file here.</li>
-                    </ol>
-                  </div>
-                }
-
-                <label class="field upload-field">
-                  <span>Aadhaar Share Code *</span>
-                  <input type="text" formControlName="aadhaarShareCode" placeholder="Enter share code exactly as downloaded" (input)="onAadhaarShareCodeChanged()" />
-                  @if (controlHasError('aadhaarShareCode')) { <small>Enter the Aadhaar share code exactly as used while downloading.</small> }
                 </label>
-
-                <label class="field upload-field">
-                  <span>Aadhaar Offline Verification File *</span>
-                  <input type="file" accept=".zip,.xml" (change)="onFileSelected('aadhaarOfflineFile', $event)" />
-                  @if (fileName('aadhaarOfflineFile')) { <strong>{{ fileName('aadhaarOfflineFile') }}</strong> }
-                  @if (hasUploadError('aadhaarOfflineFile')) { <small>Aadhaar offline verification file is required.</small> }
-                </label>
-
-                <button type="button" class="secondary-btn fetch-btn" [disabled]="aadhaarLoading()" (click)="fetchAadhaarData()">
-                  <span>{{ aadhaarLoading() ? 'Fetching Aadhaar Data...' : 'Fetch Aadhaar Data' }}</span>
-                </button>
               </div>
-
-              @if (aadhaarError()) {
-                <div class="submit-error">{{ aadhaarError() }}</div>
-              }
-
-              @if (aadhaarWarning()) {
-                <div class="aadhaar-warning">{{ aadhaarWarning() }}</div>
-              }
-            </div>
-
-            <div class="aadhaar-preview-panel">
-              @if (aadhaarPreview(); as aadhaar) {
-                <div class="aadhaar-card">
-                  <div class="aadhaar-card-head">
-                    <div>
-                      <p class="aadhaar-card-label">UIDAI Offline eKYC</p>
-                      <h3>{{ aadhaar.name }}</h3>
-                    </div>
-                    @if (aadhaar.photoDataUrl) {
-                      <button type="button" class="image-preview-trigger aadhaar-image-preview" (click)="openImagePreview(aadhaar.photoDataUrl, 'Aadhaar resident photo')">
-                        <img [src]="aadhaar.photoDataUrl" alt="Aadhaar resident photo" />
-                      </button>
-                    }
-                  </div>
-
-                  <div class="aadhaar-card-body">
-                    <p><strong>Reference ID:</strong> {{ maskedReferenceId() }}</p>
-                    <p><strong>Aadhaar Number:</strong> {{ formattedEnteredAadhaarNumber() || 'Not entered' }}</p>
-                    <p><strong>Date of Birth:</strong> {{ aadhaar.dob || 'Not shared' }}</p>
-                    <p><strong>Gender:</strong> {{ aadhaar.gender || 'Not shared' }}</p>
-                    <p><strong>Address:</strong> {{ aadhaar.address || 'Not shared' }}</p>
-                  </div>
-                </div>
-              } @else {
-                <div class="aadhaar-placeholder">
-                  <p class="aadhaar-card-label">Aadhaar Preview</p>
-                  <h3>Resident details will appear here</h3>
-                  <p>After upload and share-code verification, the Aadhaar photo, name, DOB, gender, and address will be shown on the right.</p>
-                </div>
-              }
             </div>
           </div>
         </div>
@@ -482,7 +400,7 @@
 
           <div class="terms-box">
             <p>1. All information submitted must be accurate and must pertain solely to the student applicant.</p>
-            <p>2. All uploaded certificates and Aadhaar offline verification documents must be clear, legible, and valid.</p>
+            <p>2. All uploaded certificates and Aadhaar documents must be clear, legible, and valid.</p>
             <p>3. The Scholarship Committee reserves the right to verify any information provided and request additional documentation if required.</p>
             <p>4. The Scholarship Committee reserves the right to reject any application that is incomplete, inaccurate, or contains invalid or misleading information.</p>
             <p>5. Submission of an application does not guarantee approval of the scholarship.</p>
@@ -536,10 +454,6 @@
             <p><strong>Email ID:</strong> {{ form.controls.emailId.value }}</p>
             <p><strong>Aadhaar No:</strong> {{ form.controls.aadhaarNumber.value }}</p>
             <p><strong>Address:</strong> {{ form.controls.village.value }}, {{ form.controls.taluk.value }}, {{ form.controls.district.value }}, {{ form.controls.state.value }} - {{ form.controls.pinCode.value }}</p>
-            @if (aadhaarPreview(); as aadhaar) {
-              <p><strong>Aadhaar Ref ID:</strong> {{ maskedReferenceId() }}</p>
-              <p><strong>Aadhaar Name:</strong> {{ aadhaar.name }}</p>
-            }
             @if (heardFromMemberSelected) {
               <p><strong>Referring Member Category:</strong> {{ memberCategoryPreviewLabel() }}</p>
               <p><strong>Referring Member Name:</strong> {{ form.controls.referringMemberName.value }}</p>
@@ -558,20 +472,6 @@
         </div>
 
         <div class="document-preview">
-          @if (aadhaarPreview(); as aadhaar) {
-            <div class="preview-block image-block">
-              <h3>Aadhaar eKYC</h3>
-              @if (aadhaar.photoDataUrl) {
-                <button type="button" class="image-preview-trigger" (click)="openImagePreview(aadhaar.photoDataUrl, 'Aadhaar preview photo')">
-                  <img [src]="aadhaar.photoDataUrl" alt="Aadhaar preview photo" />
-                </button>
-              }
-              <p><strong>Name:</strong> {{ aadhaar.name }}</p>
-              <p><strong>DOB:</strong> {{ aadhaar.dob || 'Not shared' }}</p>
-              <p><strong>Gender:</strong> {{ aadhaar.gender || 'Not shared' }}</p>
-            </div>
-          }
-
           <div class="preview-block image-block">
             <h3>Profile Photo</h3>
             @if (previewUrl('profilePhoto'); as profilePreview) {
@@ -584,7 +484,7 @@
           <div class="preview-block image-block">
             <h3>Caste Certificate</h3>
             @if (previewUrl('casteCertificate'); as castePreview) {
-              <button type="button" class="image-preview-trigger" (click)="openImagePreview(castePreview, 'Caste certificate preview')">
+              <button type="button" class="image-preview-trigger" (click)="openImagePreview(castePreview, 'Caste certificate preview', previewKind('casteCertificate'))">
                 <img [src]="castePreview" alt="Caste certificate preview" />
               </button>
             }
@@ -593,15 +493,19 @@
           <div class="preview-block image-block">
             <h3>Marks Card</h3>
             @if (previewUrl('marksCard'); as marksCardPreview) {
-              <button type="button" class="image-preview-trigger" (click)="openImagePreview(marksCardPreview, 'Marks card preview')">
+              <button type="button" class="image-preview-trigger" (click)="openImagePreview(marksCardPreview, 'Marks card preview', previewKind('marksCard'))">
                 <img [src]="marksCardPreview" alt="Marks card preview" />
               </button>
             }
           </div>
 
-          <div class="preview-block">
-            <h3>Aadhaar Offline File</h3>
-            <p>{{ fileName('aadhaarOfflineFile') }}</p>
+          <div class="preview-block image-block">
+            <h3>Aadhaar Copy</h3>
+            @if (previewUrl('aadhaarCard'); as aadhaarCardPreview) {
+              <button type="button" class="image-preview-trigger" (click)="openImagePreview(aadhaarCardPreview, 'Aadhaar copy preview', previewKind('aadhaarCard'))">
+                <img [src]="aadhaarCardPreview" alt="Aadhaar copy preview" />
+              </button>
+            }
           </div>
         </div>
 

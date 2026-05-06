@@ -20,7 +20,6 @@ export interface ScholarshipApplicationPayload {
   state: string;
   pinCode: string;
   aadhaarNumber: string;
-  aadhaarShareCode: string;
   board: string;
   otherBoard: string;
   standard: string;
@@ -40,18 +39,7 @@ export interface ScholarshipApplicationFiles {
   profilePhoto: File;
   casteCertificate: File;
   marksCard: File;
-  aadhaarOfflineFile: File;
-}
-
-export interface AadhaarPreviewResponse {
-  referenceId: string;
-  name: string;
-  dob: string;
-  gender: string;
-  address: string;
-  emailHash: string;
-  mobileHash: string;
-  photoDataUrl: string | null;
+  aadhaarCard: File;
 }
 
 interface ScholarshipApiResponse<T> {
@@ -112,26 +100,6 @@ export class ScholarshipService {
     const maybeError = error as { error?: ScholarshipApiErrorResponse };
     const message = maybeError?.error?.message;
     return typeof message === 'string' && message.trim() ? message : fallback;
-  }
-
-  async previewAadhaarData(file: File, aadhaarShareCode: string): Promise<AadhaarPreviewResponse> {
-    const formData = new FormData();
-    formData.append('aadhaarOfflineFile', file);
-    formData.append('aadhaarShareCode', aadhaarShareCode);
-
-    let response: ScholarshipApiResponse<AadhaarPreviewResponse>;
-    try {
-      response = await firstValueFrom(
-        this.http.post<ScholarshipApiResponse<AadhaarPreviewResponse>>(
-          `${SCHOLARSHIP_API_BASE}/aadhaar/preview`,
-          formData,
-        ),
-      );
-    } catch (error) {
-      throw new Error(this.errorMessageFromApi(error, 'Unable to fetch Aadhaar details.'));
-    }
-
-    return response.data;
   }
 
   async getSummary(): Promise<ScholarshipSummaryResponse> {
@@ -195,7 +163,7 @@ export class ScholarshipService {
     formData.append('profilePhoto', files.profilePhoto);
     formData.append('casteCertificate', files.casteCertificate);
     formData.append('marksCard', files.marksCard);
-    formData.append('aadhaarOfflineFile', files.aadhaarOfflineFile);
+    formData.append('aadhaarCard', files.aadhaarCard);
 
     let response: ScholarshipApiResponse<ScholarshipSubmissionResponse>;
     try {

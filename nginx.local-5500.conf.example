@@ -1,8 +1,8 @@
 server {
-    listen 80;
-    server_name _;
+    listen 5500;
+    server_name localhost;
 
-    root /var/www/veerashiva-mahasabha/browser;
+    root /media/villian/Obj instenseof A1/17august/mahasabha/Veerashiva_Mahasabha/dist/veerashiva-mahasabha/browser;
     index index.html;
 
     location / {

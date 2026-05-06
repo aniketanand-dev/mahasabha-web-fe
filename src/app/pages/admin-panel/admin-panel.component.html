@@ -929,10 +929,41 @@
                     placeholder="Name, application no, registration, Aadhaar, mobile"
                     [ngModel]="scholarshipSearchDraft()"
                     (ngModelChange)="onScholarshipSearchDraftChanged($event)"
+                    (keydown.enter)="$event.preventDefault(); applyScholarshipSearch()"
                   />
                   <small class="scholarship-search-hint">Search starts after 3 characters and works across all admin scholarship lists.</small>
                 </label>
+                <label class="scholarship-filter-field">
+                  <span>State</span>
+                  <select class="form-input scholarship-filter-select" [ngModel]="scholarshipSelectedState()" (ngModelChange)="onScholarshipStateChanged($event)">
+                    <option value="">All states</option>
+                    @for (state of scholarshipStateOptions; track state) {
+                      <option [value]="state">{{ state }}</option>
+                    }
+                  </select>
+                </label>
+                <label class="scholarship-filter-field">
+                  <span>District</span>
+                  <select class="form-input scholarship-filter-select" [ngModel]="scholarshipSelectedDistrict()" [disabled]="!scholarshipSelectedState()" (ngModelChange)="onScholarshipDistrictChanged($event)">
+                    <option value="">All districts</option>
+                    @for (district of scholarshipDistrictOptions; track district) {
+                      <option [value]="district">{{ district }}</option>
+                    }
+                  </select>
+                </label>
+                <label class="scholarship-filter-field">
+                  <span>Taluk</span>
+                  <select class="form-input scholarship-filter-select" [ngModel]="scholarshipSelectedTaluk()" [disabled]="!scholarshipSelectedDistrict()" (ngModelChange)="onScholarshipTalukChanged($event)">
+                    <option value="">All taluks</option>
+                    @for (taluk of scholarshipTalukOptions; track taluk) {
+                      <option [value]="taluk">{{ taluk }}</option>
+                    }
+                  </select>
+                </label>
                 <div class="scholarship-table-toolbar-actions">
+                  @if (scholarshipSelectedState() || scholarshipSelectedDistrict() || scholarshipSelectedTaluk()) {
+                    <button class="btn-cancel" [disabled]="scholarshipLoading()" (click)="clearScholarshipRegionFilters()">Clear Region</button>
+                  }
                   @if (scholarshipSearchTerm()) {
                     <button class="btn-cancel" [disabled]="scholarshipLoading()" (click)="clearScholarshipSearch()">Clear</button>
                   }
@@ -972,6 +1003,8 @@
                       <th>Mobile</th>
                       <th>Address</th>
                       <th>Academic</th>
+                      <th>Percentage</th>
+                      <th>Status</th>
                       <th>Submitted</th>
                       <th>Images</th>
                     </tr>
@@ -981,7 +1014,6 @@
                       <tr>
                         <td>
                           <div class="td-title">{{ item.applicationNumber }}</div>
-                          <div class="td-sub">{{ item.status }}</div>
                           <div class="td-sub">{{ item.academicYear }}</div>
                         </td>
                         <td>
@@ -999,26 +1031,59 @@
                           <div class="td-title">{{ item.board }} | {{ item.standard }}</div>
                           <div class="td-sub">Marks card verification available in image section</div>
                         </td>
+                        <td>
+                          <div class="td-title">{{ item.percentage }}%</div>
+                          <div class="td-sub">{{ item.marksObtained }} / {{ item.totalMarks }}</div>
+                        </td>
+                        <td>
+                          <span class="scholarship-status-badge scholarship-status-badge--table" [class]="'scholarship-status-badge scholarship-status-badge--table ' + scholarshipStatusClass(item.status)">
+                            {{ scholarshipStatusLabel(item.status) }}
+                          </span>
+                        </td>
                         <td>{{ item.submittedAt | date:'medium' }}</td>
                         <td>
                           <div class="scholarship-image-section">
                             <div class="scholarship-image-grid">
                               <button type="button" title="Open profile photo preview" (click)="openScholarshipApplicationImagePreview(item, 0)">
-                                <img [src]="imageUrl(item.profilePhotoUrl)" alt="Profile" />
+                                @if (scholarshipDocumentKind(item.profilePhotoUrl) === 'image') {
+                                  <img [src]="imageUrl(item.profilePhotoUrl)" alt="Profile" />
+                                } @else {
+                                  <span class="scholarship-document-tile">FILE</span>
+                                }
                                 <span>Photo</span>
                               </button>
                               <button type="button" title="Open caste certificate preview" (click)="openScholarshipApplicationImagePreview(item, 1)">
-                                <img [src]="imageUrl(item.casteCertificateUrl)" alt="Caste certificate" />
+                                @if (scholarshipDocumentKind(item.casteCertificateUrl) === 'image') {
+                                  <img [src]="imageUrl(item.casteCertificateUrl)" alt="Caste certificate" />
+                                } @else {
+                                  <span class="scholarship-document-tile">PDF</span>
+                                }
                                 <span>Caste</span>
                               </button>
                               <button type="button" title="Open marks card preview" (click)="openScholarshipApplicationImagePreview(item, 2)">
-                                <img [src]="imageUrl(item.marksCardUrl)" alt="Marks card" />
+                                @if (scholarshipDocumentKind(item.marksCardUrl) === 'image') {
+                                  <img [src]="imageUrl(item.marksCardUrl)" alt="Marks card" />
+                                } @else {
+                                  <span class="scholarship-document-tile">PDF</span>
+                                }
                                 <span>Marks</span>
                               </button>
-                              <a [href]="imageUrl(item.aadhaarOfflineFileUrl)" target="_blank" rel="noopener noreferrer" title="Open Aadhaar offline file" class="scholarship-file-tile">
-                                <strong>Aadhaar</strong>
-                                <span>XML/ZIP</span>
-                              </a>
+                              @if (item.aadhaarCardUrl) {
+                                <button type="button" title="Open Aadhaar copy preview" (click)="openScholarshipApplicationImagePreview(item, 3)">
+                                  @if (scholarshipDocumentKind(item.aadhaarCardUrl) === 'image') {
+                                    <img [src]="imageUrl(item.aadhaarCardUrl)" alt="Aadhaar copy" />
+                                  } @else {
+                                    <span class="scholarship-document-tile">PDF</span>
+                                  }
+                                  <span>Aadhaar Copy</span>
+                                </button>
+                              }
+                              @if (item.aadhaarOfflineFileUrl) {
+                                <a [href]="imageUrl(item.aadhaarOfflineFileUrl)" target="_blank" rel="noopener noreferrer" title="Open Aadhaar offline file" class="scholarship-file-tile">
+                                  <strong>Aadhaar</strong>
+                                  <span>XML/ZIP</span>
+                                </a>
+                              }
                             </div>
                           </div>
                         </td>
@@ -1092,7 +1157,11 @@
                     >
                       ‹
                     </button>
-                    <img [src]="scholarshipImagePreviewSrc()" [alt]="scholarshipImagePreviewAlt()" [style.transform]="'scale(' + scholarshipImageZoom() + ')'" />
+                    @if (scholarshipImagePreviewKind() === 'pdf') {
+                      <object class="scholarship-document-frame" [data]="scholarshipImagePreviewSrc()" type="application/pdf" [attr.aria-label]="scholarshipImagePreviewAlt()"></object>
+                    } @else {
+                      <img [src]="scholarshipImagePreviewSrc()" [alt]="scholarshipImagePreviewAlt()" [style.transform]="'scale(' + scholarshipImageZoom() + ')'" />
+                    }
                     <button
                       type="button"
                       class="scholarship-image-nav scholarship-image-nav--next"

@@ -14,6 +14,8 @@ Once the server is running, open your browser and navigate to `http://localhost:
 
 The app uses relative `/api` and `/uploads` paths. During local development, Angular proxies those requests to `http://localhost:5000` using `proxy.conf.json`.
 
+If you open the built files with a static server such as Live Server on `localhost:5500`, `POST /api/...` will fail because that server does not proxy API requests. Use Angular `ng serve` for development, or use Nginx to serve the build and proxy `/api` and `/uploads`.
+
 ## Code scaffolding
 
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
@@ -43,10 +45,12 @@ This will compile your project and store the build artifacts in the `dist/` dire
 For production, serve the Angular build and proxy backend requests through the same Nginx host.
 
 - Serve `dist/veerashiva-mahasabha/browser`
-- Proxy `/api/` to the backend Node process on `http://127.0.0.1:5000`
+- Proxy `/api/` to the backend Node process on `http://localhost:5000`
 - Proxy `/uploads/` to the same backend so images stay same-origin
 
 Example config is available in `nginx.conf.example`.
+
+For local preview on `localhost:5500`, use `nginx.local-5500.conf.example` instead of a plain static server.
 
 ## Running unit tests
 

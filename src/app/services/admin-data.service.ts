@@ -155,9 +155,14 @@ export interface AdminScholarshipApplication {
   marksObtained: number;
   totalMarks: number;
   percentage: number;
+  heardFromMember: boolean;
+  referringMemberCategory: string;
+  referringMemberName: string;
+  referringMemberRegistrationNo: string;
   profilePhotoUrl: string;
   casteCertificateUrl: string;
   marksCardUrl: string;
+  aadhaarCardUrl?: string;
   aadhaarOfflineFileUrl: string;
   status: string;
   rejectionComment?: string;
@@ -221,6 +226,11 @@ const normalizeScholarshipApplication = (item: AdminScholarshipApplication): Adm
 
   return {
     ...item,
+    heardFromMember: !!item.heardFromMember,
+    referringMemberCategory: item.referringMemberCategory || '',
+    referringMemberName: item.referringMemberName || '',
+    referringMemberRegistrationNo: item.referringMemberRegistrationNo || '',
+    aadhaarCardUrl: item.aadhaarCardUrl || '',
     status,
     rejectionComment: status === 'rejected' ? item.rejectionComment || '' : '',
   };
@@ -1012,13 +1022,16 @@ export class AdminDataService {
     this.saveHostels(this.hostels().filter(item => item.id !== id));
   }
 
-  async getScholarshipApplications(params: { page?: number; limit?: number; all?: boolean; academicYearId?: string; search?: string; status?: string } = {}) {
+  async getScholarshipApplications(params: { page?: number; limit?: number; all?: boolean; academicYearId?: string; search?: string; status?: string; state?: string; district?: string; taluk?: string } = {}) {
     const page = params.page ?? 1;
     const limit = params.limit ?? 10;
     const all = params.all === true;
     const academicYearId = params.academicYearId?.trim() || '';
     const search = params.search?.trim() || '';
     const status = params.status?.trim().toLowerCase() || '';
+    const state = params.state?.trim() || '';
+    const district = params.district?.trim() || '';
+    const taluk = params.taluk?.trim() || '';
 
     const response = await firstValueFrom(this.http.get<ScholarshipListApiResponse>(
       buildApiUrl('/api/v1/scholarships/applications'),
@@ -1030,6 +1043,9 @@ export class AdminDataService {
           academicYearId,
           search,
           status,
+          state,
+          district,
+          taluk,
         },
         headers: this.authHeaders(),
       },
