@@ -8,6 +8,7 @@ import {
   ScholarshipAcademicYearOption,
   ScholarshipApplicationFiles,
   ScholarshipApplicationPayload,
+  ScholarshipPortalSettings,
   ScholarshipService,
   ScholarshipSubmissionResponse,
 } from '../../services/scholarship.service';
@@ -162,6 +163,10 @@ export class ScholarshipApplicationComponent {
   readonly submitting = signal(false);
   readonly submitError = signal('');
   readonly submitSuccess = signal<ScholarshipSubmissionResponse | null>(null);
+  readonly portalSettingsLoading = signal(true);
+  readonly portalSettingsError = signal('');
+  readonly portalSettings = signal<ScholarshipPortalSettings | null>(null);
+  readonly currentTime = signal(Date.now());
   readonly percentage = signal<number | null>(null);
   readonly registrationChecking = signal(false);
   readonly registrationStatusMessage = signal('');
@@ -185,10 +190,85 @@ export class ScholarshipApplicationComponent {
   constructor() {
     this.onStateChanged();
     this.onHeardFromMemberChanged();
+    const intervalId = window.setInterval(() => {
+      this.currentTime.set(Date.now());
+    }, 1000);
+
+    void this.loadPortalSettings();
     void this.loadAcademicYears();
     this.destroyRef.onDestroy(() => {
+      window.clearInterval(intervalId);
       this.revokeAllObjectUrls();
     });
+  }
+
+  get scholarshipApplicationsOpen(): boolean {
+    return this.portalSettings()?.isOpen !== false;
+  }
+
+  get scholarshipClosedTitle(): string {
+    return this.portalSettings()?.closedTitle || 'Scholarship Applications Closed';
+  }
+
+  get scholarshipClosedMessage(): string {
+    return this.portalSettings()?.closedMessage || 'The scholarship application period has ended. Please check back later.';
+  }
+
+  get scholarshipDeadlineLabel(): string {
+    const value = this.portalSettings()?.applicationDeadline;
+    if (!value) {
+      return '';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    return new Intl.DateTimeFormat('en-IN', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  }
+
+  get scholarshipCountdownLabel(): string {
+    const value = this.portalSettings()?.applicationDeadline;
+    if (!value) {
+      return '';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    const remainingMs = date.getTime() - this.currentTime();
+    if (remainingMs <= 0) {
+      return 'Application window has closed';
+    }
+
+    const totalSeconds = Math.floor(remainingMs / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const parts = [] as string[];
+
+    if (days > 0) {
+      parts.push(`${days}d`);
+    }
+
+    if (days > 0 || hours > 0) {
+      parts.push(`${hours}h`);
+    }
+
+    parts.push(`${minutes}m`);
+    parts.push(`${seconds}s`);
+
+    return parts.join(' ');
   }
 
   get selectedBoard(): string {
@@ -345,6 +425,10 @@ export class ScholarshipApplicationComponent {
   }
 
   async onRegistrationNumberBlur(): Promise<void> {
+    if (!this.scholarshipApplicationsOpen) {
+      return;
+    }
+
     await this.checkRegistrationAvailability();
   }
 
@@ -409,6 +493,12 @@ export class ScholarshipApplicationComponent {
 
   async goToPreview(): Promise<void> {
     this.submitError.set('');
+
+    if (!this.scholarshipApplicationsOpen) {
+      this.submitError.set(this.scholarshipClosedMessage);
+      return;
+    }
+
     this.form.markAllAsTouched();
     this.updatePercentage();
 
@@ -439,6 +529,11 @@ export class ScholarshipApplicationComponent {
   }
 
   async submitApplication(): Promise<void> {
+    if (!this.scholarshipApplicationsOpen) {
+      this.submitError.set(this.scholarshipClosedMessage);
+      return;
+    }
+
     this.updatePercentage();
 
     if (this.form.errors?.['minimumPercentage']) {
@@ -616,6 +711,21 @@ export class ScholarshipApplicationComponent {
       return false;
     } finally {
       this.registrationChecking.set(false);
+    }
+  }
+
+  private async loadPortalSettings(): Promise<void> {
+    this.portalSettingsLoading.set(true);
+    this.portalSettingsError.set('');
+
+    try {
+      const settings = await this.scholarshipService.getPortalSettings();
+      this.portalSettings.set(settings);
+    } catch (error) {
+      this.portalSettingsError.set(error instanceof Error ? error.message : 'Unable to load scholarship portal settings right now.');
+      this.portalSettings.set(null);
+    } finally {
+      this.portalSettingsLoading.set(false);
     }
   }
 

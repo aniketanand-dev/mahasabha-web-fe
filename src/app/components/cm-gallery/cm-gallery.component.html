@@ -6,7 +6,9 @@
     <div class="cm-grid">
       @for (l of data.cmLeaders(); track l.id) {
         <div class="cm-card">
-          <img [src]="l.img" [alt]="l.name">
+          <div class="cm-image-frame">
+            <img class="cm-image" [src]="l.img" [alt]="l.name">
+          </div>
           <div class="cm-info">
             <div class="cm-name">{{ l.name }}</div>
             <div class="cm-state">{{ l.state }}</div>

@@ -80,6 +80,13 @@ export interface ScholarshipAcademicYearOption {
   startYear: number;
 }
 
+export interface ScholarshipPortalSettings {
+  applicationDeadline: string;
+  closedTitle: string;
+  closedMessage: string;
+  isOpen: boolean;
+}
+
 interface ScholarshipAcademicYearsApiData {
   items: ScholarshipAcademicYearOption[];
 }
@@ -88,6 +95,12 @@ interface ScholarshipAcademicYearsApiResponse {
   success: boolean;
   message: string;
   data: ScholarshipAcademicYearsApiData;
+}
+
+interface ScholarshipPortalSettingsApiResponse {
+  success: boolean;
+  message: string;
+  data: ScholarshipPortalSettings;
 }
 
 const SCHOLARSHIP_API_BASE = buildApiUrl('/api/v1/scholarships');
@@ -130,6 +143,21 @@ export class ScholarshipService {
     }
 
     return response.data.items;
+  }
+
+  async getPortalSettings(): Promise<ScholarshipPortalSettings> {
+    let response: ScholarshipPortalSettingsApiResponse;
+    try {
+      response = await firstValueFrom(
+        this.http.get<ScholarshipPortalSettingsApiResponse>(
+          `${SCHOLARSHIP_API_BASE}/portal-settings`,
+        ),
+      );
+    } catch (error) {
+      throw new Error(this.errorMessageFromApi(error, 'Unable to load scholarship portal settings right now.'));
+    }
+
+    return response.data;
   }
 
   async checkRegistrationAvailability(registrationNo: string, academicYearId: string): Promise<RegistrationAvailabilityResponse> {

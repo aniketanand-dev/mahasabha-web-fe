@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, signal, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, ViewChild, computed, effect, signal, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -8,6 +8,7 @@ import {
   AdminBhavanContent,
   AdminCmLeader,
   AdminDirectoryEntry,
+  AdminDailyVachanaContent,
   AdminEvent,
   AdminEventBadge,
   AdminEventCategory,
@@ -21,7 +22,9 @@ import {
   AdminPastPresident,
   AdminPresidentNoteContent,
   AdminScholarshipApplication,
+  AdminScholarshipSettings,
   AdminTicker,
+  AdminVisitorStats,
   ScholarshipAcademicYearOption,
 } from '../../services/admin-data.service';
 import { buildManagedAssetUrl } from '../../services/api-base';
@@ -29,6 +32,8 @@ import { translations } from '../../i18n/translations';
 
 type Tab =
   | 'header'
+  | 'magazine'
+  | 'vachana'
   | 'hero'
   | 'founders'
   | 'mission'
@@ -86,6 +91,7 @@ type DirectoryEntryForm = {
 
 type GalleryForm = {
   src: string;
+  mediaType: 'image' | 'video';
   caption: string;
 };
 
@@ -191,6 +197,12 @@ const SCHOLARSHIP_PERCENTAGE_BUCKETS = [
   { key: '99+', label: '>=99%', min: 99, max: 101 },
 ] as const;
 
+const DEFAULT_VISITOR_STATS: AdminVisitorStats = {
+  totalVisits: 0,
+  uniqueVisitors: 0,
+  lastVisitedAt: null,
+};
+
 @Component({
   selector: 'app-admin-panel',
   standalone: true,
@@ -199,6 +211,8 @@ const SCHOLARSHIP_PERCENTAGE_BUCKETS = [
   styleUrl: './admin-panel.component.scss'
 })
 export class AdminPanelComponent {
+  @ViewChild('scholarshipStatusTabs') private scholarshipStatusTabsRef?: ElementRef<HTMLDivElement>;
+
   private static readonly SCHOLARSHIP_SEARCH_DEBOUNCE_MS = 700;
   private static readonly SCHOLARSHIP_SEARCH_MIN_LENGTH = 3;
   readonly scholarshipListTabs: Array<{ key: ScholarshipListTab; label: string }> = [
@@ -222,6 +236,11 @@ export class AdminPanelComponent {
   readonly hostelItems = this.data.hostels;
 
   activeTab = signal<Tab>('header');
+  visitorStats = signal<AdminVisitorStats>({ ...DEFAULT_VISITOR_STATS });
+  visitorStatsLoading = signal(false);
+  visitorStatsError = signal('');
+  scholarshipSettingsMenuOpen = signal(false);
+  scholarshipSettingsDialogOpen = signal(false);
 
   readonly textFieldsByTab: Partial<Record<Tab, TextField[]>> = {
     header: [
@@ -231,8 +250,12 @@ export class AdminPanelComponent {
       { key: 'nav.community', label: 'Community label' },
       { key: 'nav.events', label: 'Events label' },
       { key: 'nav.gallery', label: 'Gallery label' },
+      { key: 'nav.byeLaw', label: 'By-law label' },
       { key: 'nav.directory', label: 'Directory label' },
       { key: 'nav.contact', label: 'Contact label' },
+    ],
+    magazine: [
+      { key: 'nav.magazine', label: 'Magazine label' },
     ],
     hero: [
       { key: 'hero.title', label: 'Hero title' },
@@ -342,11 +365,15 @@ export class AdminPanelComponent {
   mediaBusy = signal(false);
   mediaError = signal('');
   navbarContent!: AdminNavbarContent;
+  scholarshipSettings!: AdminScholarshipSettings;
+  dailyVachanaContent!: AdminDailyVachanaContent;
   heroContent!: AdminHeroContent;
   presidentNoteContent!: AdminPresidentNoteContent;
   bhavanContent!: AdminBhavanContent;
   footerContent!: AdminFooterContent;
   navbarLogoFile: File | null = null;
+  byeLawFile: File | null = null;
+  magazineFile: File | null = null;
   heroLogoFile: File | null = null;
   presidentPhotoFile: File | null = null;
   bhavanFiles: Array<File | null> = [null, null, null];
@@ -403,13 +430,13 @@ export class AdminPanelComponent {
   editingGalleryId = signal<number | null>(null);
   galleryBusy = signal(false);
   galleryError = signal('');
-  newGallery: GalleryForm = { src: '', caption: '' };
-  editGallery: GalleryForm = { src: '', caption: '' };
+  newGallery: GalleryForm = { src: '', mediaType: 'image', caption: '' };
+  editGallery: GalleryForm = { src: '', mediaType: 'image', caption: '' };
   newGalleryFile: File | null = null;
   editGalleryFile: File | null = null;
 
   startEditGallery(item: AdminGalleryItem) {
-    this.editGallery = { src: item.src, caption: item.caption };
+    this.editGallery = { src: item.src, mediaType: item.mediaType, caption: item.caption };
     this.editGalleryFile = null;
     this.galleryError.set('');
     this.editingGalleryId.set(item.id);
@@ -418,18 +445,22 @@ export class AdminPanelComponent {
   onNewGalleryFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     this.newGalleryFile = input.files?.[0] ?? null;
+    this.newGallery.mediaType = this.newGalleryFile?.type.startsWith('video/') ? 'video' : 'image';
     this.galleryError.set('');
   }
 
   onEditGalleryFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     this.editGalleryFile = input.files?.[0] ?? null;
+    if (this.editGalleryFile) {
+      this.editGallery.mediaType = this.editGalleryFile.type.startsWith('video/') ? 'video' : 'image';
+    }
     this.galleryError.set('');
   }
 
   async addGallery() {
     if (!this.newGalleryFile) {
-      this.galleryError.set('Select an image file before saving.');
+      this.galleryError.set('Select an image or video file before saving.');
       return;
     }
 
@@ -438,11 +469,11 @@ export class AdminPanelComponent {
 
     try {
       await this.data.addGalleryItem({ caption: this.newGallery.caption, file: this.newGalleryFile });
-      this.newGallery = { src: '', caption: '' };
+      this.newGallery = { src: '', mediaType: 'image', caption: '' };
       this.newGalleryFile = null;
       this.showGalleryAdd.set(false);
     } catch {
-      this.galleryError.set('Image upload failed. Make sure the local upload server is running.');
+      this.galleryError.set('Gallery upload failed. Make sure the backend is running and the file is an image or video.');
     } finally {
       this.galleryBusy.set(false);
     }
@@ -460,14 +491,14 @@ export class AdminPanelComponent {
       this.editGalleryFile = null;
       this.editingGalleryId.set(null);
     } catch {
-      this.galleryError.set('Image update failed. Make sure the local upload server is running.');
+      this.galleryError.set('Gallery update failed. Make sure the backend is running and the file is an image or video.');
     } finally {
       this.galleryBusy.set(false);
     }
   }
 
   async deleteGallery(id: number) {
-    if (!confirm('Delete this image?')) return;
+    if (!confirm('Delete this gallery item?')) return;
 
     this.galleryBusy.set(true);
     this.galleryError.set('');
@@ -475,7 +506,7 @@ export class AdminPanelComponent {
     try {
       await this.data.deleteGalleryItem(id);
     } catch {
-      this.galleryError.set('Image delete failed. Make sure the local upload server is running.');
+      this.galleryError.set('Gallery delete failed. Make sure the backend is running.');
     } finally {
       this.galleryBusy.set(false);
     }
@@ -487,7 +518,7 @@ export class AdminPanelComponent {
   }
 
   cancelGalleryAdd() {
-    this.newGallery = { src: '', caption: '' };
+    this.newGallery = { src: '', mediaType: 'image', caption: '' };
     this.newGalleryFile = null;
     this.galleryError.set('');
     this.showGalleryAdd.set(false);
@@ -563,6 +594,8 @@ export class AdminPanelComponent {
   scholarshipSelectedState = signal('');
   scholarshipSelectedDistrict = signal('');
   scholarshipSelectedTaluk = signal('');
+  scholarshipSubmittedFrom = signal('');
+  scholarshipSubmittedTo = signal('');
   scholarshipStatusDrafts = signal<Record<string, ScholarshipStatus>>({});
   scholarshipCommentDrafts = signal<Record<string, string>>({});
   scholarshipStatusUpdating = signal<Record<string, boolean>>({});
@@ -575,27 +608,6 @@ export class AdminPanelComponent {
   scholarshipImagePreviewIndex = signal(0);
   scholarshipImageZoom = signal(1);
   readonly scholarshipSummary = computed(() => this.buildScholarshipSummary(this.scholarshipSummaryItems()));
-  readonly scholarshipTabCounts = computed(() => {
-    const counts: Record<ScholarshipListTab, number> = {
-      all: 0,
-      pending: 0,
-      accepted: 0,
-      rejected: 0,
-    };
-
-    for (const item of this.scholarshipSummaryItems()) {
-      const normalizedStatus = String(item.status || '').toLowerCase();
-      counts.all += 1;
-
-      if (normalizedStatus === 'accepted' || normalizedStatus === 'rejected') {
-        counts[normalizedStatus] += 1;
-      } else {
-        counts.pending += 1;
-      }
-    }
-
-    return counts;
-  });
   private scholarshipSearchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private scholarshipLoadRequestId = 0;
   private scholarshipImagePanStage: HTMLDivElement | null = null;
@@ -608,14 +620,42 @@ export class AdminPanelComponent {
   constructor() {
     this.seedTextDrafts();
     this.navbarContent = this.clone(this.data.navbarContent());
+    this.scholarshipSettings = this.clone(this.data.scholarshipSettings());
+    this.dailyVachanaContent = this.clone(this.data.dailyVachanaContent());
     this.heroContent = this.clone(this.data.heroContent());
     this.presidentNoteContent = this.clone(this.data.presidentNoteContent());
     this.bhavanContent = this.clone(this.data.bhavanContent());
     this.footerContent = this.clone(this.data.footerContent());
+
+    effect(() => {
+      this.navbarContent = this.clone(this.data.navbarContent());
+    });
+
+    effect(() => {
+      this.scholarshipSettings = this.clone(this.data.scholarshipSettings());
+    });
+
+    effect(() => {
+      this.dailyVachanaContent = this.clone(this.data.dailyVachanaContent());
+    });
+
+    void this.loadVisitorStats();
+  }
+
+  get visitorStatsLastSeenLabel() {
+    const lastVisitedAt = this.visitorStats().lastVisitedAt;
+
+    if (!lastVisitedAt) {
+      return 'No visits recorded yet';
+    }
+
+    return new Date(lastVisitedAt).toLocaleString();
   }
 
   async setTab(tab: Tab) {
     this.activeTab.set(tab);
+    this.scholarshipSettingsMenuOpen.set(false);
+    this.scholarshipSettingsDialogOpen.set(false);
 
     if (tab === 'scholarships') {
       await this.loadScholarshipAcademicYears();
@@ -642,6 +682,20 @@ export class AdminPanelComponent {
     }
   }
 
+  async loadVisitorStats() {
+    this.visitorStatsLoading.set(true);
+    this.visitorStatsError.set('');
+
+    try {
+      const stats = await this.data.getVisitorStats();
+      this.visitorStats.set(stats);
+    } catch {
+      this.visitorStatsError.set('Unable to load visitor stats right now.');
+    } finally {
+      this.visitorStatsLoading.set(false);
+    }
+  }
+
   async loadScholarshipApplications(page = 1) {
     const requestId = ++this.scholarshipLoadRequestId;
     this.scholarshipLoading.set(true);
@@ -652,11 +706,13 @@ export class AdminPanelComponent {
     const state = this.scholarshipSelectedState();
     const district = this.scholarshipSelectedDistrict();
     const taluk = this.scholarshipSelectedTaluk();
+    const submittedFrom = this.scholarshipSubmittedFrom();
+    const submittedTo = this.scholarshipSubmittedTo();
 
     try {
       const [result, summaryResult, regionSeedResult] = await Promise.all([
-        this.data.getScholarshipApplications({ page, limit: this.scholarshipLimit, academicYearId, search, status, state, district, taluk }),
-        this.data.getScholarshipApplications({ all: true, academicYearId, search, status, state, district, taluk }).catch(() => null),
+        this.data.getScholarshipApplications({ page, limit: this.scholarshipLimit, academicYearId, search, status, state, district, taluk, submittedFrom, submittedTo }),
+        this.data.getScholarshipApplications({ all: true, academicYearId, search, state, district, taluk, submittedFrom, submittedTo }).catch(() => null),
         this.data.getScholarshipApplications({ all: true, academicYearId }).catch(() => null),
       ]);
 
@@ -664,10 +720,13 @@ export class AdminPanelComponent {
         return;
       }
 
+      const nextSummaryItems = summaryResult?.items
+        ?? (this.scholarshipSummaryItems().length > 0 ? this.scholarshipSummaryItems() : result.items);
+
       this.scholarshipApplications.set(result.items);
-      this.scholarshipSummaryItems.set(summaryResult?.items ?? result.items);
+      this.scholarshipSummaryItems.set(nextSummaryItems);
       this.scholarshipRegionSeedItems.set(regionSeedResult?.items ?? []);
-      this.initializeScholarshipStatusDrafts(summaryResult?.items ?? result.items);
+      this.initializeScholarshipStatusDrafts(result.items);
       this.scholarshipPage.set(result.pagination.page);
       this.scholarshipTotalItems.set(result.pagination.totalItems);
       this.scholarshipTotalPages.set(result.pagination.totalPages);
@@ -785,13 +844,40 @@ export class AdminPanelComponent {
     await this.loadScholarshipApplications(1);
   }
 
+  private scholarshipTabsTop() {
+    return this.scholarshipStatusTabsRef?.nativeElement.getBoundingClientRect().top ?? null;
+  }
+
+  private restoreScholarshipScroll(anchorTopBefore: number | null, windowScrollBefore: number) {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const anchorTopAfter = this.scholarshipTabsTop();
+
+        if (anchorTopBefore === null || anchorTopAfter === null) {
+          window.scrollTo({ top: windowScrollBefore, behavior: 'auto' });
+          return;
+        }
+
+        const delta = anchorTopAfter - anchorTopBefore;
+        window.scrollTo({ top: windowScrollBefore + delta, behavior: 'auto' });
+      });
+    });
+  }
+
   async setScholarshipListTab(tab: ScholarshipListTab) {
     if (this.scholarshipActiveListTab() === tab) {
       return;
     }
 
+    const scrollPosition = typeof window === 'undefined' ? 0 : window.scrollY;
+    const anchorTop = this.scholarshipTabsTop();
     this.scholarshipActiveListTab.set(tab);
     await this.loadScholarshipApplications(1);
+    this.restoreScholarshipScroll(anchorTop, scrollPosition);
   }
 
   onScholarshipSearchDraftChanged(value: string) {
@@ -884,6 +970,22 @@ export class AdminPanelComponent {
     this.scholarshipSelectedState.set('');
     this.scholarshipSelectedDistrict.set('');
     this.scholarshipSelectedTaluk.set('');
+    await this.loadScholarshipApplications(1);
+  }
+
+  async onScholarshipSubmittedFromChanged(submittedFrom: string) {
+    this.scholarshipSubmittedFrom.set(submittedFrom);
+    await this.loadScholarshipApplications(1);
+  }
+
+  async onScholarshipSubmittedToChanged(submittedTo: string) {
+    this.scholarshipSubmittedTo.set(submittedTo);
+    await this.loadScholarshipApplications(1);
+  }
+
+  async clearScholarshipDateFilters() {
+    this.scholarshipSubmittedFrom.set('');
+    this.scholarshipSubmittedTo.set('');
     await this.loadScholarshipApplications(1);
   }
 
@@ -1319,6 +1421,24 @@ export class AdminPanelComponent {
     };
   }
 
+  scholarshipTabCount(tab: ScholarshipListTab): number {
+    const items = this.scholarshipSummaryItems();
+
+    if (tab === 'all') {
+      return items.length;
+    }
+
+    return items.filter((item) => {
+      const normalizedStatus = String(item.status || '').trim().toLowerCase();
+
+      if (tab === 'accepted' || tab === 'rejected') {
+        return normalizedStatus === tab;
+      }
+
+      return normalizedStatus !== 'accepted' && normalizedStatus !== 'rejected';
+    }).length;
+  }
+
   private emptyOrgNodeForm(parentId: number | null = null): OrgNodeForm {
     return { parentId, title: '', subtitle: '', order: 0 };
   }
@@ -1397,6 +1517,43 @@ export class AdminPanelComponent {
     this.navbarLogoFile = this.fileFromEvent(event);
   }
 
+  onByeLawSelected(event: Event) {
+    this.byeLawFile = this.fileFromEvent(event);
+  }
+
+  onMagazineSelected(event: Event) {
+    this.magazineFile = this.fileFromEvent(event);
+  }
+
+  saveDailyVachanaContent() {
+    this.mediaError.set('');
+    this.data.saveDailyVachanaContent(this.dailyVachanaContent);
+    this.dailyVachanaContent = this.clone(this.data.dailyVachanaContent());
+  }
+
+  saveScholarshipSettings() {
+    this.mediaError.set('');
+    this.data.saveScholarshipSettings(this.scholarshipSettings);
+    this.scholarshipSettings = this.clone(this.data.scholarshipSettings());
+    this.scholarshipSettingsDialogOpen.set(false);
+    this.scholarshipSettingsMenuOpen.set(false);
+  }
+
+  toggleScholarshipSettingsMenu() {
+    this.scholarshipSettingsMenuOpen.update((isOpen) => !isOpen);
+  }
+
+  openScholarshipSettingsDialog() {
+    this.scholarshipSettingsMenuOpen.set(false);
+    this.scholarshipSettingsDialogOpen.set(true);
+  }
+
+  closeScholarshipSettingsDialog() {
+    this.scholarshipSettingsDialogOpen.set(false);
+    this.scholarshipSettingsMenuOpen.set(false);
+    this.scholarshipSettings = this.clone(this.data.scholarshipSettings());
+  }
+
   onHeroLogoSelected(event: Event) {
     this.heroLogoFile = this.fileFromEvent(event);
   }
@@ -1411,10 +1568,46 @@ export class AdminPanelComponent {
 
   async saveNavbarContent() {
     await this.runMediaAction(async () => {
-      await this.data.saveNavbarContent(this.navbarContent, this.navbarLogoFile);
+      await this.data.saveNavbarContent(this.navbarContent, this.navbarLogoFile, this.byeLawFile, this.magazineFile);
       this.navbarContent = this.clone(this.data.navbarContent());
       this.navbarLogoFile = null;
-    }, 'Header image save failed. Make sure the local upload server is running.');
+      this.byeLawFile = null;
+      this.magazineFile = null;
+    }, 'Header save failed. Make sure the backend is running and the PDF files are valid.');
+  }
+
+  async deleteByeLaw() {
+    if (!this.navbarContent.byeLawUrl) {
+      return;
+    }
+
+    if (!confirm('Delete the current by-law PDF?')) {
+      return;
+    }
+
+    await this.runMediaAction(async () => {
+      this.navbarContent = { ...this.navbarContent, byeLawUrl: '' };
+      this.byeLawFile = null;
+      await this.data.saveNavbarContent(this.navbarContent, null, null, null);
+      this.navbarContent = this.clone(this.data.navbarContent());
+    }, 'By-law PDF delete failed. Make sure the backend is running.');
+  }
+
+  async deleteMagazine() {
+    if (!this.navbarContent.magazineUrl) {
+      return;
+    }
+
+    if (!confirm('Delete the current magazine PDF?')) {
+      return;
+    }
+
+    await this.runMediaAction(async () => {
+      this.navbarContent = { ...this.navbarContent, magazineUrl: '' };
+      this.magazineFile = null;
+      await this.data.saveNavbarContent(this.navbarContent, null, null, null);
+      this.navbarContent = this.clone(this.data.navbarContent());
+    }, 'Magazine PDF delete failed. Make sure the backend is running.');
   }
 
   async saveHeroContent() {

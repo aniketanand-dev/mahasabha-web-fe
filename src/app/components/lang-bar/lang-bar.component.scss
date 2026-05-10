@@ -4,10 +4,23 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
   font-size: 0.78rem;
   color: var(--gold-light);
 }
-.langs { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.lang-bar > span {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+.langs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1 1 360px;
+}
 .lang-divider { color: rgba(232,184,75,0.4); margin: 0 2px; font-size: 0.9rem; }
 .all-lang-select {
   background: none;
@@ -34,4 +47,42 @@
   font-family: inherit;
   transition: all 0.2s;
   &:hover, &.active { background: var(--gold); color: var(--maroon-dark); border-color: var(--gold); }
+}
+
+@media (max-width: 700px) {
+  .lang-bar {
+    padding: 0.45rem 0.9rem;
+    align-items: flex-start;
+  }
+
+  .lang-bar > span {
+    flex-basis: 100%;
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+
+  .langs {
+    flex-basis: 100%;
+    justify-content: flex-start;
+    gap: 0.45rem;
+  }
+
+  .lang-btn,
+  .all-lang-select {
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .lang-bar {
+    padding-inline: 0.75rem;
+  }
+
+  .lang-divider {
+    display: none;
+  }
+
+  .all-lang-select {
+    width: min(100%, 240px);
+  }
 }

@@ -9,6 +9,12 @@
       <p class="intro">
         Fill in the student details, upload the required documents, review everything in preview, and then submit.
       </p>
+      @if (scholarshipApplicationsOpen && scholarshipDeadlineLabel) {
+        <div class="portal-countdown-card">
+          <strong>Closes in {{ scholarshipCountdownLabel }}</strong>
+          <span>Applications close on {{ scholarshipDeadlineLabel }}</span>
+        </div>
+      }
     </div>
 
     @if (submitSuccess(); as success) {
@@ -29,6 +35,28 @@
         </p>
         <a routerLink="/" class="primary-link">Return to Home</a>
       </div>
+    } @else if (portalSettingsLoading()) {
+      <div class="closed-card closed-card--loading">
+        <p class="success-tag">Checking Application Window</p>
+        <h2>Loading scholarship portal status...</h2>
+      </div>
+    } @else if (portalSettingsError()) {
+      <div class="closed-card closed-card--error">
+        <p class="success-tag">Scholarship Portal</p>
+        <h2>Unable to load application status.</h2>
+        <p class="success-copy">{{ portalSettingsError() }}</p>
+        <a routerLink="/" class="primary-link">Return to Home</a>
+      </div>
+    } @else if (!scholarshipApplicationsOpen) {
+      <div class="closed-card">
+        <p class="success-tag">Application Window Closed</p>
+        <h2>{{ scholarshipClosedTitle }}</h2>
+        <p class="success-copy">{{ scholarshipClosedMessage }}</p>
+        @if (scholarshipDeadlineLabel) {
+          <p class="success-copy">Closed on {{ scholarshipDeadlineLabel }}</p>
+        }
+        <a routerLink="/" class="primary-link">Return to Home</a>
+      </div>
     } @else if (!previewMode()) {
       <form class="application-form" [formGroup]="form" (ngSubmit)="goToPreview()">
         <div class="form-card">
@@ -37,7 +65,7 @@
             <span>Academic Year {{ selectedAcademicYearLabel }}</span>
           </div>
 
-          <div class="form-grid three-cols">
+          <div class="form-grid one-col compact-desktop-row">
             <label class="field">
               <span>Academic Year *</span>
               <select formControlName="academicYearId" (change)="onAcademicYearChanged()">
@@ -48,11 +76,9 @@
               </select>
               @if (controlHasError('academicYearId')) { <small>Please select a valid academic year.</small> }
             </label>
-            <div class="field-spacer" aria-hidden="true"></div>
-            <div class="field-spacer" aria-hidden="true"></div>
           </div>
 
-          <div class="form-grid three-cols">
+          <div class="form-grid one-col compact-desktop-row">
             <label class="field">
               <span>Registration No (10th/12th) *</span>
               <input type="text" formControlName="registrationNo" placeholder="Enter 10th or 12th registration number" (input)="onRegistrationNumberChanged()" (blur)="onRegistrationNumberBlur()" />
@@ -63,8 +89,6 @@
               @else if (registrationStatusMessage()) { <small class="field-success">{{ registrationStatusMessage() }}</small> }
               @else if (form.controls.registrationNo.dirty || form.controls.registrationNo.touched) { <small>Enter the board exam registration number (SSLC/PUC).</small> }
             </label>
-            <div class="field-spacer" aria-hidden="true"></div>
-            <div class="field-spacer" aria-hidden="true"></div>
           </div>
 
           <div class="form-grid three-cols">
@@ -127,14 +151,12 @@
             </label>
           </div>
 
-          <div class="form-grid three-cols">
+          <div class="form-grid one-col compact-desktop-row">
             <label class="field">
               <span>Email ID *</span>
               <input type="email" formControlName="emailId" placeholder="Enter email address" />
               @if (controlHasError('emailId')) { <small>Enter a valid email address.</small> }
             </label>
-            <div class="field-spacer" aria-hidden="true"></div>
-            <div class="field-spacer" aria-hidden="true"></div>
           </div>
 
           <div class="section-heading address-head">

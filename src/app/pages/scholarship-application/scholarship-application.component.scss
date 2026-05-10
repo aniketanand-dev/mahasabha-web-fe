@@ -53,22 +53,56 @@
   }
 }
 
+.portal-countdown-card {
+  display: grid;
+  gap: 0.25rem;
+  max-width: 520px;
+  margin: 1.1rem auto 0;
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  background: rgba(122, 14, 34, 0.08);
+  border: 1px solid rgba(122, 14, 34, 0.12);
+
+  strong {
+    color: var(--maroon);
+    font-size: 1rem;
+  }
+
+  span {
+    color: var(--text-light);
+    font-size: 0.92rem;
+  }
+}
+
 .application-form,
 .preview-card,
-.success-card {
+.success-card,
+.closed-card {
   display: grid;
   gap: 1.5rem;
 }
 
 .form-card,
 .preview-card,
-.success-card {
+.success-card,
+.closed-card {
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(201, 144, 26, 0.25);
   border-radius: 24px;
   padding: 1.6rem;
   box-shadow: 0 20px 45px rgba(122, 14, 34, 0.08);
   backdrop-filter: blur(6px);
+}
+
+.closed-card {
+  text-align: center;
+  justify-items: center;
+}
+
+.closed-card--loading,
+.closed-card--error {
+  max-width: 760px;
+  margin: 0 auto;
 }
 
 .section-heading {
@@ -100,8 +134,12 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+.compact-desktop-row {
+  max-width: 100%;
+}
+
 .field-spacer {
-  min-height: 1px;
+  display: none;
 }
 
 .three-cols {
@@ -135,6 +173,7 @@
     color: var(--text-mid);
     line-height: 1.35;
     overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   input,
@@ -777,9 +816,15 @@
   }
 }
 
-@media (max-width: 1120px) {
+@media (min-width: 901px) and (max-width: 1120px) {
   .three-cols {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1121px) {
+  .compact-desktop-row {
+    max-width: calc((100% - 2.3rem) / 3);
   }
 }
 
@@ -796,16 +841,19 @@
   }
 
   .field {
+    padding-top: 0.55rem;
+
     span {
       left: 0.75rem;
       max-width: calc(100% - 1.5rem);
       font-size: 0.76rem;
+      line-height: 1.25;
     }
 
     input,
     select {
       min-height: 56px;
-      padding: 0.95rem 0.9rem 0.85rem;
+      padding: 1.05rem 0.9rem 0.85rem;
     }
   }
 

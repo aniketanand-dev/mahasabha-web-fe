@@ -1,6 +1,6 @@
-import { Component, inject, signal, OnDestroy, OnInit } from '@angular/core';
+import { Component, computed, inject, signal, OnDestroy, OnInit } from '@angular/core';
 import { LanguageService } from '../../services/language.service';
-import { AdminDataService } from '../../services/admin-data.service';
+import { AdminDataService, AdminGalleryItem } from '../../services/admin-data.service';
 
 @Component({
   selector: 'app-gallery',
@@ -13,8 +13,13 @@ export class GalleryComponent implements OnInit, OnDestroy {
   protected lang = inject(LanguageService);
   protected data = inject(AdminDataService);
   protected readonly galleryItems = this.data.gallery;
+  protected readonly currentItem = computed(() => this.galleryItems()[this.current()] ?? null);
   current = signal(0);
   private timer: ReturnType<typeof setInterval> | null = null;
+
+  protected isVideoItem(item: AdminGalleryItem | null) {
+    return item?.mediaType === 'video';
+  }
 
   openLightbox(src: string) {
     const lb  = document.getElementById('lightbox') as HTMLElement;
@@ -26,7 +31,7 @@ export class GalleryComponent implements OnInit, OnDestroy {
   ngOnDestroy() { this.stopAutoplay();  }
 
   startAutoplay() {
-    if (this.timer || this.galleryItems().length < 2) {
+    if (this.timer || this.galleryItems().length < 2 || this.isVideoItem(this.currentItem())) {
       return;
     }
 
@@ -42,6 +47,11 @@ export class GalleryComponent implements OnInit, OnDestroy {
     }
 
     this.current.update(i => (i + 1) % total);
+    if (this.isVideoItem(this.currentItem())) {
+      this.stopAutoplay();
+    } else {
+      this.startAutoplay();
+    }
   }
 
   prev() {
@@ -51,7 +61,20 @@ export class GalleryComponent implements OnInit, OnDestroy {
     }
 
     this.current.update(i => (i - 1 + total) % total);
+    if (this.isVideoItem(this.currentItem())) {
+      this.stopAutoplay();
+    } else {
+      this.startAutoplay();
+    }
   }
 
-  goTo(index: number) { this.current.set(index); }
+  goTo(index: number) {
+    this.current.set(index);
+    if (this.isVideoItem(this.currentItem())) {
+      this.stopAutoplay();
+      return;
+    }
+
+    this.startAutoplay();
+  }
 }

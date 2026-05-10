@@ -1,0 +1,55 @@
+# Deployment Details
+
+## Frontend (Web Project)
+
+Codebase / Upload Directory:
+/home/root1/
+
+Live Website Path:
+/var/www/aivlm.org/
+
+Frontend Deployment Steps:
+sudo rm -rf /var/www/aivlm.org/*
+sudo cp ~/browser.zip /var/www/aivlm.org/
+cd /var/www/aivlm.org
+sudo unzip browser.zip
+sudo systemctl reload nginx
+
+--------------------------------------------------
+
+## Backend Project
+
+Codebase / Upload Directory:
+/home/root1/
+
+Live Backend Code Path:
+/var/opt/mahasabha-backend/
+
+Check Backend Files:
+ls -l /var/opt/mahasabha-backend/
+
+Backend Deployment Steps:
+cd /var/opt/mahasabha-backend/
+git pull origin main
+pm2 restart mahasabha-backend
+
+Backend Process Manager:
+Using PM2 tool we are running this project.
+
+--------------------------------------------------
+
+## Database & File Storage
+
+Database Used:
+MongoDB(No passoword for DB)
+
+Image / Photo Storage Path:
+/var/opt/mahasabha-backend/uploads/
+
+All uploaded images and photos are stored inside the backend project uploads folder.
+
+--------------------------------------------------
+
+## GitHub Linked Account
+
+exploreunlimitted@gmail.com

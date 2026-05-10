@@ -13,6 +13,12 @@
       <button [class.active]="activeTab() === 'header'" (click)="setTab('header')">
         <span>🧭</span><span class="nav-label">Header</span>
       </button>
+      <button [class.active]="activeTab() === 'magazine'" (click)="setTab('magazine')">
+        <span>📚</span><span class="nav-label">Magazine</span>
+      </button>
+      <button [class.active]="activeTab() === 'vachana'" (click)="setTab('vachana')">
+        <span>🪔</span><span class="nav-label">Daily Vachana</span>
+      </button>
       <button [class.active]="activeTab() === 'hero'" (click)="setTab('hero')">
         <span>🌅</span><span class="nav-label">Hero</span>
       </button>
@@ -74,6 +80,8 @@
       <div class="tab-header sticky-header">
         <div>
           @if (activeTab() === 'header') { <h2>🧭 Header</h2> }
+          @if (activeTab() === 'magazine') { <h2>📚 Magazine</h2> }
+          @if (activeTab() === 'vachana') { <h2>🪔 Daily Vachana</h2> }
           @if (activeTab() === 'hero') { <h2>🌅 Hero</h2> }
           @if (activeTab() === 'founders') { <h2>👥 Founders</h2> }
           @if (activeTab() === 'mission') { <h2>🎯 Mission & Vision</h2> }
@@ -91,7 +99,28 @@
           @if (activeTab() === 'footer') { <h2>🔻 Footer</h2> }
           <p class="tab-note">All admin image uploads now save into this project locally, and replacing or deleting a record removes the old managed file from disk.</p>
         </div>
+        <div class="admin-visitor-stats">
+          <div class="admin-visitor-stat-card">
+            <span class="admin-visitor-stat-label">Total Visits</span>
+            <strong class="admin-visitor-stat-value">{{ visitorStats().totalVisits }}</strong>
+          </div>
+          <div class="admin-visitor-stat-card">
+            <span class="admin-visitor-stat-label">Unique Visitors</span>
+            <strong class="admin-visitor-stat-value">{{ visitorStats().uniqueVisitors }}</strong>
+          </div>
+          <div class="admin-visitor-stat-card admin-visitor-stat-card--wide">
+            <span class="admin-visitor-stat-label">Last Visit</span>
+            <strong class="admin-visitor-stat-value admin-visitor-stat-value--small">{{ visitorStatsLastSeenLabel }}</strong>
+          </div>
+          <button class="btn-cancel admin-visitor-refresh" [disabled]="visitorStatsLoading()" (click)="loadVisitorStats()">
+            @if (visitorStatsLoading()) { Refreshing... } @else { Refresh Visitors }
+          </button>
+        </div>
       </div>
+
+      @if (visitorStatsError()) {
+        <div class="gallery-status gallery-error">{{ visitorStatsError() }}</div>
+      }
 
       <div class="content-stack">
         @if (mediaError()) {
@@ -151,6 +180,24 @@
                   <div class="field-key">Selected: {{ selectedFileName(navbarLogoFile) }}</div>
                 }
               </div>
+              <div class="form-row span-two">
+                <label>Current By-law PDF</label>
+                @if (navbarContent.byeLawUrl) {
+                  <div class="form-actions">
+                    <a [href]="navbarContent.byeLawUrl" target="_blank" rel="noopener noreferrer" class="admin-btn">Open Current PDF</a>
+                    <button type="button" class="btn-delete sm" (click)="deleteByeLaw()">Delete PDF</button>
+                  </div>
+                } @else {
+                  <div class="field-key">No by-law PDF uploaded yet.</div>
+                }
+              </div>
+              <div class="form-row span-two">
+                <label>Upload By-law PDF</label>
+                <input type="file" accept="application/pdf" class="form-input" (change)="onByeLawSelected($event)" />
+                @if (selectedFileName(byeLawFile)) {
+                  <div class="field-key">Selected: {{ selectedFileName(byeLawFile) }}</div>
+                }
+              </div>
               <div class="form-row">
                 <label>Name Kannada</label>
                 <input [(ngModel)]="navbarContent.nameKn" class="form-input" />
@@ -158,6 +205,78 @@
               <div class="form-row span-two">
                 <label>Name English</label>
                 <input [(ngModel)]="navbarContent.nameEn" class="form-input" />
+              </div>
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'magazine') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Magazine PDF</h3>
+                <p>Upload the latest magazine PDF for the public navbar link. Files are stored in the backend uploads/magazines folder.</p>
+              </div>
+              <button class="btn-save" (click)="saveNavbarContent()">Save Magazine</button>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-row span-two">
+                <label>Current Magazine PDF</label>
+                @if (navbarContent.magazineUrl) {
+                  <div class="form-actions">
+                    <a [href]="navbarContent.magazineUrl" target="_blank" rel="noopener noreferrer" class="admin-btn">Open Current PDF</a>
+                    <button type="button" class="btn-delete sm" (click)="deleteMagazine()">Delete PDF</button>
+                  </div>
+                } @else {
+                  <div class="field-key">No magazine PDF uploaded yet.</div>
+                }
+              </div>
+              <div class="form-row span-two">
+                <label>Upload Magazine PDF</label>
+                <input type="file" accept="application/pdf" class="form-input" (change)="onMagazineSelected($event)" />
+                @if (selectedFileName(magazineFile)) {
+                  <div class="field-key">Selected: {{ selectedFileName(magazineFile) }}</div>
+                }
+              </div>
+            </div>
+          </section>
+        }
+
+        @if (activeTab() === 'vachana') {
+          <section class="form-card section-card">
+            <div class="card-head">
+              <div>
+                <h3>Daily Vachana</h3>
+                <p>Add one visible vachana for the landing page so visitors can read it immediately when the site opens.</p>
+              </div>
+              <button class="btn-save" (click)="saveDailyVachanaContent()">Save Vachana</button>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-row span-two">
+                <label class="checkbox-label">
+                  <input type="checkbox" [(ngModel)]="dailyVachanaContent.enabled" />
+                  <span>Show this vachana on the homepage</span>
+                </label>
+              </div>
+              <div class="form-row span-two">
+                <label>Card Title</label>
+                <input [(ngModel)]="dailyVachanaContent.title" class="form-input" placeholder="Vachana of the Day" />
+              </div>
+              <div class="form-row span-two">
+                <label>Vachana Text</label>
+                <textarea [(ngModel)]="dailyVachanaContent.quote" class="form-input form-textarea" rows="6" placeholder="Enter the daily vachana text"></textarea>
+              </div>
+              <div class="form-row">
+                <label>Author</label>
+                <input [(ngModel)]="dailyVachanaContent.author" class="form-input" placeholder="Basavanna" />
+              </div>
+              <div class="form-row">
+                <label>Last Updated</label>
+                <input [value]="dailyVachanaContent.updatedAt | date:'medium'" class="form-input" readonly />
+              </div>
+              <div class="form-row span-two">
+                <label>Short Reflection</label>
+                <textarea [(ngModel)]="dailyVachanaContent.reflection" class="form-input form-textarea" rows="3" placeholder="Optional short meaning or reflection"></textarea>
               </div>
             </div>
           </section>
@@ -601,10 +720,10 @@
           <section class="form-card section-card">
             <div class="card-head">
               <div>
-                <h3>Gallery Images</h3>
+                <h3>Gallery Media</h3>
                 <p>Manage the slideshow and gallery thumbnails on the homepage. Uploaded files are stored in the backend uploads/gallery folder.</p>
               </div>
-              <button class="btn-add" (click)="showGalleryAdd.set(!showGalleryAdd())">+ Add Image</button>
+              <button class="btn-add" (click)="showGalleryAdd.set(!showGalleryAdd())">+ Add Media</button>
             </div>
 
             @if (galleryError()) {
@@ -618,15 +737,15 @@
             @if (showGalleryAdd()) {
               <div class="form-section-block">
                 <div class="form-row">
-                  <label>Image File *</label>
-                  <input type="file" accept="image/*" class="form-input" (change)="onNewGalleryFileSelected($event)" />
+                  <label>Media File *</label>
+                  <input type="file" accept="image/*,video/*" class="form-input" (change)="onNewGalleryFileSelected($event)" />
                 </div>
                 <div class="form-row">
                   <label>Caption</label>
                   <input [(ngModel)]="newGallery.caption" placeholder="Enter caption" class="form-input" />
                 </div>
                 <div class="form-actions">
-                  <button class="btn-save" [disabled]="galleryBusy()" (click)="addGallery()">Add Image</button>
+                  <button class="btn-save" [disabled]="galleryBusy()" (click)="addGallery()">Add Media</button>
                   <button class="btn-cancel" [disabled]="galleryBusy()" (click)="cancelGalleryAdd()">Cancel</button>
                 </div>
               </div>
@@ -636,9 +755,13 @@
               @for (item of galleryItems(); track item.id) {
                 <div class="item-row">
                   @if (editingGalleryId() === item.id) {
-                    <img class="item-thumb" [src]="editGallery.src || item.src" loading="lazy" />
+                    @if ((editGallery.src || item.src) && editGallery.mediaType === 'video') {
+                      <video class="item-thumb" [src]="editGallery.src || item.src" muted playsinline preload="metadata"></video>
+                    } @else {
+                      <img class="item-thumb" [src]="editGallery.src || item.src" loading="lazy" />
+                    }
                     <div class="item-edit-fields">
-                      <div class="form-row"><label>Replace Image</label><input type="file" accept="image/*" class="form-input" (change)="onEditGalleryFileSelected($event)" /></div>
+                      <div class="form-row"><label>Replace Media</label><input type="file" accept="image/*,video/*" class="form-input" (change)="onEditGalleryFileSelected($event)" /></div>
                       <div class="form-row"><label>Caption</label><input [(ngModel)]="editGallery.caption" class="form-input" /></div>
                       <div class="form-actions">
                         <button class="btn-save sm" [disabled]="galleryBusy()" (click)="saveGallery(item.id)">Save</button>
@@ -646,9 +769,14 @@
                       </div>
                     </div>
                   } @else {
-                    <img class="item-thumb" [src]="item.src" loading="lazy" />
+                    @if (item.mediaType === 'video') {
+                      <video class="item-thumb" [src]="item.src" muted playsinline preload="metadata"></video>
+                    } @else {
+                      <img class="item-thumb" [src]="item.src" loading="lazy" />
+                    }
                     <div class="item-info">
                       <div class="item-title">{{ item.caption || '(no caption)' }}</div>
+                      <div class="item-sub">{{ item.mediaType === 'video' ? 'Video' : 'Image' }}</div>
                       <div class="item-sub">{{ item.src }}</div>
                     </div>
                     <div class="item-actions">
@@ -795,8 +923,8 @@
                 <h3>All Scholarship Applications</h3>
                 <p>Review submitted applications with pagination, export the list to Excel, or download all uploaded files as a ZIP named with student name and Aadhaar number.</p>
               </div>
-              <div class="form-actions compact-actions">
-                <label class="scholarship-filter-field">
+              <div class="form-actions compact-actions scholarship-head-actions">
+                <label class="scholarship-filter-field scholarship-head-year-field">
                   <span>Academic Year</span>
                   <select [ngModel]="scholarshipSelectedAcademicYearId()" (ngModelChange)="onScholarshipAcademicYearChanged($event)" class="form-input scholarship-filter-select">
                     @for (year of scholarshipAcademicYearOptions(); track year._id) {
@@ -804,13 +932,23 @@
                     }
                   </select>
                 </label>
-                <button class="btn-save" [disabled]="scholarshipLoading()" (click)="loadScholarshipApplications(scholarshipPage())">Refresh</button>
-                <button class="btn-add" [disabled]="scholarshipExporting()" (click)="exportScholarshipsToExcel()">
-                  @if (scholarshipExporting()) { Exporting... } @else { Download Excel }
-                </button>
-                <button class="btn-add" [disabled]="scholarshipZipExporting()" (click)="downloadScholarshipUploadsZip()">
-                  @if (scholarshipZipExporting()) { Preparing ZIP... } @else { Download ZIP }
-                </button>
+                <div class="scholarship-head-buttons">
+                  <button class="btn-save scholarship-head-button" [disabled]="scholarshipLoading()" (click)="loadScholarshipApplications(scholarshipPage())">Refresh</button>
+                  <button class="btn-add scholarship-head-button" [disabled]="scholarshipExporting()" (click)="exportScholarshipsToExcel()">
+                    @if (scholarshipExporting()) { Exporting... } @else { Download Excel }
+                  </button>
+                  <button class="btn-add scholarship-head-button" [disabled]="scholarshipZipExporting()" (click)="downloadScholarshipUploadsZip()">
+                    @if (scholarshipZipExporting()) { Preparing ZIP... } @else { Download ZIP }
+                  </button>
+                </div>
+                <div class="scholarship-settings-actions">
+                  <button type="button" class="scholarship-kebab-btn" aria-label="Scholarship settings" (click)="toggleScholarshipSettingsMenu()">⋮</button>
+                  @if (scholarshipSettingsMenuOpen()) {
+                    <div class="scholarship-kebab-popover">
+                      <button type="button" class="scholarship-kebab-popover-item" (click)="openScholarshipSettingsDialog()">Portal Settings</button>
+                    </div>
+                  }
+                </div>
               </div>
             </div>
 
@@ -822,7 +960,7 @@
               <div class="gallery-status">Loading scholarship applications...</div>
             }
 
-            @if (!scholarshipLoading() && scholarshipSummary().totalApplications > 0) {
+            @if (scholarshipSummary().totalApplications > 0) {
               <div class="scholarship-dashboard">
                 <div class="scholarship-kpi-grid">
                   <article class="scholarship-summary-card scholarship-summary-card--accent scholarship-summary-card--kpi">
@@ -919,8 +1057,7 @@
               </div>
             }
 
-            @if (!scholarshipLoading()) {
-              <div class="scholarship-table-toolbar">
+            <div class="scholarship-table-toolbar">
                 <label class="scholarship-filter-field scholarship-search-field">
                   <span>Search Student</span>
                   <input
@@ -960,32 +1097,53 @@
                     }
                   </select>
                 </label>
+                <label class="scholarship-filter-field">
+                  <span>Submitted From</span>
+                  <input
+                    class="form-input scholarship-filter-select"
+                    type="date"
+                    [ngModel]="scholarshipSubmittedFrom()"
+                    (ngModelChange)="onScholarshipSubmittedFromChanged($event)"
+                  />
+                </label>
+                <label class="scholarship-filter-field">
+                  <span>Submitted To</span>
+                  <input
+                    class="form-input scholarship-filter-select"
+                    type="date"
+                    [ngModel]="scholarshipSubmittedTo()"
+                    (ngModelChange)="onScholarshipSubmittedToChanged($event)"
+                  />
+                </label>
                 <div class="scholarship-table-toolbar-actions">
                   @if (scholarshipSelectedState() || scholarshipSelectedDistrict() || scholarshipSelectedTaluk()) {
                     <button class="btn-cancel" [disabled]="scholarshipLoading()" (click)="clearScholarshipRegionFilters()">Clear Region</button>
+                  }
+                  @if (scholarshipSubmittedFrom() || scholarshipSubmittedTo()) {
+                    <button class="btn-cancel" [disabled]="scholarshipLoading()" (click)="clearScholarshipDateFilters()">Clear Date</button>
                   }
                   @if (scholarshipSearchTerm()) {
                     <button class="btn-cancel" [disabled]="scholarshipLoading()" (click)="clearScholarshipSearch()">Clear</button>
                   }
                 </div>
-              </div>
-              <div class="scholarship-status-tabs" role="tablist" aria-label="Scholarship status filters">
+            </div>
+            <div #scholarshipStatusTabs class="scholarship-status-tabs" role="tablist" aria-label="Scholarship status filters">
                 @for (tab of scholarshipListTabs; track tab.key) {
                   <button
                     type="button"
                     class="scholarship-status-tab"
                     [class.is-active]="scholarshipActiveListTab() === tab.key"
+                    [disabled]="scholarshipLoading()"
                     (click)="setScholarshipListTab(tab.key)"
                   >
                     <span>{{ tab.label }}</span>
-                    <strong>{{ scholarshipTabCounts()[tab.key] }}</strong>
+                    <strong>{{ scholarshipTabCount(tab.key) }}</strong>
                   </button>
                 }
-              </div>
-              <div class="scholarship-meta">Academic Year {{ scholarshipSelectedAcademicYearLabel() }} | Showing page {{ scholarshipPage() }} of {{ scholarshipTotalPages() || 1 }} | Total {{ scholarshipTotalItems() }} applications</div>
-              @if (scholarshipSearchTerm()) {
-                <div class="scholarship-search-meta">Search active for: <strong>{{ scholarshipSearchTerm() }}</strong></div>
-              }
+            </div>
+            <div class="scholarship-meta">Academic Year {{ scholarshipSelectedAcademicYearLabel() }} | Showing page {{ scholarshipPage() }} of {{ scholarshipTotalPages() || 1 }} | Total {{ scholarshipTotalItems() }} applications</div>
+            @if (scholarshipSearchTerm()) {
+              <div class="scholarship-search-meta">Search active for: <strong>{{ scholarshipSearchTerm() }}</strong></div>
             }
 
             @if (!scholarshipLoading() && scholarshipApplications().length === 0) {
@@ -1220,6 +1378,43 @@
               </div>
             }
           </section>
+
+          @if (scholarshipSettingsDialogOpen()) {
+            <div class="scholarship-settings-modal-backdrop" (click)="closeScholarshipSettingsDialog()">
+              <section class="scholarship-settings-modal" (click)="$event.stopPropagation()">
+                <div class="scholarship-settings-modal-head">
+                  <div>
+                    <p class="scholarship-settings-modal-eyebrow">Scholarship Portal</p>
+                    <h3>Portal Settings</h3>
+                    <p>Set the exact closing date and time for public applications. After this time, the Apply button is disabled and the form is hidden.</p>
+                  </div>
+                  <button type="button" class="scholarship-settings-close" aria-label="Close scholarship settings" (click)="closeScholarshipSettingsDialog()">✕</button>
+                </div>
+                <div class="form-grid-2 scholarship-settings-grid">
+                  <div class="form-row">
+                    <label>Application Closing Date & Time</label>
+                    <input [(ngModel)]="scholarshipSettings.applicationDeadline" type="datetime-local" class="form-input" />
+                  </div>
+                  <div class="form-row">
+                    <label>Portal Status</label>
+                    <input [value]="data.isScholarshipApplicationsOpen() ? 'Open' : 'Closed'" class="form-input" readonly />
+                  </div>
+                  <div class="form-row span-two">
+                    <label>Closed Title</label>
+                    <input [(ngModel)]="scholarshipSettings.closedTitle" class="form-input" placeholder="Scholarship Applications Closed" />
+                  </div>
+                  <div class="form-row span-two">
+                    <label>Closed Message</label>
+                    <textarea [(ngModel)]="scholarshipSettings.closedMessage" class="form-input form-textarea" rows="3" placeholder="Tell visitors that the deadline has passed."></textarea>
+                  </div>
+                </div>
+                <div class="form-actions scholarship-settings-modal-actions">
+                  <button type="button" class="btn-save" (click)="saveScholarshipSettings()">Save Scholarship Settings</button>
+                  <button type="button" class="btn-cancel" (click)="closeScholarshipSettingsDialog()">Cancel</button>
+                </div>
+              </section>
+            </div>
+          }
         }
 
         @if (activeTab() === 'founders') {

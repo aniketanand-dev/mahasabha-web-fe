@@ -9,9 +9,16 @@ interface AdminApiErrorResponse {
   message?: string;
 }
 
+export interface AdminVisitorStats {
+  totalVisits: number;
+  uniqueVisitors: number;
+  lastVisitedAt: string | null;
+}
+
 export interface AdminGalleryItem {
   id: number;
   src: string;
+  mediaType: 'image' | 'video';
   caption: string;
 }
 
@@ -66,7 +73,26 @@ export interface AdminNavbarContent {
   logoUrl: string;
   nameKn: string;
   nameEn: string;
+  byeLawUrl: string;
+  magazineUrl: string;
 }
+
+export interface AdminDailyVachanaContent {
+  enabled: boolean;
+  title: string;
+  quote: string;
+  author: string;
+  reflection: string;
+  updatedAt: string;
+}
+
+export interface AdminScholarshipSettings {
+  applicationDeadline: string;
+  closedTitle: string;
+  closedMessage: string;
+}
+
+const SCHOLARSHIP_DEADLINE_DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
 export interface AdminFooterContent {
   logoSymbol: string;
@@ -212,6 +238,12 @@ interface ScholarshipStatusUpdateApiResponse {
   data: AdminScholarshipApplication;
 }
 
+interface VisitorStatsApiResponse {
+  success: boolean;
+  message: string;
+  data: AdminVisitorStats;
+}
+
 const normalizeScholarshipStatus = (status: string): ScholarshipStatus => {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'accepted' || normalized === 'rejected') {
@@ -240,6 +272,8 @@ export type AdminTextOverrides = Record<string, string>;
 
 type UploadFolder =
   | 'gallery'
+  | 'documents'
+  | 'magazines'
   | 'navbar'
   | 'hero'
   | 'president'
@@ -268,6 +302,8 @@ type SiteContentKey =
   | 'adm_president_note_content'
   | 'adm_bhavan_content'
   | 'adm_navbar_content'
+  | 'adm_scholarship_settings'
+  | 'adm_daily_vachana'
   | 'adm_footer_content'
   | 'adm_cm_leaders'
   | 'adm_past_presidents'
@@ -304,6 +340,7 @@ const DEFAULT_GALLERY_CAPTIONS = [
 const DEFAULT_GALLERY: AdminGalleryItem[] = DEFAULT_GALLERY_CAPTIONS.map((caption, index) => ({
   id: index + 1,
   src: DEFAULT_LANDSCAPE_IMAGE,
+  mediaType: 'image',
   caption,
 }));
 
@@ -368,7 +405,24 @@ const DEFAULT_BHAVAN_CONTENT: AdminBhavanContent = {
 const DEFAULT_NAVBAR_CONTENT: AdminNavbarContent = {
   logoUrl: DEFAULT_ICON_IMAGE,
   nameKn: 'ವೀರಶೈವ ಮಹಾಸಭಾ',
-  nameEn: 'Veerashiva Mahasabha'
+  nameEn: 'Veerashiva Mahasabha',
+  byeLawUrl: '',
+  magazineUrl: ''
+};
+
+const DEFAULT_DAILY_VACHANA_CONTENT: AdminDailyVachanaContent = {
+  enabled: true,
+  title: 'Vachana of the Day',
+  quote: 'Do not steal. Do not kill. Do not lie. Do not be angry. Do not think ill of others. This is the way to inner purity.',
+  author: 'Basavanna',
+  reflection: 'A short daily vachana can keep Basava principles visible on the homepage for every visitor.',
+  updatedAt: new Date().toISOString(),
+};
+
+const DEFAULT_SCHOLARSHIP_SETTINGS: AdminScholarshipSettings = {
+  applicationDeadline: '',
+  closedTitle: 'Scholarship Applications Closed',
+  closedMessage: 'The scholarship application period has ended. Please check back for the next cycle.',
 };
 
 const DEFAULT_FOOTER_CONTENT: AdminFooterContent = {
@@ -551,6 +605,8 @@ export class AdminDataService {
   presidentNoteContent = signal<AdminPresidentNoteContent>(this.normalizePresidentNoteContent(cloneData(DEFAULT_PRESIDENT_NOTE_CONTENT)));
   bhavanContent = signal<AdminBhavanContent>(this.normalizeBhavanContent(cloneData(DEFAULT_BHAVAN_CONTENT)));
   navbarContent = signal<AdminNavbarContent>(this.normalizeNavbarContent(cloneData(DEFAULT_NAVBAR_CONTENT)));
+  scholarshipSettings = signal<AdminScholarshipSettings>(this.normalizeScholarshipSettings(cloneData(DEFAULT_SCHOLARSHIP_SETTINGS)));
+  dailyVachanaContent = signal<AdminDailyVachanaContent>(this.normalizeDailyVachanaContent(cloneData(DEFAULT_DAILY_VACHANA_CONTENT)));
   footerContent = signal<AdminFooterContent>(cloneData(DEFAULT_FOOTER_CONTENT));
   cmLeaders = signal<AdminCmLeader[]>(this.normalizeCmLeaders(cloneData(DEFAULT_CM_LEADERS)));
   pastPresidents = signal<AdminPastPresident[]>(this.normalizePastPresidents(cloneData(DEFAULT_PAST_PRESIDENTS)));
@@ -601,6 +657,16 @@ export class AdminDataService {
     if (items['adm_navbar_content'] !== undefined) {
       const next = this.normalizeNavbarContent(cloneData(items['adm_navbar_content'] as AdminNavbarContent));
       this.navbarContent.set(next);
+    }
+
+    if (items['adm_scholarship_settings'] !== undefined) {
+      const next = this.normalizeScholarshipSettings(cloneData(items['adm_scholarship_settings'] as AdminScholarshipSettings));
+      this.scholarshipSettings.set(next);
+    }
+
+    if (items['adm_daily_vachana'] !== undefined) {
+      const next = this.normalizeDailyVachanaContent(cloneData(items['adm_daily_vachana'] as AdminDailyVachanaContent));
+      this.dailyVachanaContent.set(next);
     }
 
     if (items['adm_footer_content'] !== undefined) {
@@ -699,8 +765,25 @@ export class AdminDataService {
     return managedPath ? buildManagedAssetUrl(managedPath) : src;
   }
 
+  private inferGalleryMediaType(item: Pick<AdminGalleryItem, 'src'> & Partial<Pick<AdminGalleryItem, 'mediaType'>>) {
+    if (item.mediaType === 'image' || item.mediaType === 'video') {
+      return item.mediaType;
+    }
+
+    try {
+      const pathname = new URL(item.src, window.location.origin).pathname.toLowerCase();
+      return /\.(mp4|webm|ogg|mov|m4v)$/i.test(pathname) ? 'video' : 'image';
+    } catch {
+      return /\.(mp4|webm|ogg|mov|m4v)$/i.test(item.src.toLowerCase()) ? 'video' : 'image';
+    }
+  }
+
   private normalizeGallery(items: AdminGalleryItem[]) {
-    return items.map(item => ({ ...item, src: this.toManagedAssetUrl(item.src) }));
+    return items.map(item => ({
+      ...item,
+      src: this.toManagedAssetUrl(item.src),
+      mediaType: this.inferGalleryMediaType(item),
+    }));
   }
 
   private normalizeFounders(items: AdminFounder[]) {
@@ -750,10 +833,42 @@ export class AdminDataService {
   }
 
   private normalizeNavbarContent(content: AdminNavbarContent) {
-    return { ...content, logoUrl: this.toManagedAssetUrl(content.logoUrl) };
+    return {
+      ...content,
+      logoUrl: this.toManagedAssetUrl(content.logoUrl),
+      byeLawUrl: content.byeLawUrl ? this.toManagedAssetUrl(content.byeLawUrl) : '',
+      magazineUrl: content.magazineUrl ? this.toManagedAssetUrl(content.magazineUrl) : '',
+    };
+  }
+
+  private normalizeScholarshipSettings(content: AdminScholarshipSettings) {
+    const applicationDeadline = String(content.applicationDeadline || '').trim();
+    return {
+      applicationDeadline: SCHOLARSHIP_DEADLINE_DATETIME_PATTERN.test(applicationDeadline) ? applicationDeadline : '',
+      closedTitle: String(content.closedTitle || '').trim() || DEFAULT_SCHOLARSHIP_SETTINGS.closedTitle,
+      closedMessage: String(content.closedMessage || '').trim() || DEFAULT_SCHOLARSHIP_SETTINGS.closedMessage,
+    };
+  }
+
+  private normalizeDailyVachanaContent(content: AdminDailyVachanaContent) {
+    return {
+      enabled: content.enabled !== false,
+      title: String(content.title || '').trim() || DEFAULT_DAILY_VACHANA_CONTENT.title,
+      quote: String(content.quote || '').trim(),
+      author: String(content.author || '').trim(),
+      reflection: String(content.reflection || '').trim(),
+      updatedAt: String(content.updatedAt || '').trim() || new Date().toISOString(),
+    };
   }
 
   private async uploadImage(file: File, folder: UploadFolder) {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    return firstValueFrom(this.http.post<UploadResponse>(this.uploadApiUrl(`/api/uploads/${folder}`), formData));
+  }
+
+  private async uploadDocument(file: File, folder: UploadFolder) {
     const formData = new FormData();
     formData.append('image', file);
 
@@ -772,6 +887,12 @@ export class AdminDataService {
 
   private async replaceImage(currentSrc: string, file: File, folder: UploadFolder) {
     const uploaded = await this.uploadImage(file, folder);
+    await this.deleteImage(currentSrc);
+    return this.toManagedAssetUrl(uploaded.src);
+  }
+
+  private async replaceDocument(currentSrc: string | null | undefined, file: File, folder: UploadFolder) {
+    const uploaded = await this.uploadDocument(file, folder);
     await this.deleteImage(currentSrc);
     return this.toManagedAssetUrl(uploaded.src);
   }
@@ -835,15 +956,59 @@ export class AdminDataService {
     await this.persistContent('adm_bhavan_content', next);
   }
 
-  async saveNavbarContent(content: AdminNavbarContent, logoFile?: File | null) {
+  async saveNavbarContent(content: AdminNavbarContent, logoFile?: File | null, byeLawFile?: File | null, magazineFile?: File | null) {
     const next = this.normalizeNavbarContent(cloneData(content));
+    const previous = this.navbarContent();
 
     if (logoFile) {
       next.logoUrl = await this.replaceImage(next.logoUrl, logoFile, 'navbar');
     }
 
+    if (byeLawFile) {
+      next.byeLawUrl = await this.replaceDocument(next.byeLawUrl, byeLawFile, 'documents');
+    } else if (!next.byeLawUrl && previous.byeLawUrl) {
+      await this.deleteImage(previous.byeLawUrl);
+    }
+
+    if (magazineFile) {
+      next.magazineUrl = await this.replaceDocument(next.magazineUrl, magazineFile, 'magazines');
+    } else if (!next.magazineUrl && previous.magazineUrl) {
+      await this.deleteImage(previous.magazineUrl);
+    }
+
     this.navbarContent.set(next);
     await this.persistContent('adm_navbar_content', next);
+  }
+
+  saveScholarshipSettings(content: AdminScholarshipSettings) {
+    const next = this.normalizeScholarshipSettings(cloneData(content));
+    this.scholarshipSettings.set(next);
+    void this.persistContent('adm_scholarship_settings', next);
+  }
+
+  saveDailyVachanaContent(content: AdminDailyVachanaContent) {
+    const next = this.normalizeDailyVachanaContent({
+      ...cloneData(content),
+      updatedAt: new Date().toISOString(),
+    });
+    this.dailyVachanaContent.set(next);
+    void this.persistContent('adm_daily_vachana', next);
+  }
+
+  scholarshipDeadlineDate() {
+    const value = this.scholarshipSettings().applicationDeadline;
+
+    if (!value) {
+      return null;
+    }
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  isScholarshipApplicationsOpen(referenceDate = new Date()) {
+    const deadline = this.scholarshipDeadlineDate();
+    return !deadline || referenceDate < deadline;
   }
 
   saveFooterContent(content: AdminFooterContent) {
@@ -1014,7 +1179,7 @@ export class AdminDataService {
   async addGalleryItem(item: { caption: string; file: File }) {
     const formData = new FormData();
     formData.append('folder', 'gallery');
-    formData.append('image', item.file);
+    formData.append('media', item.file);
     formData.append('caption', item.caption.trim());
 
     const created = await firstValueFrom(this.http.post<AdminGalleryItem>(this.uploadApiUrl('/api/gallery'), formData));
@@ -1030,7 +1195,7 @@ export class AdminDataService {
     }
 
     if (patch.file) {
-      formData.append('image', patch.file);
+      formData.append('media', patch.file);
     }
 
     const updated = await firstValueFrom(this.http.patch<AdminGalleryItem>(this.uploadApiUrl(`/api/gallery/${id}`), formData));
@@ -1123,7 +1288,7 @@ export class AdminDataService {
     this.saveHostels(this.hostels().filter(item => item.id !== id));
   }
 
-  async getScholarshipApplications(params: { page?: number; limit?: number; all?: boolean; academicYearId?: string; search?: string; status?: string; state?: string; district?: string; taluk?: string } = {}) {
+  async getScholarshipApplications(params: { page?: number; limit?: number; all?: boolean; academicYearId?: string; search?: string; status?: string; state?: string; district?: string; taluk?: string; submittedFrom?: string; submittedTo?: string } = {}) {
     const page = params.page ?? 1;
     const limit = params.limit ?? 10;
     const all = params.all === true;
@@ -1133,6 +1298,8 @@ export class AdminDataService {
     const state = params.state?.trim() || '';
     const district = params.district?.trim() || '';
     const taluk = params.taluk?.trim() || '';
+    const submittedFrom = params.submittedFrom?.trim() || '';
+    const submittedTo = params.submittedTo?.trim() || '';
 
     const response = await firstValueFrom(this.http.get<ScholarshipListApiResponse>(
       buildApiUrl('/api/v1/scholarships/applications'),
@@ -1147,6 +1314,8 @@ export class AdminDataService {
           state,
           district,
           taluk,
+          submittedFrom,
+          submittedTo,
         },
         headers: this.authHeaders(),
       },
@@ -1197,5 +1366,16 @@ export class AdminDataService {
     ));
 
     return normalizeScholarshipApplication(response.data);
+  }
+
+  async getVisitorStats() {
+    const response = await firstValueFrom(this.http.get<VisitorStatsApiResponse>(
+      buildApiUrl('/api/v1/analytics/stats'),
+      {
+        headers: this.authHeaders(),
+      },
+    ));
+
+    return response.data;
   }
 }

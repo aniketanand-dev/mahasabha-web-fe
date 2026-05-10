@@ -6,7 +6,23 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Akhila Bharata Veerashiva Lingayat Mahasabha - Official Website">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link id="app-favicon" rel="icon" type="image/jpeg" href="mahasabha-logo.jpeg">
+  <script>
+    (function () {
+      var hostname = window.location.hostname;
+      var domains = ['', hostname ? ';domain=' + hostname : ''];
+      if (hostname && hostname.indexOf('.') !== -1) {
+        domains.push(';domain=.' + hostname);
+      }
+
+      for (var i = 0; i < domains.length; i += 1) {
+        document.cookie = 'googtrans=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/' + domains[i];
+      }
+
+      document.documentElement.lang = 'kn';
+      document.documentElement.setAttribute('data-lang', 'kn');
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@300;400;500;600;700&family=Noto+Serif+Kannada:wght@400;600;700&family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">

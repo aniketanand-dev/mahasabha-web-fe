@@ -18,11 +18,15 @@
         <!-- Slides -->
         <div class="slider-track">
           @for (item of galleryItems(); track item.id; let i = $index) {
-            <div class="slide" [class.active]="i === current()" (click)="openLightbox(item.src)">
-              <img [src]="item.src" [alt]="item.caption" draggable="false" />
+            <div class="slide" [class.active]="i === current()">
+              @if (item.mediaType === 'video') {
+                <video [src]="item.src" [attr.aria-label]="item.caption" controls playsinline preload="metadata"></video>
+              } @else {
+                <img [src]="item.src" [alt]="item.caption" draggable="false" (click)="openLightbox(item.src)" />
+              }
               <div class="slide-caption">
                 <span>{{ item.caption }}</span>
-                <span class="zoom-icon">🔍</span>
+                <span class="zoom-icon">{{ item.mediaType === 'video' ? '▶' : '🔍' }}</span>
               </div>
             </div>
           }
@@ -47,7 +51,11 @@
       <div class="thumbs-strip">
         @for (item of galleryItems(); track item.id; let i = $index) {
           <div class="thumb" [class.active]="i === current()" (click)="goTo(i)">
-            <img [src]="item.src" [alt]="item.caption" loading="lazy" />
+            @if (item.mediaType === 'video') {
+              <video [src]="item.src" muted playsinline preload="metadata"></video>
+            } @else {
+              <img [src]="item.src" [alt]="item.caption" loading="lazy" />
+            }
           </div>
         }
       </div>

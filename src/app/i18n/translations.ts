@@ -9,6 +9,8 @@ export const translations: Translations = {
   'nav.community': { kn: 'ಸಮುದಾಯ',           en: 'Community',          hi: 'समुदाय',    te: 'సమాజం',         ta: 'சமூகம்',        mr: 'समाज' },
   'nav.events':    { kn: 'ಕಾರ್ಯಕ್ರಮಗಳು',     en: 'Events',             hi: 'कार्यक्रम', te: 'కార్యక్రమాలు',  ta: 'நிகழ்வுகள்',    mr: 'कार्यक्रम' },
   'nav.gallery':   { kn: 'ಗ್ಯಾಲರಿ',           en: 'Gallery',            hi: 'गैलरी',     te: 'గ్యాలరీ',        ta: 'தொகுப்பு',      mr: 'गॅलरी' },
+  'nav.byeLaw':    { kn: 'ಉಪನಿಯಮಗಳು',        en: 'By-law',             hi: 'उपनियम',    te: 'ఉపనియమాలు',     ta: 'உபநியமம்',      mr: 'उपनियम' },
+  'nav.magazine':  { kn: 'ಮ್ಯಾಗಜಿನ್',         en: 'Magazine',           hi: 'पत्रिका',   te: 'మ్యాగజైన్',      ta: 'மகசின்',        mr: 'मॅगझिन' },
   'nav.directory': { kn: 'ಹಾಸ್ಟೆಲ್ / ಸ್ಮಶಾನ',  en: 'Hostel / Crematory', hi: 'हॉस्टल / श्मशान', te: 'హాస్టల్ / స్మశానం', ta: 'விடுதி / இடுகாடு', mr: 'वसतिगृह / स्मशान' },
   'nav.contact':   { kn: 'ಸಂಪರ್ಕ',            en: 'Contact',            hi: 'संपर्क',    te: 'సంప్రదింపు',    ta: 'தொடர்பு',       mr: 'संपर्क' },
 

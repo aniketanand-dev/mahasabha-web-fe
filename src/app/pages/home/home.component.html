@@ -1,6 +1,31 @@
 <app-lang-bar></app-lang-bar>
 <app-navbar></app-navbar>
-<app-hero></app-hero>
+
+<div class="hero-stage">
+  <app-hero></app-hero>
+
+  @if (showDailyVachana()) {
+    <aside class="hero-vachana-panel">
+      <div class="hero-vachana-aura" aria-hidden="true"></div>
+      <article class="vachana-card vachana-card--hero">
+        <span class="vachana-scripture-mark" aria-hidden="true">ವಚನ</span>
+        <div class="vachana-card-head">
+          <span class="vachana-badge">{{ dailyVachanaLabel }}</span>
+          <span class="vachana-updated">Updated {{ dailyVachanaUpdatedLabel(data.dailyVachanaContent().updatedAt) }}</span>
+        </div>
+        <h2>{{ data.dailyVachanaContent().title }}</h2>
+        <div class="vachana-rule" aria-hidden="true"></div>
+        <p class="vachana-quote">{{ data.dailyVachanaContent().quote }}</p>
+        @if (data.dailyVachanaContent().author) {
+          <p class="vachana-author">{{ data.dailyVachanaContent().author }}</p>
+        }
+        @if (data.dailyVachanaContent().reflection) {
+          <p class="vachana-reflection">{{ data.dailyVachanaContent().reflection }}</p>
+        }
+      </article>
+    </aside>
+  }
+</div>
 
 <section class="scholarship-notice-board">
   <div class="notice-board-shell">
@@ -15,10 +40,61 @@
       } @else {
         <p class="notice-board-copy">Loading latest scholarship application count...</p>
       }
-      <a routerLink="/scholarships/apply" class="notice-board-link">Apply for Scholarship</a>
+      @if (scholarshipApplicationsOpen() && scholarshipDeadlineLabel()) {
+        <div class="notice-board-deadline">
+          <span class="notice-board-deadline-label">Closes in {{ scholarshipCountdownLabel() }}</span>
+          <span class="notice-board-deadline-time">Applications close on {{ scholarshipDeadlineLabel() }}</span>
+        </div>
+      }
+      @if (scholarshipApplicationsOpen()) {
+        <a routerLink="/scholarships/apply" class="notice-board-link">Apply for Scholarship</a>
+      } @else {
+        <button type="button" class="notice-board-link notice-board-link--disabled" disabled>Applications Closed</button>
+      }
     </div>
   </div>
 </section>
+
+@if (data.navbarContent().magazineUrl) {
+  <section class="magazine-spotlight">
+    <div class="magazine-shell">
+      <article class="magazine-card">
+        <div class="magazine-copy">
+          <div class="magazine-badge-row">
+            <span class="magazine-badge">Latest Magazine</span>
+          </div>
+          <p class="magazine-kicker">{{ todayMagazineLabel }}</p>
+          <h2>{{ magazineTitle }}</h2>
+          <p class="magazine-date">Featured issue for {{ magazinePublishedLabel }}</p>
+          <p class="magazine-description">Read the latest community magazine with current updates, feature stories, and important announcements in one place.</p>
+          <div class="magazine-actions">
+            <a [href]="data.navbarContent().magazineUrl" target="_blank" rel="noopener noreferrer" class="magazine-primary-link">Read Latest Issue</a>
+            <span class="magazine-filename">{{ magazineFileName(data.navbarContent().magazineUrl) }}</span>
+          </div>
+        </div>
+        <div class="magazine-cover-shell" aria-hidden="true">
+          @if (magazinePreviewImage()) {
+            <div class="magazine-preview-frame">
+              <span class="magazine-preview-badge">Latest</span>
+              <img [src]="magazinePreviewImage()" [alt]="magazineTitle + ' preview'" class="magazine-preview-image" />
+            </div>
+          } @else {
+            <div class="magazine-cover-card">
+              <span class="magazine-cover-tag">Latest Issue</span>
+              <strong>{{ magazineTitle }}</strong>
+              <span>{{ magazinePublishedLabel }}</span>
+              @if (magazinePreviewLoading()) {
+                <em>Loading preview...</em>
+              } @else if (magazinePreviewError()) {
+                <em>{{ magazinePreviewError() }}</em>
+              }
+            </div>
+          }
+        </div>
+      </article>
+    </div>
+  </section>
+}
 
 <app-ticker></app-ticker>
 <app-founders></app-founders>
