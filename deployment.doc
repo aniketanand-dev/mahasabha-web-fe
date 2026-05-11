@@ -9,6 +9,7 @@ Live Website Path:
 /var/www/aivlm.org/
 
 Frontend Deployment Steps:
+scp -P 22 browser.zip root1@103.117.51.74:/home/root1/
 sudo rm -rf /var/www/aivlm.org/*
 sudo cp ~/browser.zip /var/www/aivlm.org/
 cd /var/www/aivlm.org
