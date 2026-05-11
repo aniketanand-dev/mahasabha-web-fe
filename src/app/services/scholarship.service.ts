@@ -19,6 +19,9 @@ export interface ScholarshipApplicationPayload {
   district: string;
   state: string;
   pinCode: string;
+  bankName: string;
+  accountNumber: string;
+  ifscCode: string;
   aadhaarNumber: string;
   board: string;
   otherBoard: string;

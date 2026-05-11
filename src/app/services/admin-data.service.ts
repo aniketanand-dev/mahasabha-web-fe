@@ -176,6 +176,9 @@ export interface AdminScholarshipApplication {
   state: string;
   pinCode: string;
   aadhaarNumber: string;
+  bankName: string;
+  accountNumber: string;
+  ifscCode: string;
   board: string;
   standard: string;
   marksObtained: number;

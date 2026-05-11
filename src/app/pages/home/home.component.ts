@@ -21,6 +21,7 @@ import { FooterComponent } from '../../components/footer/footer.component';
 import { AdminDataService } from '../../services/admin-data.service';
 import { LanguageService } from '../../services/language.service';
 import { ScholarshipService } from '../../services/scholarship.service';
+import { VisitorAnalyticsService } from '../../services/visitor-analytics.service';
 
 @Component({
   selector: 'app-home',
@@ -39,6 +40,7 @@ import { ScholarshipService } from '../../services/scholarship.service';
 })
 export class HomeComponent {
   private readonly scholarshipService = inject(ScholarshipService);
+  private readonly visitorAnalytics = inject(VisitorAnalyticsService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly data = inject(AdminDataService);
@@ -46,6 +48,8 @@ export class HomeComponent {
 
   readonly scholarshipCount = signal<number | null>(null);
   readonly scholarshipCountError = signal('');
+  readonly visitorCount = signal<number | null>(null);
+  readonly visitorCountError = signal('');
   readonly currentTime = signal(Date.now());
   readonly dailyVachanaLabel = 'Today\'s Vachana';
   readonly todayMagazineLabel = `Today's Magazine`;
@@ -79,6 +83,12 @@ export class HomeComponent {
     });
 
     void this.loadScholarshipSummary();
+    void this.loadVisitorSummary();
+  }
+
+  visitorCountLabel() {
+    const count = this.visitorCount();
+    return count === null ? '' : new Intl.NumberFormat('en-IN').format(count);
   }
 
   closeLb(e: Event): void {
@@ -97,20 +107,6 @@ export class HomeComponent {
   showDailyVachana() {
     const content = this.data.dailyVachanaContent();
     return content.enabled && !!content.quote.trim();
-  }
-
-  dailyVachanaUpdatedLabel(value: string) {
-    const parsed = new Date(value);
-
-    if (Number.isNaN(parsed.getTime())) {
-      return 'today';
-    }
-
-    return new Intl.DateTimeFormat('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    }).format(parsed);
   }
 
   scholarshipApplicationsOpen() {
@@ -226,6 +222,17 @@ export class HomeComponent {
       this.scholarshipCount.set(summary.totalApplications);
     } catch {
       this.scholarshipCountError.set('Unable to load the latest scholarship count right now.');
+    }
+  }
+
+  private async loadVisitorSummary(): Promise<void> {
+    this.visitorCountError.set('');
+
+    try {
+      const summary = await this.visitorAnalytics.getSummary();
+      this.visitorCount.set(summary.totalVisits);
+    } catch {
+      this.visitorCountError.set('Unable to load total visitor count right now.');
     }
   }
 }

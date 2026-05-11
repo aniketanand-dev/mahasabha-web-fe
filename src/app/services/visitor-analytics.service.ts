@@ -9,6 +9,18 @@ interface TrackVisitPayload {
   referrer: string;
 }
 
+export interface VisitorSummary {
+  totalVisits: number;
+  uniqueVisitors: number;
+  lastVisitedAt: string | null;
+}
+
+interface VisitorSummaryApiResponse {
+  success: boolean;
+  message: string;
+  data: VisitorSummary;
+}
+
 const VISITOR_ID_STORAGE_KEY = 'mahasabha_visitor_id';
 
 const generateVisitorId = () => {
@@ -23,6 +35,11 @@ const generateVisitorId = () => {
 export class VisitorAnalyticsService {
   private readonly http = inject(HttpClient);
   private hasTrackedCurrentLoad = false;
+
+  async getSummary(): Promise<VisitorSummary> {
+    const response = await firstValueFrom(this.http.get<VisitorSummaryApiResponse>(buildApiUrl('/api/v1/analytics/summary')));
+    return response.data;
+  }
 
   trackCurrentVisit() {
     if (this.hasTrackedCurrentLoad || typeof window === 'undefined') {

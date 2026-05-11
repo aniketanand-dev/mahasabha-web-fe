@@ -54,8 +54,6 @@
     <div class="nav-end">
       @if (scholarshipApplicationsOpen()) {
         <a routerLink="/scholarships/apply" class="apply-btn" (click)="closeMenus()">Apply</a>
-      } @else {
-        <button type="button" class="apply-btn apply-btn--disabled" disabled>Applications Closed</button>
       }
       @if (auth.isLoggedIn()) {
         <a routerLink="/admin" class="admin-btn" title="Admin Panel" (click)="closeMenus()">⚙ Admin</a>

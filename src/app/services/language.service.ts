@@ -7,7 +7,7 @@ import { LangCode, MLString, translations } from '../i18n/translations';
 export class LanguageService {
   private readonly adminData = inject(AdminDataService);
   private readonly document = inject(DOCUMENT);
-  current = signal<LangCode>('kn');
+  current = signal<LangCode>('en');
 
   constructor() {
     this.initializeDefaultLanguage();
@@ -15,8 +15,8 @@ export class LanguageService {
 
   initializeDefaultLanguage(): void {
     this.clearGoogleTranslateState();
-    this.applyLanguageToDocument('kn');
-    this.current.set('kn');
+    this.applyLanguageToDocument('en');
+    this.current.set('en');
   }
 
   setLang(code: LangCode): void {

@@ -143,7 +143,7 @@ export class LangBarComponent {
     const sel = event.target as HTMLSelectElement;
     const code = sel.value;
     if (!code) return;
-    this.lang.setLang('kn');
+    this.lang.setLang('en');
     this.triggerGoogleTranslate(code);
     sel.value = '';
   }

@@ -216,6 +216,43 @@
               @if (controlHasError('pinCode')) { <small>Enter a valid 6-digit PIN code.</small> }
             </label>
           </div>
+
+          <div class="section-heading address-head">
+            <p>Bank Account Details</p>
+            <span>Scholarship amount will be processed using these details</span>
+          </div>
+
+          <div class="form-grid two-cols">
+            <label class="field">
+              <span>Bank Name *</span>
+              <input type="text" formControlName="bankName" placeholder="Enter bank name" />
+              @if (controlHasError('bankName')) { <small>Bank name is required.</small> }
+            </label>
+
+            <label class="field">
+              <span>IFSC Code *</span>
+              <input type="text" formControlName="ifscCode" maxlength="11" placeholder="Enter IFSC code" (input)="onIfscInput($event)" />
+              @if (controlHasError('ifscCode')) { <small>Enter a valid IFSC code.</small> }
+            </label>
+          </div>
+
+          <div class="form-grid two-cols">
+            <label class="field">
+              <span>Account Number *</span>
+              <input type="text" formControlName="accountNumber" maxlength="18" inputmode="numeric" placeholder="Enter account number" (input)="onAccountNumberInput('accountNumber', $event)" />
+              @if (controlHasError('accountNumber')) { <small>Enter a valid account number.</small> }
+            </label>
+
+            <label class="field">
+              <span>Re-enter Account Number *</span>
+              <input type="text" formControlName="reEnterAccountNumber" maxlength="18" inputmode="numeric" placeholder="Re-enter account number" (input)="onAccountNumberInput('reEnterAccountNumber', $event)" />
+              @if (controlHasError('reEnterAccountNumber')) { <small>Re-enter the account number.</small> }
+            </label>
+          </div>
+
+          @if (groupHasError('accountNumberMismatch')) {
+            <small class="full-error">Account number and re-entered account number must match.</small>
+          }
         </div>
 
         <div class="form-card">
@@ -480,6 +517,9 @@
             <p><strong>Email ID:</strong> {{ form.controls.emailId.value }}</p>
             <p><strong>Aadhaar No:</strong> {{ form.controls.aadhaarNumber.value }}</p>
             <p><strong>Address:</strong> {{ form.controls.village.value }}, {{ form.controls.taluk.value }}, {{ form.controls.district.value }}, {{ form.controls.state.value }} - {{ form.controls.pinCode.value }}</p>
+            <p><strong>Bank Name:</strong> {{ form.controls.bankName.value }}</p>
+            <p><strong>Account Number:</strong> {{ form.controls.accountNumber.value }}</p>
+            <p><strong>IFSC Code:</strong> {{ form.controls.ifscCode.value }}</p>
             @if (heardFromMemberSelected) {
               <p><strong>Referring Member Category:</strong> {{ memberCategoryPreviewLabel() }}</p>
               <p><strong>Referring Member Name:</strong> {{ form.controls.referringMemberName.value }}</p>

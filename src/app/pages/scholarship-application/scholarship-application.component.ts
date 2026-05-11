@@ -82,6 +82,19 @@ const minimumPercentageValidator = (minimumPercentage: number): ValidatorFn => {
   };
 };
 
+const accountNumberMatchValidator = (accountControlName: string, confirmControlName: string): ValidatorFn => {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const accountNumber = String(control.get(accountControlName)?.value || '').trim();
+    const confirmAccountNumber = String(control.get(confirmControlName)?.value || '').trim();
+
+    if (!accountNumber || !confirmAccountNumber) {
+      return null;
+    }
+
+    return accountNumber === confirmAccountNumber ? null : { accountNumberMismatch: true };
+  };
+};
+
 const MEMBER_CATEGORY_OPTIONS = [
   { value: 'Life Member', label: 'Life Member - Rs250' },
   { value: 'Ashrayadataru', label: 'Ashrayadataru - Rs1,000' },
@@ -137,6 +150,10 @@ export class ScholarshipApplicationComponent {
       district: ['', [Validators.required, Validators.maxLength(120)]],
       state: ['', [Validators.required, Validators.maxLength(120)]],
       pinCode: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
+      bankName: ['', [Validators.required, Validators.maxLength(120)]],
+      accountNumber: ['', [Validators.required, Validators.pattern(/^\d{9,18}$/)]],
+      reEnterAccountNumber: ['', [Validators.required, Validators.pattern(/^\d{9,18}$/)]],
+      ifscCode: ['', [Validators.required, Validators.pattern(/^[A-Z]{4}0[A-Z0-9]{6}$/)]],
       aadhaarNumber: ['', [Validators.required, Validators.pattern(/^\d{12}$/)]],
       board: ['', Validators.required],
       otherBoard: [''],
@@ -155,6 +172,7 @@ export class ScholarshipApplicationComponent {
         otherValueRequiredValidator('board', 'Other', 'otherBoard'),
         marksValidator,
         minimumPercentageValidator(ScholarshipApplicationComponent.MINIMUM_PERCENTAGE),
+        accountNumberMatchValidator('accountNumber', 'reEnterAccountNumber'),
       ],
     },
   );
@@ -405,6 +423,29 @@ export class ScholarshipApplicationComponent {
     this.form.controls.aadhaarNumber.setValue(normalizedValue, { emitEvent: false });
   }
 
+  onAccountNumberInput(controlName: 'accountNumber' | 'reEnterAccountNumber', event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const normalizedValue = input.value.replace(/\D/g, '').slice(0, 18);
+
+    if (input.value !== normalizedValue) {
+      input.value = normalizedValue;
+    }
+
+    this.form.controls[controlName].setValue(normalizedValue, { emitEvent: false });
+    this.form.updateValueAndValidity({ emitEvent: false });
+  }
+
+  onIfscInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const normalizedValue = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11);
+
+    if (input.value !== normalizedValue) {
+      input.value = normalizedValue;
+    }
+
+    this.form.controls.ifscCode.setValue(normalizedValue, { emitEvent: false });
+  }
+
   onDistrictChanged(): void {
     this.form.controls.taluk.setValue('');
   }
@@ -604,6 +645,9 @@ export class ScholarshipApplicationComponent {
       district: String(this.form.controls.district.value || '').trim(),
       state: String(this.form.controls.state.value || '').trim(),
       pinCode: String(this.form.controls.pinCode.value || '').trim(),
+      bankName: String(this.form.controls.bankName.value || '').trim(),
+      accountNumber: String(this.form.controls.accountNumber.value || '').trim(),
+      ifscCode: String(this.form.controls.ifscCode.value || '').trim().toUpperCase(),
       aadhaarNumber: String(this.form.controls.aadhaarNumber.value || '').trim(),
       board: this.selectedBoard,
       otherBoard: String(this.form.controls.otherBoard.value || '').trim(),

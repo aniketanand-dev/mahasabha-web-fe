@@ -1,59 +1,75 @@
 <app-lang-bar></app-lang-bar>
 <app-navbar></app-navbar>
+<app-ticker></app-ticker>
 
 <div class="hero-stage">
   <app-hero></app-hero>
 
   @if (showDailyVachana()) {
-    <aside class="hero-vachana-panel">
-      <div class="hero-vachana-aura" aria-hidden="true"></div>
-      <article class="vachana-card vachana-card--hero">
-        <span class="vachana-scripture-mark" aria-hidden="true">ವಚನ</span>
-        <div class="vachana-card-head">
-          <span class="vachana-badge">{{ dailyVachanaLabel }}</span>
-          <span class="vachana-updated">Updated {{ dailyVachanaUpdatedLabel(data.dailyVachanaContent().updatedAt) }}</span>
+    <aside class="daily-vachana-panel">
+        <div class="daily-vachana-frame">
+          <div class="daily-vachana-head">
+            <p class="daily-vachana-kicker">{{ dailyVachanaLabel }}</p>
+            <span class="daily-vachana-scripture" aria-hidden="true">ವಚನ</span>
+          </div>
+          @if (data.dailyVachanaContent().title) {
+            <p class="daily-vachana-title">{{ data.dailyVachanaContent().title }}</p>
+          }
+          <div class="daily-vachana-divider" aria-hidden="true">
+            <span></span>
+          </div>
+          <p class="daily-vachana-quote">{{ data.dailyVachanaContent().quote }}</p>
+          @if (data.dailyVachanaContent().author) {
+            <div class="daily-vachana-footer">
+              <span class="daily-vachana-footer-line" aria-hidden="true"></span>
+              <p class="daily-vachana-author">{{ data.dailyVachanaContent().author }}</p>
+            </div>
+          }
         </div>
-        <h2>{{ data.dailyVachanaContent().title }}</h2>
-        <div class="vachana-rule" aria-hidden="true"></div>
-        <p class="vachana-quote">{{ data.dailyVachanaContent().quote }}</p>
-        @if (data.dailyVachanaContent().author) {
-          <p class="vachana-author">{{ data.dailyVachanaContent().author }}</p>
-        }
-        @if (data.dailyVachanaContent().reflection) {
-          <p class="vachana-reflection">{{ data.dailyVachanaContent().reflection }}</p>
-        }
-      </article>
     </aside>
   }
 </div>
 
-<section class="scholarship-notice-board">
-  <div class="notice-board-shell">
-    <div class="notice-board-card">
-      <p class="notice-board-tag">Scholarship Notice Board</p>
-      <h2>Prathibha Puraskara application status</h2>
-      @if (scholarshipCount() !== null) {
-        <p class="notice-board-count">{{ scholarshipCount() }}</p>
-        <p class="notice-board-copy">Scholarship applications have been received so far.</p>
-      } @else if (scholarshipCountError()) {
-        <p class="notice-board-copy">{{ scholarshipCountError() }}</p>
-      } @else {
-        <p class="notice-board-copy">Loading latest scholarship application count...</p>
-      }
-      @if (scholarshipApplicationsOpen() && scholarshipDeadlineLabel()) {
-        <div class="notice-board-deadline">
-          <span class="notice-board-deadline-label">Closes in {{ scholarshipCountdownLabel() }}</span>
-          <span class="notice-board-deadline-time">Applications close on {{ scholarshipDeadlineLabel() }}</span>
+@if (visitorCount() !== null) {
+  <section class="landing-visitor-band">
+    <div class="landing-visitor-shell">
+      <article class="landing-visitor-card">
+        <div class="landing-visitor-copy">
+          <p class="landing-visitor-tag">Community Reach</p>
+          <h2>Total visitors on the Mahasabha website</h2>
+          <p class="landing-visitor-count">{{ visitorCountLabel() }}</p>
+          <p class="landing-visitor-note">Visits recorded across the public website so far.</p>
         </div>
-      }
-      @if (scholarshipApplicationsOpen()) {
-        <a routerLink="/scholarships/apply" class="notice-board-link">Apply for Scholarship</a>
-      } @else {
-        <button type="button" class="notice-board-link notice-board-link--disabled" disabled>Applications Closed</button>
-      }
+      </article>
     </div>
-  </div>
-</section>
+  </section>
+}
+
+@if (scholarshipApplicationsOpen()) {
+  <section class="scholarship-notice-board">
+    <div class="notice-board-shell">
+      <div class="notice-board-card">
+        <p class="notice-board-tag">Scholarship Notice Board</p>
+        <h2>Prathibha Puraskara application status</h2>
+        @if (scholarshipCount() !== null) {
+          <p class="notice-board-count">{{ scholarshipCount() }}</p>
+          <p class="notice-board-copy">Scholarship applications have been received so far.</p>
+        } @else if (scholarshipCountError()) {
+          <p class="notice-board-copy">{{ scholarshipCountError() }}</p>
+        } @else {
+          <p class="notice-board-copy">Loading latest scholarship application count...</p>
+        }
+        @if (scholarshipDeadlineLabel()) {
+          <div class="notice-board-deadline">
+            <span class="notice-board-deadline-label">Closes in {{ scholarshipCountdownLabel() }}</span>
+            <span class="notice-board-deadline-time">Applications close on {{ scholarshipDeadlineLabel() }}</span>
+          </div>
+        }
+        <a routerLink="/scholarships/apply" class="notice-board-link">Apply for Scholarship</a>
+      </div>
+    </div>
+  </section>
+}
 
 @if (data.navbarContent().magazineUrl) {
   <section class="magazine-spotlight">
@@ -72,23 +88,27 @@
             <span class="magazine-filename">{{ magazineFileName(data.navbarContent().magazineUrl) }}</span>
           </div>
         </div>
-        <div class="magazine-cover-shell" aria-hidden="true">
+        <div class="magazine-cover-shell">
           @if (magazinePreviewImage()) {
-            <div class="magazine-preview-frame">
-              <span class="magazine-preview-badge">Latest</span>
-              <img [src]="magazinePreviewImage()" [alt]="magazineTitle + ' preview'" class="magazine-preview-image" />
-            </div>
+            <a [href]="data.navbarContent().magazineUrl" target="_blank" rel="noopener noreferrer" class="magazine-preview-link" [attr.aria-label]="'Open ' + magazineTitle + ' PDF'">
+              <div class="magazine-preview-frame">
+                <span class="magazine-preview-badge">Latest</span>
+                <img [src]="magazinePreviewImage()" [alt]="magazineTitle + ' preview'" class="magazine-preview-image" />
+              </div>
+            </a>
           } @else {
-            <div class="magazine-cover-card">
-              <span class="magazine-cover-tag">Latest Issue</span>
-              <strong>{{ magazineTitle }}</strong>
-              <span>{{ magazinePublishedLabel }}</span>
-              @if (magazinePreviewLoading()) {
-                <em>Loading preview...</em>
-              } @else if (magazinePreviewError()) {
-                <em>{{ magazinePreviewError() }}</em>
-              }
-            </div>
+            <a [href]="data.navbarContent().magazineUrl" target="_blank" rel="noopener noreferrer" class="magazine-preview-link" [attr.aria-label]="'Open ' + magazineTitle + ' PDF'">
+              <div class="magazine-cover-card">
+                <span class="magazine-cover-tag">Latest Issue</span>
+                <strong>{{ magazineTitle }}</strong>
+                <span>{{ magazinePublishedLabel }}</span>
+                @if (magazinePreviewLoading()) {
+                  <em>Loading preview...</em>
+                } @else if (magazinePreviewError()) {
+                  <em>{{ magazinePreviewError() }}</em>
+                }
+              </div>
+            </a>
           }
         </div>
       </article>
@@ -96,7 +116,6 @@
   </section>
 }
 
-<app-ticker></app-ticker>
 <app-founders></app-founders>
 <app-mission-vision></app-mission-vision>
 <app-president-note></app-president-note>

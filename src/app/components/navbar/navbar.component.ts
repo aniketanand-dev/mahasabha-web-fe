@@ -19,16 +19,6 @@ type NavLink = {
   styleUrl: './navbar.component.scss'
 })
 export class NavbarComponent {
-  private static readonly NAVBAR_HOSTEL_LABELS = {
-    kn: 'ಹಾಸ್ಟೆಲ್',
-    en: 'Hostel',
-    hi: 'हॉस्टल',
-    te: 'హాస్టల్',
-    ta: 'விடுதி',
-    mr: 'वसतिगृह',
-    ml: 'ഹോസ്റ്റൽ'
-  } as const;
-
   protected data  = inject(AdminDataService);
   protected lang  = inject(LanguageService);
   protected auth  = inject(AuthService);
@@ -49,22 +39,18 @@ export class NavbarComponent {
   protected readonly aboutLinks = computed<NavLink[]>(() => {
     const byeLawUrl = this.data.navbarContent().byeLawUrl;
     return [
-      { href: '/#about', labelKey: 'nav.about' },
+      { href: '/#about', labelKey: 'nav.aboutOverview' },
       {
         href: byeLawUrl || '',
         labelKey: 'nav.byeLaw',
         external: !!byeLawUrl,
         disabled: !byeLawUrl
       },
-      { href: '/#org-chart', labelKey: 'orgChart.title' }
+      { href: '/#org-chart', labelKey: 'nav.orgChart' }
     ];
   });
 
   protected navLabel(key: string) {
-    if (key === 'nav.directory') {
-      return NavbarComponent.NAVBAR_HOSTEL_LABELS[this.lang.current()];
-    }
-
     return this.lang.t(key);
   }
 
