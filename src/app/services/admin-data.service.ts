@@ -33,6 +33,7 @@ export interface AdminFounder {
 export interface AdminTicker {
   id: number;
   text: string;
+  link: string;
 }
 
 export interface AdminHostel {
@@ -87,12 +88,44 @@ export interface AdminDailyVachanaContent {
 }
 
 export interface AdminScholarshipSettings {
+  displayYear: string;
   applicationDeadline: string;
   closedTitle: string;
   closedMessage: string;
 }
 
 const SCHOLARSHIP_DEADLINE_DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+const SCHOLARSHIP_DISPLAY_YEAR_PATTERN = /^\d{4}-\d{2}$/;
+
+const getDefaultScholarshipDisplayYear = (referenceDate = new Date()) => {
+  const startYear = referenceDate.getMonth() < 5
+    ? referenceDate.getFullYear() - 1
+    : referenceDate.getFullYear();
+
+  const endYearShort = String((startYear + 1) % 100).padStart(2, '0');
+  return `${startYear}-${endYearShort}`;
+};
+
+const parseLocalDateTime = (value: string) => {
+  const match = String(value || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, year, month, day, hour, minute] = match;
+  const date = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+    0,
+    0,
+  );
+
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 
 export interface AdminFooterContent {
   logoSymbol: string;
@@ -175,8 +208,10 @@ export interface AdminScholarshipApplication {
   district: string;
   state: string;
   pinCode: string;
+  accountHolderName: string;
   aadhaarNumber: string;
   bankName: string;
+  bankBranchName: string;
   accountNumber: string;
   ifscCode: string;
   board: string;
@@ -233,6 +268,12 @@ interface ScholarshipAcademicYearsApiResponse {
   success: boolean;
   message: string;
   data: ScholarshipAcademicYearsApiData;
+}
+
+interface ScholarshipAcademicYearCreateApiResponse {
+  success: boolean;
+  message: string;
+  data: { item: ScholarshipAcademicYearOption };
 }
 
 interface ScholarshipStatusUpdateApiResponse {
@@ -314,10 +355,26 @@ type SiteContentKey =
   | 'adm_directory_entries'
   | 'adm_org_nodes'
   | 'adm_founders'
-  | 'adm_tickers'
-  | 'adm_hostels';
+  | 'adm_tickers';
+
+interface HostelListApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    hostels: AdminHostel[];
+  };
+}
+
+interface HostelSingleApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    hostel: AdminHostel;
+  };
+}
 
 const SITE_CONTENT_API_BASE = buildApiUrl('/api/v1/site-content');
+const HOSTELS_API_BASE = buildApiUrl('/api/v1/hostels');
 
 const MANAGED_UPLOAD_PREFIX = '/uploads/';
 const DEFAULT_ICON_IMAGE = '/uploads/placeholders/default-icon.svg';
@@ -372,10 +429,10 @@ const DEFAULT_FOUNDERS: AdminFounder[] = [
 ];
 
 const DEFAULT_TICKERS: AdminTicker[] = [
-  { id: 1, text: 'Annual Mahasabha Convention - Jan 15, 2025 - Bengaluru' },
-  { id: 2, text: 'Hanagal Kumaraswamiji Jayanti - Feb 3, 2025' },
-  { id: 3, text: 'Youth Convention - Mar 10, 2025 - Mysuru' },
-  { id: 4, text: 'Scholarship Applications Open - Deadline: December 31' },
+  { id: 1, text: 'Annual Mahasabha Convention - Jan 15, 2025 - Bengaluru', link: '' },
+  { id: 2, text: 'Hanagal Kumaraswamiji Jayanti - Feb 3, 2025', link: '' },
+  { id: 3, text: 'Youth Convention - Mar 10, 2025 - Mysuru', link: '' },
+  { id: 4, text: 'Scholarship Applications Open - Deadline: December 31', link: '' },
 ];
 
 const DEFAULT_HERO_CONTENT: AdminHeroContent = {
@@ -423,6 +480,7 @@ const DEFAULT_DAILY_VACHANA_CONTENT: AdminDailyVachanaContent = {
 };
 
 const DEFAULT_SCHOLARSHIP_SETTINGS: AdminScholarshipSettings = {
+  displayYear: getDefaultScholarshipDisplayYear(),
   applicationDeadline: '',
   closedTitle: 'Scholarship Applications Closed',
   closedMessage: 'The scholarship application period has ended. Please check back for the next cycle.',
@@ -624,6 +682,7 @@ export class AdminDataService {
   constructor() {
     void this.hydrateContentFromApi();
     void this.refreshGalleryFromApi();
+    void this.loadHostelsFromApi();
   }
 
   private async hydrateContentFromApi() {
@@ -708,14 +767,10 @@ export class AdminDataService {
     }
 
     if (items['adm_tickers'] !== undefined) {
-      const next = cloneData(items['adm_tickers'] as AdminTicker[]);
+      const next = this.normalizeTickers(cloneData(items['adm_tickers'] as AdminTicker[]));
       this.tickers.set(next);
     }
 
-    if (items['adm_hostels'] !== undefined) {
-      const next = this.normalizeHostels(cloneData(items['adm_hostels'] as AdminHostel[]));
-      this.hostels.set(next);
-    }
   }
 
   private async persistContent(key: SiteContentKey, value: unknown) {
@@ -816,6 +871,16 @@ export class AdminDataService {
       .sort((a, b) => a.order - b.order || a.id - b.id);
   }
 
+  private async loadHostelsFromApi() {
+    try {
+      const response = await firstValueFrom(this.http.get<HostelListApiResponse>(HOSTELS_API_BASE));
+      const items = response?.data?.hostels || [];
+      this.hostels.set(this.normalizeHostels(items));
+    } catch {
+      // Keep empty list when API is unavailable.
+    }
+  }
+
   private normalizeHostels(items: AdminHostel[]) {
     return items.map(item => ({ ...item, img: this.toManagedAssetUrl(item.img) }));
   }
@@ -845,8 +910,10 @@ export class AdminDataService {
   }
 
   private normalizeScholarshipSettings(content: AdminScholarshipSettings) {
+    const displayYear = String(content.displayYear || '').trim();
     const applicationDeadline = String(content.applicationDeadline || '').trim();
     return {
+      displayYear: SCHOLARSHIP_DISPLAY_YEAR_PATTERN.test(displayYear) ? displayYear : DEFAULT_SCHOLARSHIP_SETTINGS.displayYear,
       applicationDeadline: SCHOLARSHIP_DEADLINE_DATETIME_PATTERN.test(applicationDeadline) ? applicationDeadline : '',
       closedTitle: String(content.closedTitle || '').trim() || DEFAULT_SCHOLARSHIP_SETTINGS.closedTitle,
       closedMessage: String(content.closedMessage || '').trim() || DEFAULT_SCHOLARSHIP_SETTINGS.closedMessage,
@@ -862,6 +929,14 @@ export class AdminDataService {
       reflection: String(content.reflection || '').trim(),
       updatedAt: String(content.updatedAt || '').trim() || new Date().toISOString(),
     };
+  }
+
+  private normalizeTickers(items: AdminTicker[]) {
+    return items.map(item => ({
+      ...item,
+      text: String(item.text || '').trim(),
+      link: String(item.link || '').trim(),
+    }));
   }
 
   private async uploadImage(file: File, folder: UploadFolder) {
@@ -1000,13 +1075,7 @@ export class AdminDataService {
 
   scholarshipDeadlineDate() {
     const value = this.scholarshipSettings().applicationDeadline;
-
-    if (!value) {
-      return null;
-    }
-
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
+    return value ? parseLocalDateTime(value) : null;
   }
 
   isScholarshipApplicationsOpen(referenceDate = new Date()) {
@@ -1243,32 +1312,31 @@ export class AdminDataService {
   }
 
   saveTickers(items: AdminTicker[]) {
-    const next = cloneData(items);
+    const next = this.normalizeTickers(cloneData(items));
     this.tickers.set(next);
     void this.persistContent('adm_tickers', next);
   }
 
-  addTicker(text: string) {
-    this.saveTickers([...this.tickers(), { id: Date.now(), text }]);
+  addTicker(text: string, link = '') {
+    this.saveTickers([...this.tickers(), { id: Date.now(), text, link }]);
   }
 
-  updateTicker(id: number, text: string) {
-    this.saveTickers(this.tickers().map(item => item.id === id ? { ...item, text } : item));
+  updateTicker(id: number, text: string, link?: string) {
+    this.saveTickers(this.tickers().map(item => item.id === id ? { ...item, text, link: link ?? item.link } : item));
   }
 
   deleteTicker(id: number) {
     this.saveTickers(this.tickers().filter(item => item.id !== id));
   }
 
-  private saveHostels(items: AdminHostel[]) {
-    const next = this.normalizeHostels(cloneData(items));
-    this.hostels.set(next);
-    void this.persistContent('adm_hostels', next);
-  }
-
   async addHostel(item: Omit<AdminHostel, 'id' | 'img'>, file: File) {
     const uploaded = await this.uploadImage(file, 'hostels');
-    this.saveHostels([...this.hostels(), { ...item, img: uploaded.src, id: Date.now() }]);
+    const headers = this.authHeaders();
+    const response = await firstValueFrom(
+      this.http.post<HostelSingleApiResponse>(HOSTELS_API_BASE, { ...item, img: uploaded.src }, { headers })
+    );
+    const created = this.normalizeHostels([response.data.hostel])[0];
+    this.hostels.set([...this.hostels(), created]);
   }
 
   async updateHostel(id: number, patch: Partial<Omit<AdminHostel, 'id' | 'img'>>, file?: File | null) {
@@ -1282,13 +1350,18 @@ export class AdminDataService {
       nextImg = await this.replaceImage(current.img, file, 'hostels');
     }
 
-    this.saveHostels(this.hostels().map(item => item.id === id ? { ...item, ...patch, img: nextImg } : item));
+    const headers = this.authHeaders();
+    const response = await firstValueFrom(
+      this.http.patch<HostelSingleApiResponse>(`${HOSTELS_API_BASE}/${id}`, { ...patch, img: nextImg }, { headers })
+    );
+    const updated = this.normalizeHostels([response.data.hostel])[0];
+    this.hostels.set(this.hostels().map(item => item.id === id ? updated : item));
   }
 
   async deleteHostel(id: number) {
-    const current = this.hostels().find(item => item.id === id);
-    await this.deleteImage(current?.img);
-    this.saveHostels(this.hostels().filter(item => item.id !== id));
+    const headers = this.authHeaders();
+    await firstValueFrom(this.http.delete<void>(`${HOSTELS_API_BASE}/${id}`, { headers }));
+    this.hostels.set(this.hostels().filter(item => item.id !== id));
   }
 
   async getScholarshipApplications(params: { page?: number; limit?: number; all?: boolean; academicYearId?: string; search?: string; status?: string; state?: string; district?: string; taluk?: string; submittedFrom?: string; submittedTo?: string } = {}) {
@@ -1344,6 +1417,18 @@ export class AdminDataService {
     }
 
     return response.data.items;
+  }
+
+  async addScholarshipAcademicYear(direction: 'next' | 'previous' = 'next') {
+    const response = await firstValueFrom(this.http.post<ScholarshipAcademicYearCreateApiResponse>(
+      buildApiUrl('/api/v1/scholarships/academic-years'),
+      { direction },
+      {
+        headers: this.authHeaders(),
+      },
+    ));
+
+    return response.data.item;
   }
 
   async downloadScholarshipUploadsZip(academicYearId?: string) {

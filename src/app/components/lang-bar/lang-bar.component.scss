@@ -1,12 +1,12 @@
 .lang-bar {
   background: var(--maroon-dark);
-  padding: 0.4rem 1.5rem;
+  padding: 0.28rem 1.1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem 1rem;
   flex-wrap: wrap;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: var(--gold-light);
 }
 .lang-bar > span {
@@ -29,7 +29,7 @@
   padding: 2px 8px;
   border-radius: 20px;
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-family: inherit;
   transition: all 0.2s;
   outline: none;
@@ -43,7 +43,7 @@
   padding: 2px 10px;
   border-radius: 20px;
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-family: inherit;
   transition: all 0.2s;
   &:hover, &.active { background: var(--gold); color: var(--maroon-dark); border-color: var(--gold); }

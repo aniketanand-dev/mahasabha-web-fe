@@ -26,24 +26,30 @@
             </div>
           }
         </div>
+
+        @if (visitorCount() !== null || uniqueVisitorCount() !== null || visitorCountError()) {
+          <div class="hero-visitor-mini hero-visitor-mini--inline" aria-live="polite">
+            <p class="hero-visitor-mini-tag">Visitor Stats</p>
+
+            @if (!visitorCountError()) {
+              <div class="hero-visitor-mini-grid">
+                <article class="hero-visitor-mini-item">
+                  <p class="hero-visitor-mini-label">Total</p>
+                  <p class="hero-visitor-mini-value">{{ visitorCountLabel() }}</p>
+                </article>
+                <article class="hero-visitor-mini-item">
+                  <p class="hero-visitor-mini-label">Unique</p>
+                  <p class="hero-visitor-mini-value">{{ uniqueVisitorCountLabel() }}</p>
+                </article>
+              </div>
+            } @else {
+              <p class="hero-visitor-mini-error">{{ visitorCountError() }}</p>
+            }
+          </div>
+        }
     </aside>
   }
 </div>
-
-@if (visitorCount() !== null) {
-  <section class="landing-visitor-band">
-    <div class="landing-visitor-shell">
-      <article class="landing-visitor-card">
-        <div class="landing-visitor-copy">
-          <p class="landing-visitor-tag">Community Reach</p>
-          <h2>Total visitors on the Mahasabha website</h2>
-          <p class="landing-visitor-count">{{ visitorCountLabel() }}</p>
-          <p class="landing-visitor-note">Visits recorded across the public website so far.</p>
-        </div>
-      </article>
-    </div>
-  </section>
-}
 
 @if (scholarshipApplicationsOpen()) {
   <section class="scholarship-notice-board">

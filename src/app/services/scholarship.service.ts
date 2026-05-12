@@ -19,7 +19,9 @@ export interface ScholarshipApplicationPayload {
   district: string;
   state: string;
   pinCode: string;
+  accountHolderName: string;
   bankName: string;
+  bankBranchName: string;
   accountNumber: string;
   ifscCode: string;
   aadhaarNumber: string;
@@ -84,6 +86,7 @@ export interface ScholarshipAcademicYearOption {
 }
 
 export interface ScholarshipPortalSettings {
+  displayYear: string;
   applicationDeadline: string;
   closedTitle: string;
   closedMessage: string;

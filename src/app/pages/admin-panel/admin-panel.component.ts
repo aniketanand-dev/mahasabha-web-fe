@@ -157,6 +157,7 @@ type ScholarshipSummary = {
 type ScholarshipPreviewDetails = {
   title: string;
   registrationNo?: string;
+  aadhaarNumber?: string;
   totalMarks?: number;
   marksObtained?: number;
   percentage?: number;
@@ -234,6 +235,33 @@ export class AdminPanelComponent {
   readonly tickerItems = this.data.tickers;
   readonly founderItems = this.data.founders;
   readonly hostelItems = this.data.hostels;
+  readonly hostelPageSize = 6;
+  readonly hostelPage = signal(1);
+  readonly hostelTotalPages = computed(() => {
+    const total = this.data.hostels().length;
+    return total === 0 ? 0 : Math.ceil(total / this.hostelPageSize);
+  });
+  readonly hostelVisibleItems = computed(() => {
+    const items = this.data.hostels();
+    const totalPages = this.hostelTotalPages();
+
+    if (items.length === 0 || totalPages === 0) {
+      return [] as AdminHostel[];
+    }
+
+    const currentPage = Math.min(Math.max(this.hostelPage(), 1), totalPages);
+    const startIndex = (currentPage - 1) * this.hostelPageSize;
+    return items.slice(startIndex, startIndex + this.hostelPageSize);
+  });
+  readonly hostelPageLabel = computed(() => {
+    const totalPages = this.hostelTotalPages();
+    if (totalPages === 0) {
+      return '0 / 0';
+    }
+
+    const currentPage = Math.min(Math.max(this.hostelPage(), 1), totalPages);
+    return `${currentPage} / ${totalPages}`;
+  });
 
   activeTab = signal<Tab>('header');
   visitorStats = signal<AdminVisitorStats>({ ...DEFAULT_VISITOR_STATS });
@@ -541,24 +569,40 @@ export class AdminPanelComponent {
   showTickerAdd   = signal(false);
   editingTickerId = signal<number | null>(null);
   newTickerText   = '';
+  newTickerLink   = '';
   editTickerText  = '';
+  editTickerLink   = '';
 
   startEditTicker(t: AdminTicker) {
     this.editTickerText = t.text;
+    this.editTickerLink = t.link;
     this.editingTickerId.set(t.id);
   }
   addTicker() {
     if (!this.newTickerText.trim()) return;
-    this.data.addTicker(this.newTickerText.trim());
+    this.data.addTicker(this.newTickerText.trim(), this.newTickerLink.trim());
     this.newTickerText = '';
+    this.newTickerLink = '';
     this.showTickerAdd.set(false);
   }
   saveTicker(id: number) {
-    this.data.updateTicker(id, this.editTickerText);
+    this.data.updateTicker(id, this.editTickerText.trim(), this.editTickerLink.trim());
     this.editingTickerId.set(null);
   }
   deleteTicker(id: number) {
     if (confirm('Delete this announcement?')) this.data.deleteTicker(id);
+  }
+
+  goToHostelPage(page: number) {
+    const totalPages = this.hostelTotalPages();
+
+    if (totalPages === 0) {
+      this.hostelPage.set(1);
+      return;
+    }
+
+    const nextPage = Math.min(Math.max(page, 1), totalPages);
+    this.hostelPage.set(nextPage);
   }
 
   // ── Hostels state ────────────────────────────────────
@@ -682,6 +726,23 @@ export class AdminPanelComponent {
     }
   }
 
+  async addScholarshipAcademicYear(direction: 'next' | 'previous' = 'next') {
+    if (this.scholarshipLoading()) {
+      return;
+    }
+
+    this.scholarshipError.set('');
+
+    try {
+      const created = await this.data.addScholarshipAcademicYear(direction);
+      await this.loadScholarshipAcademicYears();
+      this.scholarshipSelectedAcademicYearId.set(created._id);
+      await this.loadScholarshipApplications(1);
+    } catch {
+      this.scholarshipError.set('Unable to create scholarship academic year right now.');
+    }
+  }
+
   async loadVisitorStats() {
     this.visitorStatsLoading.set(true);
     this.visitorStatsError.set('');
@@ -783,7 +844,9 @@ export class AdminPanelComponent {
         State: item.state,
         'PIN Code': item.pinCode,
         'Aadhaar Number': item.aadhaarNumber,
+        'Account Holder Name': item.accountHolderName,
         'Bank Name': item.bankName,
+        'Bank Branch Name': item.bankBranchName,
         'Account Number': item.accountNumber,
         'IFSC Code': item.ifscCode,
         Board: item.board,
@@ -1123,7 +1186,10 @@ export class AdminPanelComponent {
         src: this.imageUrl(item.aadhaarCardUrl || ''),
         alt: 'Aadhaar copy',
         kind: this.scholarshipDocumentKind(item.aadhaarCardUrl || ''),
-        details: { title: 'Aadhaar copy' },
+        details: {
+          title: 'Aadhaar copy verification',
+          aadhaarNumber: item.aadhaarNumber,
+        },
       },
     ].filter((entry) => !!entry.src);
 
@@ -2047,6 +2113,7 @@ export class AdminPanelComponent {
       this.newHostel = { name: '', location: '', contact: '', description: '', capacity: '', img: '' };
       this.newHostelFile = null;
       this.showHostelAdd.set(false);
+      this.goToHostelPage(this.hostelTotalPages());
     }, 'Hostel image upload failed. Make sure the local upload server is running.');
   }
 

@@ -68,6 +68,15 @@ const getDefaultAcademicYearLabel = (referenceDate = new Date()): string => {
   return createAcademicYearLabel(startYear);
 };
 
+const toDisplayYear = (academicYearLabel: string): string => {
+  const match = String(academicYearLabel || '').trim().match(/^AY-(\d{4})-(\d{4})$/i);
+  if (!match) {
+    return getDefaultAcademicYearLabel().replace(/^AY-/, '').replace(/-(\d{2})\d{2}$/, '-$1');
+  }
+
+  return `${match[1]}-${match[2].slice(-2)}`;
+};
+
 const minimumPercentageValidator = (minimumPercentage: number): ValidatorFn => {
   return (control: AbstractControl): ValidationErrors | null => {
     const marksObtained = Number(control.get('marksObtained')?.value);
@@ -150,7 +159,9 @@ export class ScholarshipApplicationComponent {
       district: ['', [Validators.required, Validators.maxLength(120)]],
       state: ['', [Validators.required, Validators.maxLength(120)]],
       pinCode: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
+      accountHolderName: ['', [Validators.required, Validators.maxLength(120)]],
       bankName: ['', [Validators.required, Validators.maxLength(120)]],
+      bankBranchName: ['', [Validators.required, Validators.maxLength(120)]],
       accountNumber: ['', [Validators.required, Validators.pattern(/^\d{9,18}$/)]],
       reEnterAccountNumber: ['', [Validators.required, Validators.pattern(/^\d{9,18}$/)]],
       ifscCode: ['', [Validators.required, Validators.pattern(/^[A-Z]{4}0[A-Z0-9]{6}$/)]],
@@ -300,6 +311,15 @@ export class ScholarshipApplicationComponent {
   get selectedAcademicYearLabel(): string {
     const selectedAcademicYear = this.academicYearOptions().find((year) => year._id === this.selectedAcademicYearId);
     return selectedAcademicYear?.label || this.fallbackAcademicYearLabel;
+  }
+
+  get scholarshipTitle(): string {
+    const configuredYear = String(this.portalSettings()?.displayYear || '').trim();
+    const displayYear = /^\d{4}-\d{2}$/.test(configuredYear)
+      ? configuredYear
+      : toDisplayYear(this.selectedAcademicYearLabel);
+
+    return `PRATHIBHA PURASKARA - ${displayYear}`;
   }
 
   get selectedStandard(): string {
@@ -645,7 +665,9 @@ export class ScholarshipApplicationComponent {
       district: String(this.form.controls.district.value || '').trim(),
       state: String(this.form.controls.state.value || '').trim(),
       pinCode: String(this.form.controls.pinCode.value || '').trim(),
+      accountHolderName: String(this.form.controls.accountHolderName.value || '').trim(),
       bankName: String(this.form.controls.bankName.value || '').trim(),
+      bankBranchName: String(this.form.controls.bankBranchName.value || '').trim(),
       accountNumber: String(this.form.controls.accountNumber.value || '').trim(),
       ifscCode: String(this.form.controls.ifscCode.value || '').trim().toUpperCase(),
       aadhaarNumber: String(this.form.controls.aadhaarNumber.value || '').trim(),

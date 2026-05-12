@@ -5,10 +5,18 @@
       <div class="announce-ticker">
         <div class="announce-ticker-inner">
           @for (t of data.tickers(); track t.id) {
-            <span>{{ t.text }}</span>
+            @if (t.link) {
+              <a [href]="t.link" class="announce-item">{{ t.text }}</a>
+            } @else {
+              <span class="announce-item">{{ t.text }}</span>
+            }
           }
           @for (t of data.tickers(); track t.id) {
-            <span>{{ t.text }}</span>
+            @if (t.link) {
+              <a [href]="t.link" class="announce-item">{{ t.text }}</a>
+            } @else {
+              <span class="announce-item">{{ t.text }}</span>
+            }
           }
         </div>
       </div>

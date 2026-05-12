@@ -7,7 +7,7 @@ nav {
 .nav-inner {
   display: flex; align-items: center; justify-content: space-between;
   gap: clamp(1rem, 2vw, 2.2rem);
-  padding: 0.7rem clamp(1.1rem, 3vw, 2.75rem);
+  padding: 0.5rem clamp(1.1rem, 3vw, 2.75rem);
   max-width: 1360px;
   margin: 0 auto;
   position: relative;
@@ -20,10 +20,10 @@ nav {
   flex: 1 1 auto;
   min-width: 0;
 }
-.nav-logo img { width: 56px; height: 56px; object-fit: cover; border-radius: 50%; border: 2px solid var(--gold); }
+.nav-logo img { width: 48px; height: 48px; object-fit: cover; border-radius: 50%; border: 2px solid var(--gold); }
 .nav-logo-text { line-height: 1.2; min-width: 0; }
-.name-kn { font-family: 'Noto Serif Kannada', serif; font-size: 1rem; font-weight: 700; color: var(--maroon); }
-.name-en { font-family: 'Cinzel', serif; font-size: 0.7rem; color: var(--text-light); letter-spacing: 1px; }
+.name-kn { font-family: 'Noto Serif Kannada', serif; font-size: 0.92rem; font-weight: 700; color: var(--maroon); }
+.name-en { font-family: 'Cinzel', serif; font-size: 0.64rem; color: var(--text-light); letter-spacing: 1px; }
 .nav-links {
   display: flex;
   flex: 1 1 auto;
@@ -46,8 +46,8 @@ nav {
 }
 .nav-links a,
 .nav-trigger {
-    font-family: 'Noto Sans Kannada', serif; font-size: 0.85rem; font-weight: 500;
-  color: var(--text-mid); text-decoration: none; padding: 0.5rem clamp(0.6rem, 0.9vw, 1rem);
+    font-family: 'Noto Sans Kannada', serif; font-size: 0.8rem; font-weight: 500;
+  color: var(--text-mid); text-decoration: none; padding: 0.4rem clamp(0.55rem, 0.85vw, 0.9rem);
     border-bottom: 2px solid transparent; transition: all 0.2s; display: block;
     background: none; border-left: none; border-right: none; border-top: none; cursor: pointer;
     &:hover { color: var(--maroon); border-bottom-color: var(--saffron); }

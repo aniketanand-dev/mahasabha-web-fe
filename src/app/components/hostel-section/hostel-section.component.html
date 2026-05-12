@@ -5,7 +5,7 @@
       <p class="section-sub">{{ lang.t('hostels.subtitle') }}</p>
     </div>
     <div class="hostels-grid">
-      @for (h of data.hostels(); track h.id) {
+      @for (h of visibleHostels(); track h.id) {
         <div class="hostel-card">
           @if (h.img) {
             <img class="hostel-img" [src]="h.img" [alt]="h.name" loading="lazy" />
@@ -22,5 +22,12 @@
         </div>
       }
     </div>
+    @if (totalPages() > 1) {
+      <div class="hostels-pagination">
+        <button type="button" class="hostels-page-btn" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">Prev</button>
+        <span class="hostels-page-label">Page {{ pageLabel() }}</span>
+        <button type="button" class="hostels-page-btn" [disabled]="page() >= totalPages()" (click)="goToPage(page() + 1)">Next</button>
+      </div>
+    }
   </section>
 }

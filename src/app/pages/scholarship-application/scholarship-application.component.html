@@ -5,7 +5,7 @@
     <div class="page-head">
       <a routerLink="/" class="back-link">Back to Home</a>
       <p class="eyebrow">Scholarship Application Portal</p>
-      <h1>prathibha puraskara scholarships for {{ selectedAcademicYearLabel }}</h1>
+      <h1>{{ scholarshipTitle }}</h1>
       <p class="intro">
         Fill in the student details, upload the required documents, review everything in preview, and then submit.
       </p>
@@ -220,6 +220,20 @@
           <div class="section-heading address-head">
             <p>Bank Account Details</p>
             <span>Scholarship amount will be processed using these details</span>
+          </div>
+
+          <div class="form-grid two-cols">
+            <label class="field">
+              <span>Account Holder Name *</span>
+              <input type="text" formControlName="accountHolderName" placeholder="Enter account holder name" />
+              @if (controlHasError('accountHolderName')) { <small>Account holder name is required.</small> }
+            </label>
+
+            <label class="field">
+              <span>Bank Branch Name *</span>
+              <input type="text" formControlName="bankBranchName" placeholder="Enter bank branch name" />
+              @if (controlHasError('bankBranchName')) { <small>Bank branch name is required.</small> }
+            </label>
           </div>
 
           <div class="form-grid two-cols">
@@ -517,7 +531,9 @@
             <p><strong>Email ID:</strong> {{ form.controls.emailId.value }}</p>
             <p><strong>Aadhaar No:</strong> {{ form.controls.aadhaarNumber.value }}</p>
             <p><strong>Address:</strong> {{ form.controls.village.value }}, {{ form.controls.taluk.value }}, {{ form.controls.district.value }}, {{ form.controls.state.value }} - {{ form.controls.pinCode.value }}</p>
+            <p><strong>Account Holder Name:</strong> {{ form.controls.accountHolderName.value }}</p>
             <p><strong>Bank Name:</strong> {{ form.controls.bankName.value }}</p>
+            <p><strong>Bank Branch Name:</strong> {{ form.controls.bankBranchName.value }}</p>
             <p><strong>Account Number:</strong> {{ form.controls.accountNumber.value }}</p>
             <p><strong>IFSC Code:</strong> {{ form.controls.ifscCode.value }}</p>
             @if (heardFromMemberSelected) {

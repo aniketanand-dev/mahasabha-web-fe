@@ -577,6 +577,21 @@
 /* ── ITEMS LIST ───────────────────────────────────────── */
 .items-list { display: flex; flex-direction: column; gap: 0.75rem; }
 
+.pagination-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.pagination-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #7a0e22;
+}
+
 .item-row {
   background: #fff;
   border-radius: 10px;

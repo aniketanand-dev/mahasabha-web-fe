@@ -880,6 +880,10 @@
                   <label>Announcement Text</label>
                   <input [(ngModel)]="newTickerText" placeholder="Enter announcement text..." class="form-input" />
                 </div>
+                <div class="form-row">
+                  <label>Announcement Link</label>
+                  <input [(ngModel)]="newTickerLink" placeholder="https://example.com" class="form-input" />
+                </div>
                 <div class="form-actions">
                   <button class="btn-save" (click)="addTicker()">Add</button>
                   <button class="btn-cancel" (click)="showTickerAdd.set(false)">Cancel</button>
@@ -897,6 +901,7 @@
                   @if (editingTickerId() === t.id) {
                     <div class="item-edit-fields full-width-edit">
                       <div class="form-row"><label>Announcement</label><input [(ngModel)]="editTickerText" class="form-input" /></div>
+                      <div class="form-row"><label>Announcement Link</label><input [(ngModel)]="editTickerLink" class="form-input" /></div>
                       <div class="form-actions">
                         <button class="btn-save sm" (click)="saveTicker(t.id)">Save</button>
                         <button class="btn-cancel sm" (click)="editingTickerId.set(null)">Cancel</button>
@@ -933,6 +938,7 @@
                   </select>
                 </label>
                 <div class="scholarship-head-buttons">
+                  <!-- <button class="btn-cancel scholarship-head-button" [disabled]="scholarshipLoading()" (click)="addScholarshipAcademicYear()">Add Next Year</button> -->
                   <button class="btn-save scholarship-head-button" [disabled]="scholarshipLoading()" (click)="loadScholarshipApplications(scholarshipPage())">Refresh</button>
                   <button class="btn-add scholarship-head-button" [disabled]="scholarshipExporting()" (click)="exportScholarshipsToExcel()">
                     @if (scholarshipExporting()) { Exporting... } @else { Download Excel }
@@ -1264,12 +1270,18 @@
                   <div class="scholarship-image-preview-head">
                     <div>
                       <h4>{{ scholarshipImagePreviewDetails()?.title || scholarshipImagePreviewAlt() }}</h4>
-                      @if (scholarshipImagePreviewDetails()?.registrationNo || scholarshipImagePreviewDetails()?.percentage !== undefined) {
+                      @if (scholarshipImagePreviewDetails()?.registrationNo || scholarshipImagePreviewDetails()?.aadhaarNumber || scholarshipImagePreviewDetails()?.percentage !== undefined) {
                         <div class="scholarship-image-preview-meta">
                           @if (scholarshipImagePreviewDetails()?.registrationNo) {
                             <div class="scholarship-image-preview-chip scholarship-image-preview-chip--wide">
                               <span>Registration No</span>
                               <strong>{{ scholarshipImagePreviewDetails()?.registrationNo }}</strong>
+                            </div>
+                          }
+                          @if (scholarshipImagePreviewDetails()?.aadhaarNumber) {
+                            <div class="scholarship-image-preview-chip scholarship-image-preview-chip--wide">
+                              <span>Aadhaar Number</span>
+                              <strong>{{ scholarshipImagePreviewDetails()?.aadhaarNumber }}</strong>
                             </div>
                           }
                           @if (scholarshipImagePreviewDetails()?.percentage !== undefined) {
@@ -1392,6 +1404,10 @@
                 </div>
                 <div class="form-grid-2 scholarship-settings-grid">
                   <div class="form-row">
+                    <label>Display Year</label>
+                    <input [(ngModel)]="scholarshipSettings.displayYear" class="form-input" placeholder="2025-26" />
+                  </div>
+                  <div class="form-row">
                     <label>Application Closing Date & Time</label>
                     <input [(ngModel)]="scholarshipSettings.applicationDeadline" type="datetime-local" class="form-input" />
                   </div>
@@ -1513,7 +1529,7 @@
               </div>
             }
 
-            @if (hostelItems().length === 0) {
+            @if (hostelVisibleItems().length === 0) {
               <div class="empty-state">
                 <span>🏨</span>
                 <p>No hostels added yet.</p>
@@ -1521,7 +1537,7 @@
             }
 
             <div class="items-list">
-              @for (h of hostelItems(); track h.id) {
+              @for (h of hostelVisibleItems(); track h.id) {
                 <div class="item-row hostel-row">
                   @if (editingHostelId() === h.id) {
                     @if (editHostel.img) { <img class="founder-thumb" [src]="editHostel.img" /> }
@@ -1561,6 +1577,7 @@
                 </div>
               }
             </div>
+
           </section>
         }
 

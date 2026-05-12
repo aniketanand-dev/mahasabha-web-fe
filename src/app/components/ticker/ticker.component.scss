@@ -1,10 +1,17 @@
-.announce-section { background: var(--maroon); overflow: hidden; padding: 1.2rem 0; }
-.announce-label { background: var(--gold); color: var(--maroon-dark); padding: 0.3rem 1.2rem; font-size: 0.78rem; font-weight: 700; letter-spacing: 2px; white-space: nowrap; flex-shrink: 0; }
+.announce-section { background: var(--maroon); overflow: hidden; padding: 0.72rem 0; }
+.announce-label { background: var(--gold); color: var(--maroon-dark); padding: 0.24rem 0.95rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 1.6px; white-space: nowrap; flex-shrink: 0; }
 .announce-inner { display: flex; align-items: center; gap: 1rem; overflow: hidden; }
 .announce-ticker { flex: 1; overflow: hidden; }
 .announce-ticker-inner {
   display: flex; gap: 3rem; animation: ticker 30s linear infinite; white-space: nowrap;
-  span { color: rgba(255,255,255,0.85); font-size: 0.85rem; }
-  span::before { content: '◈ '; color: var(--gold); }
+  .announce-item {
+    color: rgba(255,255,255,0.85);
+    font-size: 0.78rem;
+    text-decoration: none;
+  }
+
+  .announce-item::before { content: '◈ '; color: var(--gold); }
+  a.announce-item { cursor: pointer; }
+  .announce-item:hover { text-decoration: underline; }
 }
 @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }

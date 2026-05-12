@@ -49,6 +49,7 @@ export class HomeComponent {
   readonly scholarshipCount = signal<number | null>(null);
   readonly scholarshipCountError = signal('');
   readonly visitorCount = signal<number | null>(null);
+  readonly uniqueVisitorCount = signal<number | null>(null);
   readonly visitorCountError = signal('');
   readonly currentTime = signal(Date.now());
   readonly dailyVachanaLabel = 'Today\'s Vachana';
@@ -88,6 +89,11 @@ export class HomeComponent {
 
   visitorCountLabel() {
     const count = this.visitorCount();
+    return count === null ? '' : new Intl.NumberFormat('en-IN').format(count);
+  }
+
+  uniqueVisitorCountLabel() {
+    const count = this.uniqueVisitorCount();
     return count === null ? '' : new Intl.NumberFormat('en-IN').format(count);
   }
 
@@ -231,6 +237,7 @@ export class HomeComponent {
     try {
       const summary = await this.visitorAnalytics.getSummary();
       this.visitorCount.set(summary.totalVisits);
+      this.uniqueVisitorCount.set(summary.uniqueVisitors);
     } catch {
       this.visitorCountError.set('Unable to load total visitor count right now.');
     }
