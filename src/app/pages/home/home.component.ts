@@ -67,7 +67,7 @@ export class HomeComponent {
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
-      GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString();
+      GlobalWorkerOptions.workerSrc = '/pdf.worker.mjs';
 
       const intervalId = window.setInterval(() => {
         this.currentTime.set(Date.now());
