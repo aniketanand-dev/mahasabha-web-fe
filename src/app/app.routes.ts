@@ -7,6 +7,26 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent)
   },
   {
+    path: 'organisation/working-committee',
+    loadComponent: () => import('./pages/working-committee/working-committee.component').then(m => m.WorkingCommitteeComponent)
+  },
+  {
+    path: 'organisation/representative-general-body',
+    loadComponent: () => import('./pages/representative-general-body/representative-general-body.component').then(m => m.RepresentativeGeneralBodyComponent)
+  },
+  {
+    path: 'organisation/state-committee',
+    loadComponent: () => import('./pages/state-committee/state-committee.component').then(m => m.StateCommitteeComponent)
+  },
+  {
+    path: 'organisation/nominated-body',
+    loadComponent: () => import('./pages/nominated-body/nominated-body.component').then(m => m.NominatedBodyComponent)
+  },
+  {
+    path: 'organisation/node/:nodeId',
+    loadComponent: () => import('./pages/org-node-detail/org-node-detail.component').then(m => m.OrgNodeDetailComponent)
+  },
+  {
     path: 'scholarships/apply',
     loadComponent: () => import('./pages/scholarship-application/scholarship-application.component').then(m => m.ScholarshipApplicationComponent)
   },

@@ -1,5 +1,6 @@
 import { Component, ElementRef, HostListener, ViewChild, computed, effect, signal, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -103,11 +104,23 @@ type FounderForm = {
 };
 
 type OrgNodeForm = {
-  parentId: number | null;
+  parentId: string | null;
   title: string;
   subtitle: string;
+  contact: string;
   order: number;
+  description: string;
+  level: 'state' | 'district' | 'taluk';
+  state: string;
+  district: string;
+  taluk: string;
+  sidebarLabel: string;
+  imageUrl: string;
+  imageAlt: string;
+  isActive: boolean;
 };
+
+type OrgQuickSection = 'president' | 'working' | 'representative' | 'nominated' | 'state';
 
 type HostelForm = {
   name: string;
@@ -175,6 +188,32 @@ type ScholarshipPreviewItem = {
 type ScholarshipStatus = 'pending' | 'accepted' | 'rejected';
 type ScholarshipListTab = 'all' | ScholarshipStatus;
 
+const TALUK_COMMITTEE_SECTION_LABEL = 'taluk-committee';
+const TALUK_COMMITTEE_MEMBER_LABEL = 'taluk-committee-member';
+const TALUK_COMMITTEE_TITLE = 'CMC/TMC/GP';
+
+const ADMIN_ACTIVE_TAB_STORAGE_KEY = 'admin_active_tab';
+const ADMIN_VALID_TABS: readonly Tab[] = [
+  'header',
+  'magazine',
+  'vachana',
+  'hero',
+  'founders',
+  'mission',
+  'president',
+  'org',
+  'leaders',
+  'bhavan',
+  'past-presidents',
+  'events',
+  'gallery',
+  'directory',
+  'scholarships',
+  'ticker',
+  'hostels',
+  'footer',
+];
+
 const createAcademicYearLabel = (startYear: number): string => `AY-${startYear}-${startYear + 1}`;
 
 const getDefaultAcademicYearLabel = (referenceDate = new Date()): string => {
@@ -213,6 +252,7 @@ const DEFAULT_VISITOR_STATS: AdminVisitorStats = {
 })
 export class AdminPanelComponent {
   @ViewChild('scholarshipStatusTabs') private scholarshipStatusTabsRef?: ElementRef<HTMLDivElement>;
+  @ViewChild('orgNodeAddForm') private orgNodeAddFormRef?: ElementRef<HTMLDivElement>;
 
   private static readonly SCHOLARSHIP_SEARCH_DEBOUNCE_MS = 700;
   private static readonly SCHOLARSHIP_SEARCH_MIN_LENGTH = 3;
@@ -449,9 +489,11 @@ export class AdminPanelComponent {
   editDirectoryEntry: DirectoryEntryForm = { name: '', state: '', district: '', address: '', contact: '', type: 'hostel' };
 
   showOrgNodeAdd = signal(false);
-  editingOrgNodeId = signal<number | null>(null);
+  editingOrgNodeId = signal<string | null>(null);
   newOrgNode: OrgNodeForm = this.emptyOrgNodeForm();
   editOrgNode: OrgNodeForm = this.emptyOrgNodeForm();
+  newOrgNodeImageFile: File | null = null;
+  editOrgNodeImageFile: File | null = null;
 
   // ── Gallery state ────────────────────────────────────
   showGalleryAdd   = signal(false);
@@ -661,6 +703,27 @@ export class AdminPanelComponent {
   private scholarshipImagePanScrollTop = 0;
   isScholarshipImagePanning = false;
 
+  private readPersistedTab(): Tab | null {
+    try {
+      const value = localStorage.getItem(ADMIN_ACTIVE_TAB_STORAGE_KEY);
+      if (value && ADMIN_VALID_TABS.includes(value as Tab)) {
+        return value as Tab;
+      }
+    } catch {
+      // Ignore localStorage read failures.
+    }
+
+    return null;
+  }
+
+  private persistActiveTab(tab: Tab) {
+    try {
+      localStorage.setItem(ADMIN_ACTIVE_TAB_STORAGE_KEY, tab);
+    } catch {
+      // Ignore localStorage write failures.
+    }
+  }
+
   constructor() {
     this.seedTextDrafts();
     this.navbarContent = this.clone(this.data.navbarContent());
@@ -683,6 +746,15 @@ export class AdminPanelComponent {
       this.dailyVachanaContent = this.clone(this.data.dailyVachanaContent());
     });
 
+    const persistedTab = this.readPersistedTab();
+    if (persistedTab) {
+      this.activeTab.set(persistedTab);
+      if (persistedTab === 'scholarships') {
+        void this.loadScholarshipAcademicYears();
+        void this.loadScholarshipApplications(1);
+      }
+    }
+
     void this.loadVisitorStats();
   }
 
@@ -698,6 +770,7 @@ export class AdminPanelComponent {
 
   async setTab(tab: Tab) {
     this.activeTab.set(tab);
+    this.persistActiveTab(tab);
     this.scholarshipSettingsMenuOpen.set(false);
     this.scholarshipSettingsDialogOpen.set(false);
 
@@ -1508,8 +1581,756 @@ export class AdminPanelComponent {
     }).length;
   }
 
-  private emptyOrgNodeForm(parentId: number | null = null): OrgNodeForm {
-    return { parentId, title: '', subtitle: '', order: 0 };
+  private emptyOrgNodeForm(parentId: string | null = null): OrgNodeForm {
+    return {
+      parentId,
+      title: '',
+      subtitle: '',
+      contact: '',
+      order: 0,
+      description: '',
+      level: parentId ? 'district' : 'state',
+      state: '',
+      district: '',
+      taluk: '',
+      sidebarLabel: '',
+      imageUrl: '',
+      imageAlt: '',
+      isActive: true,
+    };
+  }
+
+  private inferChildLevel(parent?: AdminOrgNode | null): 'state' | 'district' | 'taluk' {
+    if (!parent) {
+      return 'state';
+    }
+
+    if (parent.level === 'state') {
+      return 'district';
+    }
+
+    return 'taluk';
+  }
+
+  private normalizeOrgSearchText(value: string): string {
+    return String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+
+  private isRepresentativeSectionLabel(label: string | null | undefined): boolean {
+    return this.normalizeOrgSearchText(String(label || '')) === this.normalizeOrgSearchText('representative-general-body');
+  }
+
+  private isStateCommitteeSectionLabel(label: string | null | undefined): boolean {
+    return this.normalizeOrgSearchText(String(label || '')) === this.normalizeOrgSearchText('state-committee');
+  }
+
+  private isTalukCommitteeSectionLabel(label: string | null | undefined): boolean {
+    return this.normalizeOrgSearchText(String(label || '')) === this.normalizeOrgSearchText(TALUK_COMMITTEE_SECTION_LABEL);
+  }
+
+  private isTalukCommitteeMemberLabel(label: string | null | undefined): boolean {
+    return this.normalizeOrgSearchText(String(label || '')) === this.normalizeOrgSearchText(TALUK_COMMITTEE_MEMBER_LABEL);
+  }
+
+  protected isTalukCommitteeContainerNode(node: AdminOrgNode | null | undefined): boolean {
+    return !!node
+      && this.isTalukCommitteeSectionLabel(node.sidebarLabel);
+  }
+
+  private isTalukCommitteeMemberNode(node: AdminOrgNode | null | undefined): boolean {
+    if (!node || !this.isTalukCommitteeMemberLabel(node.sidebarLabel)) {
+      return false;
+    }
+
+    const parent = this.orgNodeById(node.parentId);
+    if (!parent || !this.isTalukCommitteeContainerNode(parent)) {
+      return false;
+    }
+
+    return parent.level === node.level
+      && parent.location.state === node.location.state
+      && parent.location.district === node.location.district
+      && parent.location.taluk === node.location.taluk;
+  }
+
+  private matchesOrgKeywords(node: AdminOrgNode, groups: string[][]): boolean {
+    const text = this.normalizeOrgSearchText(`${node.title} ${node.subtitle} ${node.sidebarLabel}`);
+    return groups.some((group) => group.every((keyword) => text.includes(this.normalizeOrgSearchText(keyword))));
+  }
+
+  private sectionKeywords(section: OrgQuickSection): string[][] {
+    if (section === 'president') {
+      return [
+        ['president', 'office'],
+        ['national', 'president'],
+        ['president'],
+      ];
+    }
+
+    if (section === 'working') {
+      return [
+        ['working', 'committee'],
+        ['central', 'committee'],
+        ['working'],
+      ];
+    }
+
+    if (section === 'representative') {
+      return [
+        ['representative', 'general', 'body'],
+        ['representative'],
+        ['general', 'body'],
+      ];
+    }
+
+    if (section === 'nominated') {
+      return [
+        ['nominated-body'],
+        ['nominated', 'body'],
+        ['nominated'],
+      ];
+    }
+
+    return [
+      ['state', 'committee'],
+      ['state'],
+    ];
+  }
+
+  private sectionDefaultSidebarLabel(section: OrgQuickSection): string {
+    if (section === 'president') {
+      return 'president-office';
+    }
+
+    if (section === 'working') {
+      return 'working-committee';
+    }
+
+    if (section === 'representative') {
+      return 'representative-general-body';
+    }
+
+    if (section === 'nominated') {
+      return 'nominated-body';
+    }
+
+    return 'state-committee';
+  }
+
+  private simpleOrgSectionLabels(): string[] {
+    return ['president-office', 'working-committee', 'representative-general-body', 'nominated-body'];
+  }
+
+  private simpleOrgSectionConfig(label: string) {
+    const normalizedLabel = this.normalizeOrgSearchText(label);
+
+    if (normalizedLabel === this.normalizeOrgSearchText('president-office')) {
+      return {
+        sectionTitle: 'President Office',
+        memberTitle: 'President',
+      };
+    }
+
+    if (normalizedLabel === this.normalizeOrgSearchText('working-committee')) {
+      return {
+        sectionTitle: 'Working Committee',
+        memberTitle: 'Member',
+      };
+    }
+
+    if (normalizedLabel === this.normalizeOrgSearchText('representative-general-body')) {
+      return {
+        sectionTitle: 'Representative General Body',
+        memberTitle: 'Member',
+      };
+    }
+
+    if (normalizedLabel === this.normalizeOrgSearchText('nominated-body')) {
+      return {
+        sectionTitle: 'Nominated Bodies',
+        memberTitle: 'Member',
+      };
+    }
+
+    return null;
+  }
+
+  private isSimpleOrgSectionLabel(label: string | null | undefined): boolean {
+    const normalizedLabel = this.normalizeOrgSearchText(String(label || ''));
+    return this.simpleOrgSectionLabels().some((candidate) => this.normalizeOrgSearchText(candidate) === normalizedLabel);
+  }
+
+  protected isSimpleOrgSection(form: OrgNodeForm): boolean {
+    return this.isSimpleOrgSectionLabel(form.sidebarLabel);
+  }
+
+  protected isHierarchyMemberForm(form: OrgNodeForm): boolean {
+    const parent = this.orgNodeById(form.parentId);
+
+    if (!parent) {
+      return false;
+    }
+
+    if (this.isStateCommitteeSectionLabel(form.sidebarLabel)) {
+      if (this.isStateCommitteeContainer(parent)) {
+        return false;
+      }
+
+      if (form.level !== parent.level || parent.location.state !== form.state) {
+        return false;
+      }
+
+      if (parent.level === 'state') {
+        return !form.district.trim() && !form.taluk.trim();
+      }
+
+      if (parent.level === 'district') {
+        return parent.location.district === form.district && !form.taluk.trim();
+      }
+
+      return parent.location.district === form.district && parent.location.taluk === form.taluk;
+    }
+
+    if (this.isTalukCommitteeMemberLabel(form.sidebarLabel)) {
+      if (!this.isTalukCommitteeContainerNode(parent)) {
+        return false;
+      }
+
+      return form.level === parent.level
+        && parent.location.state === form.state
+        && parent.location.district === form.district
+        && parent.location.taluk === form.taluk;
+    }
+
+    return false;
+  }
+
+  protected isStateHierarchyEntry(form: OrgNodeForm): boolean {
+    return this.isStateCommitteeSectionLabel(form.sidebarLabel)
+      && form.level === 'state'
+      && !this.isHierarchyMemberForm(form);
+  }
+
+  protected isStructuralHierarchyEntry(form: OrgNodeForm): boolean {
+    return (this.isStateCommitteeSectionLabel(form.sidebarLabel) || this.isTalukCommitteeSectionLabel(form.sidebarLabel))
+      && !this.isHierarchyMemberForm(form);
+  }
+
+  protected structuralHierarchyLabel(form: OrgNodeForm): string {
+    if (this.isTalukCommitteeSectionLabel(form.sidebarLabel) || this.isTalukCommitteeMemberLabel(form.sidebarLabel)) {
+      return TALUK_COMMITTEE_TITLE;
+    }
+
+    if (form.level === 'district') {
+      return 'District';
+    }
+
+    if (form.level === 'taluk') {
+      return 'Taluk';
+    }
+
+    return 'State';
+  }
+
+  protected requiresOrgDisplayOrder(form: OrgNodeForm): boolean {
+    return this.requiresOrgHierarchyControls(form) && !this.isStructuralHierarchyEntry(form);
+  }
+
+  protected requiresOrgImageFields(form: OrgNodeForm): boolean {
+    return !this.isStructuralHierarchyEntry(form);
+  }
+
+  protected orgAddHeading(form: OrgNodeForm): string {
+    const parent = this.orgNodeById(form.parentId);
+
+    if (this.isStructuralHierarchyEntry(form)) {
+      const label = this.structuralHierarchyLabel(form);
+      return parent ? `Add ${label} under ${parent.title}` : `Add ${label}`;
+    }
+
+    if (this.isHierarchyMemberForm(form)) {
+      const parentLabel = parent ? ` under ${parent.title}` : '';
+      return `Add ${this.structuralHierarchyLabel(form)} Member${parentLabel}`;
+    }
+
+    return parent ? `Add Item under ${parent.title}` : 'Add Organisation Item';
+  }
+
+  private scrollOrgAddFormIntoView(): void {
+    setTimeout(() => {
+      this.orgNodeAddFormRef?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+  }
+
+  protected requiresOrgLocation(form: OrgNodeForm): boolean {
+    if (this.isHierarchyMemberForm(form)) {
+      return false;
+    }
+
+    // Simple sections don't require location, EXCEPT Representative with a parent (child nodes)
+    if (this.isSimpleOrgSectionLabel(form.sidebarLabel)) {
+      const isRepresentative = this.isRepresentativeSectionLabel(form.sidebarLabel);
+      // Only if Representative AND it has a parent (is a child node), it requires location
+      if (isRepresentative && form.parentId) {
+        return true; // Representative children (State Committees) require location
+      }
+      return false;
+    }
+    return true;
+  }
+
+  protected requiresOrgHierarchyControls(form: OrgNodeForm): boolean {
+    if (this.isHierarchyMemberForm(form)) {
+      return false;
+    }
+
+    // Simple sections don't have hierarchy controls, EXCEPT Representative with a parent
+    if (this.isSimpleOrgSectionLabel(form.sidebarLabel)) {
+      const isRepresentative = this.isRepresentativeSectionLabel(form.sidebarLabel);
+      if (isRepresentative && form.parentId) {
+        return true; // Representative children need level/location selectors
+      }
+      return false;
+    }
+    return true;
+  }
+
+  protected requiresOrgTitleInput(form: OrgNodeForm, nodeId: string | null = null): boolean {
+    if (this.isTalukCommitteeSectionLabel(form.sidebarLabel)) {
+      return true;
+    }
+
+    if (this.isStructuralHierarchyEntry(form)) {
+      return false;
+    }
+
+    if (this.isHierarchyMemberForm(form)) {
+      return false;
+    }
+
+    if (!this.isSimpleOrgSection(form)) {
+      return true;
+    }
+
+    // Representative children (State Committees) ALWAYS need title
+    const isRepresentative = this.isRepresentativeSectionLabel(form.sidebarLabel);
+    if (isRepresentative && form.parentId) {
+      return true;
+    }
+
+    if (!nodeId) {
+      return false;
+    }
+
+    const node = this.orgNodeItems().find((item) => item.id === nodeId);
+    return node?.parentId === null;
+  }
+
+  protected orgTitleFieldLabel(form: OrgNodeForm): string {
+    return this.isTalukCommitteeSectionLabel(form.sidebarLabel)
+      ? 'CMC/TMC/GP Name *'
+      : 'Title *';
+  }
+
+  protected orgTitlePlaceholder(form: OrgNodeForm): string {
+    if (this.isTalukCommitteeSectionLabel(form.sidebarLabel)) {
+      return 'Enter CMC/TMC/GP name (e.g., Hubballi CMC)';
+    }
+
+    if (this.isStructuralHierarchyEntry(form)) {
+      return `Enter ${this.structuralHierarchyLabel(form)} name`;
+    }
+
+    return 'Designation (President / Secretary)';
+  }
+
+  protected orgFormTypeBadge(form: OrgNodeForm): string {
+    if (this.isTalukCommitteeSectionLabel(form.sidebarLabel)) {
+      return 'CMC/TMC/GP Branch';
+    }
+
+    if (this.isHierarchyMemberForm(form)) {
+      return `${this.structuralHierarchyLabel(form)} Member`;
+    }
+
+    if (this.isStructuralHierarchyEntry(form)) {
+      return `${this.structuralHierarchyLabel(form)} Node`;
+    }
+
+    if (this.isSimpleOrgSection(form)) {
+      return 'Section Member';
+    }
+
+    return 'Organisation Item';
+  }
+
+  protected orgSelectedParentLabel(form: OrgNodeForm): string {
+    const parent = this.orgNodeById(form.parentId);
+    return parent ? this.orgNodePath(parent) : 'Top level';
+  }
+
+  protected orgSaveTargetHint(form: OrgNodeForm): string {
+    if (this.isTalukCommitteeSectionLabel(form.sidebarLabel)) {
+      return 'Creates a CMC/TMC/GP branch under the selected taluk. Members can be added inside it.';
+    }
+
+    if (this.isHierarchyMemberForm(form)) {
+      return 'Creates a member inside the selected hierarchy node.';
+    }
+
+    if (this.isStructuralHierarchyEntry(form)) {
+      return 'Creates a structural node in the hierarchy tree.';
+    }
+
+    return 'Creates a member/profile entry under the selected section.';
+  }
+
+  protected orgStructuralEntryHelpText(form: OrgNodeForm): string {
+    if (this.isTalukCommitteeSectionLabel(form.sidebarLabel)) {
+      return 'Enter the CMC/TMC/GP name here. Member name will be derived from this title.';
+    }
+
+    return `Only the ${this.structuralHierarchyLabel(form).toLowerCase()} name is required here. Title and member fields will be filled automatically.`;
+  }
+
+  protected canAddOrgChild(node: AdminOrgNode): boolean {
+    if (this.isTalukCommitteeContainerNode(node) || this.isTalukCommitteeMemberNode(node) || this.isStateCommitteeMemberNode(node)) {
+      return false;
+    }
+
+    // Representative nodes can have children (State Committees)
+    const isRepresentative = this.isRepresentativeSectionLabel(node.sidebarLabel);
+    if (isRepresentative) {
+      return true;
+    }
+
+    // Other simple sections cannot have children
+    if (this.isSimpleOrgSectionLabel(node.sidebarLabel)) {
+      return false;
+    }
+
+    // State Committee can extend through taluk to create the extra CMC/TMC/GP level.
+    return this.isStateCommitteeNode(node);
+  }
+
+  protected canAddOrgMember(node: AdminOrgNode): boolean {
+    return (this.isStateCommitteeNode(node)
+      && !this.isStateCommitteeContainer(node)
+      && !this.isStateCommitteeMemberNode(node))
+      || this.isTalukCommitteeContainerNode(node);
+  }
+
+  protected orgChildActionLabel(node: AdminOrgNode): string {
+    const isRepresentative = this.isRepresentativeSectionLabel(node.sidebarLabel);
+
+    if (isRepresentative) {
+      return '+ State Committee';
+    }
+
+    if (this.isStateCommitteeNode(node)) {
+      if (this.isStateCommitteeContainer(node)) {
+        return '+ State';
+      }
+
+      if (node.level === 'state') {
+        return '+ District';
+      }
+
+      if (node.level === 'district') {
+        return '+ Taluk';
+      }
+
+      if (node.level === 'taluk') {
+        return '+ CMC/TMC/GP';
+      }
+    }
+
+    return '+ Child';
+  }
+
+  protected orgMemberActionLabel(node: AdminOrgNode): string {
+    if (this.isTalukCommitteeContainerNode(node)) {
+      return '+ CMC/TMC/GP Member';
+    }
+
+    if (node.level === 'state') {
+      return '+ State Member';
+    }
+
+    if (node.level === 'district') {
+      return '+ District Member';
+    }
+
+    return '+ Taluk Member';
+  }
+
+  private normalizeOrgFormForSave(form: OrgNodeForm): OrgNodeForm {
+    const normalizedContact = String(form.contact || '').trim();
+
+    if (this.isStructuralHierarchyEntry(form)) {
+      const stateName = String(form.state || '').trim();
+      const districtName = String(form.district || '').trim();
+      const talukName = String(form.taluk || '').trim();
+
+      if (this.isTalukCommitteeSectionLabel(form.sidebarLabel)) {
+        const committeeTitle = String(form.title || '').trim();
+        return {
+          ...form,
+          contact: normalizedContact,
+          title: committeeTitle,
+          subtitle: committeeTitle,
+          district: districtName,
+          taluk: talukName,
+        };
+      }
+
+      const title = form.level === 'district'
+        ? districtName
+        : form.level === 'taluk'
+          ? talukName
+          : stateName;
+
+      return {
+        ...form,
+        contact: normalizedContact,
+        title,
+        subtitle: title,
+        district: form.level === 'state' ? '' : districtName,
+        taluk: form.level === 'taluk' ? talukName : '',
+      };
+    }
+
+    const sectionConfig = this.simpleOrgSectionConfig(form.sidebarLabel);
+
+    if (sectionConfig) {
+      return {
+        ...form,
+        contact: normalizedContact,
+        title: String(form.title || '').trim() || sectionConfig.memberTitle,
+        level: 'state',
+        state: String(form.state || '').trim() || 'Karnataka',
+        district: '',
+        taluk: '',
+      };
+    }
+
+    if (this.isHierarchyMemberForm(form)) {
+      return {
+        ...form,
+        contact: normalizedContact,
+        title: String(form.title || '').trim() || 'Member',
+      };
+    }
+
+    return {
+      ...form,
+      contact: normalizedContact,
+    };
+  }
+
+  private findSimpleSectionAnchor(label: string) {
+    const config = this.simpleOrgSectionConfig(label);
+    const normalizedLabel = this.normalizeOrgSearchText(label);
+
+    if (!config) {
+      return null;
+    }
+
+    return this.orgNodeItems().find((node) =>
+      node.parentId === null
+      && this.normalizeOrgSearchText(node.sidebarLabel) === normalizedLabel
+      && this.normalizeOrgSearchText(node.title) === this.normalizeOrgSearchText(config.sectionTitle)
+    ) ?? null;
+  }
+
+  private async ensureSimpleSectionAnchor(label: string): Promise<AdminOrgNode | null> {
+    const config = this.simpleOrgSectionConfig(label);
+
+    if (!config) {
+      return null;
+    }
+
+    const existing = this.findSimpleSectionAnchor(label);
+    if (existing) {
+      return existing;
+    }
+
+    await this.data.addOrgNode({
+      parentId: null,
+      title: config.sectionTitle,
+      subtitle: config.sectionTitle,
+      contact: '',
+      order: 0,
+      description: '',
+      level: 'state',
+      location: {
+        state: 'Karnataka',
+        district: '',
+        taluk: '',
+      },
+      sidebarLabel: label,
+      imageUrl: '',
+      imageAlt: '',
+      isActive: true,
+    });
+
+    return this.findSimpleSectionAnchor(label);
+  }
+
+  private findSectionAnchor(section: OrgQuickSection): AdminOrgNode | null {
+    const candidates = this.orgNodeItems();
+    const groups = this.sectionKeywords(section);
+
+    if (section === 'state') {
+      return candidates.find((node) =>
+        node.parentId === null
+        && this.isStateCommitteeSectionLabel(node.sidebarLabel)
+        && this.normalizeOrgSearchText(node.title) === this.normalizeOrgSearchText('State Committee')
+      ) ?? null;
+    }
+
+    const exactLabel = candidates.find((node) =>
+      this.normalizeOrgSearchText(node.sidebarLabel) === this.normalizeOrgSearchText(this.sectionDefaultSidebarLabel(section))
+    );
+
+    if (exactLabel) {
+      return exactLabel;
+    }
+
+    return candidates.find((node) => this.matchesOrgKeywords(node, groups)) ?? null;
+  }
+
+  private applySectionDefaults(section: OrgQuickSection) {
+    this.newOrgNode.sidebarLabel = this.sectionDefaultSidebarLabel(section);
+
+    if (section === 'president') {
+      this.newOrgNode.parentId = null;
+      this.newOrgNode.level = 'state';
+      this.newOrgNode.district = '';
+      this.newOrgNode.taluk = '';
+      if (!this.newOrgNode.title.trim()) {
+        this.newOrgNode.title = 'President';
+      }
+      this.newOrgNode.state = this.newOrgNode.state || 'Karnataka';
+      return;
+    }
+
+    if (section === 'working' || section === 'nominated') {
+      this.newOrgNode.level = 'state';
+      this.newOrgNode.state = this.newOrgNode.state || 'Karnataka';
+      this.newOrgNode.district = '';
+      this.newOrgNode.taluk = '';
+      return;
+    }
+
+    if (section === 'representative') {
+      // Can be root (parentId: null) or child of representative (parentId: set)
+      if (!this.newOrgNode.parentId) {
+        this.newOrgNode.parentId = null;
+      }
+      this.newOrgNode.level = 'state';
+      this.newOrgNode.state = this.newOrgNode.state || 'Karnataka';
+      this.newOrgNode.district = '';
+      this.newOrgNode.taluk = '';
+      return;
+    }
+
+    if (section === 'state') {
+      // Preserve parentId if already set (adding as child); only clear if not set (root)
+      if (!this.newOrgNode.parentId) {
+        this.newOrgNode.parentId = null;
+      }
+      this.newOrgNode.level = 'state';
+      this.newOrgNode.district = '';
+      this.newOrgNode.taluk = '';
+    }
+  }
+
+  private isOrgLocationValid(form: OrgNodeForm) {
+    if (this.isSimpleOrgSection(form)) {
+      return true;
+    }
+
+    const level = form.level;
+
+    if (!form.state.trim()) {
+      return false;
+    }
+
+    if (level === 'state') {
+      return !form.district.trim() && !form.taluk.trim();
+    }
+
+    if (level === 'district') {
+      return !!form.district.trim() && !form.taluk.trim();
+    }
+
+    return !!form.district.trim() && !!form.taluk.trim();
+  }
+
+  private orgFormValidationError(form: OrgNodeForm): string | null {
+    const normalizedForm = this.normalizeOrgFormForSave(form);
+
+    if (this.isStructuralHierarchyEntry(normalizedForm)) {
+      if (this.isTalukCommitteeSectionLabel(normalizedForm.sidebarLabel) && !normalizedForm.title.trim()) {
+        return 'CMC/TMC/GP name is required.';
+      }
+
+      if (!normalizedForm.state.trim()) {
+        return 'State is required.';
+      }
+
+      if (normalizedForm.level === 'district' && !normalizedForm.district.trim()) {
+        return 'District is required.';
+      }
+
+      if (normalizedForm.level === 'taluk' && !normalizedForm.taluk.trim()) {
+        return 'Taluk is required.';
+      }
+
+      if (!this.isOrgLocationValid(normalizedForm)) {
+        if (normalizedForm.level === 'state') {
+          return 'For state level, keep district and taluk empty.';
+        }
+
+        if (normalizedForm.level === 'district') {
+          return 'For district level, district is required and taluk must be empty.';
+        }
+
+        return 'For taluk level, both district and taluk are required.';
+      }
+
+      return null;
+    }
+
+    if (!normalizedForm.title.trim()) {
+      return 'Title is required.';
+    }
+
+    if (!normalizedForm.subtitle.trim()) {
+      return 'Member name is required.';
+    }
+
+    if (this.requiresOrgLocation(normalizedForm) && !normalizedForm.state.trim()) {
+      return 'State is required.';
+    }
+
+    if (!this.isOrgLocationValid(normalizedForm)) {
+      if (normalizedForm.level === 'state') {
+        return 'For state level, keep district and taluk empty.';
+      }
+
+      if (normalizedForm.level === 'district') {
+        return 'For district level, district is required and taluk must be empty.';
+      }
+
+      return 'For taluk level, both district and taluk are required.';
+    }
+
+    return null;
   }
 
   private fileFromEvent(event: Event) {
@@ -1527,8 +2348,12 @@ export class AdminPanelComponent {
 
     try {
       await action();
-    } catch {
-      this.mediaError.set(errorMessage);
+    } catch (error) {
+      const httpError = error as HttpErrorResponse;
+      const apiMessage = typeof httpError?.error?.message === 'string'
+        ? httpError.error.message.trim()
+        : '';
+      this.mediaError.set(apiMessage || errorMessage);
     } finally {
       this.mediaBusy.set(false);
     }
@@ -1895,8 +2720,8 @@ export class AdminPanelComponent {
     if (confirm('Delete this entry?')) this.data.deleteDirectoryEntry(id);
   }
 
-  private isOrgNodeInSubtree(candidateId: number, rootId: number): boolean {
-    const childrenByParent = new Map<number, number[]>();
+  private isOrgNodeInSubtree(candidateId: string, rootId: string): boolean {
+    const childrenByParent = new Map<string, string[]>();
 
     for (const node of this.orgNodeItems()) {
       if (node.parentId === null) {
@@ -1910,7 +2735,7 @@ export class AdminPanelComponent {
 
     const queue = [rootId];
     while (queue.length) {
-      const current = queue.shift() as number;
+      const current = queue.shift() as string;
       if (current === candidateId) {
         return true;
       }
@@ -1923,7 +2748,7 @@ export class AdminPanelComponent {
     return false;
   }
 
-  orgParentOptions(excludeId: number | null = null) {
+  orgParentOptions(excludeId: string | null = null) {
     return this.orgNodeItems()
       .filter(node => excludeId === null ? true : !this.isOrgNodeInSubtree(node.id, excludeId))
       .sort((a, b) => a.title.localeCompare(b.title));
@@ -1965,9 +2790,156 @@ export class AdminPanelComponent {
     return segments.join(' / ');
   }
 
+  private orgSectionRoot(node: AdminOrgNode): AdminOrgNode {
+    const nodesById = new Map(this.orgNodeItems().map(item => [item.id, item] as const));
+    let current = node;
+
+    while (current.parentId) {
+      const parent = nodesById.get(current.parentId);
+      if (!parent) {
+        break;
+      }
+      current = parent;
+    }
+
+    return current;
+  }
+
+  private orgNodeById(id: string | null): AdminOrgNode | null {
+    if (!id) {
+      return null;
+    }
+
+    return this.orgNodeItems().find((item) => item.id === id) ?? null;
+  }
+
+  private applyParentDefaults(form: OrgNodeForm): OrgNodeForm {
+    const parent = this.orgNodeById(form.parentId);
+
+    if (!parent) {
+      return form;
+    }
+
+    // Representative children should be treated as state-committee nodes
+    const isRepresentative = this.isRepresentativeSectionLabel(parent.sidebarLabel);
+    if (isRepresentative) {
+      return {
+        ...form,
+        sidebarLabel: 'state-committee', // Change label to state-committee for proper hierarchy
+        level: 'state',
+        state: parent.location.state || form.state || 'Karnataka',
+        district: '',
+        taluk: '',
+      };
+    }
+
+    if (this.isSimpleOrgSection(form)) {
+      return {
+        ...form,
+        level: 'state',
+        state: parent.location.state || form.state || 'Karnataka',
+        district: '',
+        taluk: '',
+      };
+    }
+
+    if (parent.level === 'state') {
+      return {
+        ...form,
+        level: 'district',
+        state: parent.location.state || form.state,
+        district: '',
+        taluk: '',
+      };
+    }
+
+    return {
+      ...form,
+      level: 'taluk',
+      state: parent.location.state || form.state,
+      district: parent.location.district || form.district,
+      taluk: parent.level === 'taluk' ? (parent.location.taluk || form.taluk) : '',
+    };
+  }
+
+  protected onNewOrgParentChanged(parentId: string | null): void {
+    this.newOrgNode.parentId = parentId;
+    this.newOrgNode = this.applyParentDefaults(this.newOrgNode);
+  }
+
+  protected onEditOrgParentChanged(parentId: string | null): void {
+    this.editOrgNode.parentId = parentId;
+    this.editOrgNode = this.applyParentDefaults(this.editOrgNode);
+  }
+
+  protected isStateCommitteeNode(node: AdminOrgNode): boolean {
+    const section = this.orgSectionRoot(node);
+    return this.normalizeOrgSearchText(section.sidebarLabel) === this.normalizeOrgSearchText('state-committee');
+  }
+
+  protected isStateCommitteeContainer(node: AdminOrgNode): boolean {
+    return this.isStateCommitteeNode(node)
+      && this.normalizeOrgSearchText(node.title) === this.normalizeOrgSearchText('state committee');
+  }
+
+  protected isStateCommitteeMemberNode(node: AdminOrgNode): boolean {
+    if (!this.isStateCommitteeNode(node) || this.isStateCommitteeContainer(node)) {
+      return false;
+    }
+
+    const parent = this.orgNodeById(node.parentId);
+
+    if (!parent || this.isStateCommitteeContainer(parent)) {
+      return false;
+    }
+
+    if (parent.level !== node.level || parent.location.state !== node.location.state) {
+      return false;
+    }
+
+    if (node.level === 'state') {
+      return !node.location.district && !node.location.taluk;
+    }
+
+    if (node.level === 'district') {
+      return parent.location.district === node.location.district && !node.location.taluk;
+    }
+
+    return parent.location.district === node.location.district
+      && parent.location.taluk === node.location.taluk;
+  }
+
+  isOrgSectionHeader(node: AdminOrgNode): boolean {
+    return node.parentId === null;
+  }
+
+  orgSectionLabel(node: AdminOrgNode): string {
+    return this.orgSectionRoot(node).title || 'Organisation Section';
+  }
+
+  isOrgSectionMember(node: AdminOrgNode): boolean {
+    return node.parentId !== null;
+  }
+
+  protected orgNodeBadgeLabel(node: AdminOrgNode): string {
+    if (this.isTalukCommitteeContainerNode(node)) {
+      return TALUK_COMMITTEE_TITLE;
+    }
+
+    if (this.isTalukCommitteeMemberNode(node)) {
+      return `${TALUK_COMMITTEE_TITLE} Member`;
+    }
+
+    if (this.isOrgSectionHeader(node)) {
+      return 'Section Root';
+    }
+
+    return 'Member';
+  }
+
   orgNodesForDisplay() {
-    const nodes = [...this.orgNodeItems()].sort((a, b) => a.order - b.order || a.id - b.id);
-    const childrenByParent = new Map<number | null, AdminOrgNode[]>();
+    const nodes = [...this.orgNodeItems()].sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
+    const childrenByParent = new Map<string | null, AdminOrgNode[]>();
 
     for (const node of nodes) {
       const children = childrenByParent.get(node.parentId) ?? [];
@@ -1976,7 +2948,7 @@ export class AdminPanelComponent {
     }
 
     const ordered: Array<{ node: AdminOrgNode; depth: number }> = [];
-    const visit = (parentId: number | null, depth: number) => {
+    const visit = (parentId: string | null, depth: number) => {
       for (const child of childrenByParent.get(parentId) ?? []) {
         ordered.push({ node: child, depth });
         visit(child.id, depth + 1);
@@ -1989,11 +2961,57 @@ export class AdminPanelComponent {
 
   startAddOrgNode(parent?: AdminOrgNode) {
     this.newOrgNode = this.emptyOrgNodeForm(parent?.id ?? null);
+    this.newOrgNode.level = this.inferChildLevel(parent);
+
+    if (parent) {
+      this.newOrgNode.sidebarLabel = parent.level === 'taluk'
+        ? TALUK_COMMITTEE_SECTION_LABEL
+        : parent.sidebarLabel;
+      this.newOrgNode.state = parent.location.state;
+      this.newOrgNode.district = parent.level === 'state' ? '' : parent.location.district;
+      this.newOrgNode.taluk = parent.level === 'taluk' ? parent.location.taluk : '';
+    }
+
+    this.newOrgNode = this.applyParentDefaults(this.newOrgNode);
+
+    this.newOrgNodeImageFile = null;
     this.showOrgNodeAdd.set(true);
+    this.scrollOrgAddFormIntoView();
+  }
+
+  startAddOrgMember(parent: AdminOrgNode) {
+    this.newOrgNode = this.emptyOrgNodeForm(parent.id);
+    this.newOrgNode.sidebarLabel = this.isTalukCommitteeContainerNode(parent)
+      ? TALUK_COMMITTEE_MEMBER_LABEL
+      : this.isRepresentativeSectionLabel(parent.sidebarLabel)
+      ? 'state-committee'
+      : parent.sidebarLabel;
+    this.newOrgNode.level = parent.level;
+    this.newOrgNode.state = parent.location.state;
+    this.newOrgNode.district = parent.location.district;
+    this.newOrgNode.taluk = parent.location.taluk;
+    this.newOrgNodeImageFile = null;
+    this.showOrgNodeAdd.set(true);
+    this.scrollOrgAddFormIntoView();
+  }
+
+  startQuickAddOrgNode(section: OrgQuickSection) {
+    const anchor = this.findSectionAnchor(section);
+    this.startAddOrgNode(anchor ?? undefined);
+    this.applySectionDefaults(section);
+  }
+
+  setNewOrgSidebarLabel(value: string) {
+    this.newOrgNode.sidebarLabel = value;
+  }
+
+  setEditOrgSidebarLabel(value: string) {
+    this.editOrgNode.sidebarLabel = value;
   }
 
   cancelAddOrgNode() {
     this.newOrgNode = this.emptyOrgNodeForm();
+    this.newOrgNodeImageFile = null;
     this.showOrgNodeAdd.set(false);
   }
 
@@ -2002,44 +3020,123 @@ export class AdminPanelComponent {
       parentId: node.parentId,
       title: node.title,
       subtitle: node.subtitle,
+      contact: String((node as AdminOrgNode & { contact?: string }).contact || ''),
       order: node.order,
+      description: node.description,
+      level: node.level,
+      state: node.location.state,
+      district: node.location.district,
+      taluk: node.location.taluk,
+      sidebarLabel: node.sidebarLabel,
+      imageUrl: node.imageUrl,
+      imageAlt: node.imageAlt,
+      isActive: node.isActive,
     };
+    this.editOrgNode = this.applyParentDefaults(this.editOrgNode);
+    this.editOrgNodeImageFile = null;
     this.editingOrgNodeId.set(node.id);
   }
 
   cancelEditOrgNode() {
     this.editOrgNode = this.emptyOrgNodeForm();
+    this.editOrgNodeImageFile = null;
     this.editingOrgNodeId.set(null);
   }
 
-  addOrgNode() {
-    if (!this.newOrgNode.title.trim()) return;
-
-    this.data.addOrgNode({
-      parentId: this.newOrgNode.parentId,
-      title: this.newOrgNode.title,
-      subtitle: this.newOrgNode.subtitle,
-      order: this.newOrgNode.order,
-    });
-    this.cancelAddOrgNode();
+  onNewOrgNodeImageSelected(event: Event) {
+    this.newOrgNodeImageFile = this.fileFromEvent(event);
   }
 
-  saveOrgNode(id: number) {
-    if (!this.editOrgNode.title.trim()) return;
-
-    this.data.updateOrgNode(id, {
-      parentId: this.editOrgNode.parentId,
-      title: this.editOrgNode.title,
-      subtitle: this.editOrgNode.subtitle,
-      order: this.editOrgNode.order,
-    });
-    this.cancelEditOrgNode();
+  onEditOrgNodeImageSelected(event: Event) {
+    this.editOrgNodeImageFile = this.fileFromEvent(event);
   }
 
-  deleteOrgNode(id: number) {
-    if (confirm('Delete this organisation item and all its child items?')) {
-      this.data.deleteOrgNode(id);
+  async addOrgNode() {
+    const normalizedForm = this.normalizeOrgFormForSave(this.newOrgNode);
+    const validationError = this.orgFormValidationError(normalizedForm);
+    if (validationError) {
+      this.mediaError.set(validationError);
+      return;
     }
+
+    await this.runMediaAction(async () => {
+      let imageUrl = this.newOrgNode.imageUrl;
+      let parentId = normalizedForm.parentId;
+
+      if (this.newOrgNodeImageFile) {
+        imageUrl = await this.data.uploadOrgMemberImage(this.newOrgNodeImageFile);
+      }
+
+      if (this.isSimpleOrgSection(normalizedForm)) {
+        const anchor = await this.ensureSimpleSectionAnchor(normalizedForm.sidebarLabel);
+        parentId = anchor?.id ?? parentId;
+      }
+
+      await this.data.addOrgNode({
+        parentId,
+        title: normalizedForm.title,
+        subtitle: normalizedForm.subtitle,
+        contact: String(normalizedForm.contact || '').trim(),
+        order: normalizedForm.order,
+        description: normalizedForm.description,
+        level: normalizedForm.level,
+        location: {
+          state: normalizedForm.state,
+          district: normalizedForm.district,
+          taluk: normalizedForm.taluk,
+        },
+        sidebarLabel: normalizedForm.sidebarLabel,
+        imageUrl,
+        imageAlt: normalizedForm.imageAlt,
+        isActive: normalizedForm.isActive,
+      });
+      this.cancelAddOrgNode();
+    }, 'Organization member create failed. Check required hierarchy fields and try again.');
+  }
+
+  async saveOrgNode(id: string) {
+    const normalizedForm = this.normalizeOrgFormForSave(this.editOrgNode);
+    const validationError = this.orgFormValidationError(normalizedForm);
+    if (validationError) {
+      this.mediaError.set(validationError);
+      return;
+    }
+
+    await this.runMediaAction(async () => {
+      let imageUrl = this.editOrgNode.imageUrl;
+
+      if (this.editOrgNodeImageFile) {
+        imageUrl = await this.data.uploadOrgMemberImage(this.editOrgNodeImageFile);
+      }
+
+      await this.data.updateOrgNode(id, {
+        parentId: normalizedForm.parentId,
+        title: normalizedForm.title,
+        subtitle: normalizedForm.subtitle,
+        contact: String(normalizedForm.contact || '').trim(),
+        order: normalizedForm.order,
+        description: normalizedForm.description,
+        level: normalizedForm.level,
+        location: {
+          state: normalizedForm.state,
+          district: normalizedForm.district,
+          taluk: normalizedForm.taluk,
+        },
+        sidebarLabel: normalizedForm.sidebarLabel,
+        imageUrl,
+        imageAlt: normalizedForm.imageAlt,
+        isActive: normalizedForm.isActive,
+      });
+      this.cancelEditOrgNode();
+    }, 'Organization member update failed. Check hierarchy fields and try again.');
+  }
+
+  async deleteOrgNode(id: string) {
+    if (!confirm('Delete this organisation item? Delete child items first if present.')) return;
+
+    await this.runMediaAction(async () => {
+      await this.data.deleteOrgNode(id);
+    }, 'Organization member delete failed. Delete child members first and retry.');
   }
 
   startEditHostel(h: AdminHostel) {
@@ -2145,6 +3242,11 @@ export class AdminPanelComponent {
 
   logout() {
     this.auth.logout();
+    try {
+      localStorage.removeItem(ADMIN_ACTIVE_TAB_STORAGE_KEY);
+    } catch {
+      // Ignore localStorage cleanup failures.
+    }
     this.router.navigate(['/']);
   }
 }

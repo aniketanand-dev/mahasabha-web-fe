@@ -1,0 +1,179 @@
+<app-navbar></app-navbar>
+
+<section class="state-page">
+  <div class="state-shell">
+
+    <div class="state-head">
+      <a routerLink="/" class="back-link">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Back to Home
+      </a>
+      <p class="eyebrow">Organisation Explorer</p>
+      <h1>State Committee</h1>
+      <p class="intro">
+        Select any state, district, taluk, CMC/TMC/GP, or assembly from the list to inspect its structure and open member pages.
+      </p>
+    </div>
+
+    <div class="explorer-shell">
+
+      <!-- ── Left: Accordion Tree ── -->
+      <section class="tree-panel">
+        <div class="tree-panel__head">
+          <h2>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <rect x="1" y="3" width="14" height="2" rx="1" fill="currentColor"/>
+              <rect x="4" y="7" width="11" height="2" rx="1" fill="currentColor"/>
+              <rect x="7" y="11" width="8" height="2" rx="1" fill="currentColor"/>
+            </svg>
+            Committee Tree
+          </h2>
+          <span class="tree-panel__count">{{ stateCount() }} {{ stateCount() === 1 ? 'state' : 'states' }}</span>
+        </div>
+
+        @if (stateRoots().length) {
+          <div class="accordion-wrap">
+            <ul class="accordion-list">
+              <ng-container *ngTemplateOutlet="branchTemplate; context: { $implicit: stateRoots(), level: 0 }"></ng-container>
+            </ul>
+          </div>
+        } @else {
+          <div class="tree-empty">No state committee structure is available yet.</div>
+        }
+      </section>
+
+      <!-- ── Right: Detail Panel ── -->
+      <section class="detail-panel">
+
+        @if (selectedNode(); as selected) {
+
+          <article class="detail-card">
+            <div class="detail-card__header">
+              <span class="node-badge node-badge--kind">{{ nodeKind(selected) }}</span>
+            </div>
+            <h2>{{ selected.title }}</h2>
+            <p class="detail-card__path">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <path d="M1 6h10M7 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              {{ selected.path.join('  ›  ') }}
+            </p>
+            <p class="detail-card__copy">{{ nodeDescription(selected) }}</p>
+
+            @if (nodeContact(selected)) {
+              <p class="detail-card__contact">📞 {{ nodeContact(selected) }}</p>
+            }
+
+            <div class="detail-stats">
+              @for (stat of statCards(); track stat.label) {
+                <div class="detail-stat">
+                  <span>{{ stat.label }}</span>
+                  <strong>{{ stat.value }}</strong>
+                </div>
+              }
+            </div>
+          </article>
+
+          @if (memberCards().length) {
+            <div class="children-section">
+              <p class="children-section__label">Members / Sub-units</p>
+              <div class="member-grid">
+                @for (child of memberCards(); track child.id) {
+                  <article class="member-card">
+                    <div class="member-image-frame">
+                      @if (child.imageUrl) {
+                        <img class="member-image" [src]="child.imageUrl" [alt]="child.imageAlt || child.subtitle || child.title" loading="lazy" decoding="async" />
+                      } @else {
+                        <div class="member-image-placeholder" aria-hidden="true">
+                          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <circle cx="24" cy="18" r="10" stroke="currentColor" stroke-width="2" opacity="0.35"/>
+                            <path d="M6 44c0-9.941 8.059-18 18-18s18 8.059 18 18" stroke="currentColor" stroke-width="2" opacity="0.25"/>
+                          </svg>
+                        </div>
+                      }
+                    </div>
+                    <div class="member-info">
+                      <div class="member-name">{{ child.subtitle || child.title }}</div>
+                      @if (child.subtitle && child.title) {
+                        <div class="member-designation">{{ child.title }}</div>
+                      }
+                      <div class="member-desc">{{ nodeDescription(child) }}</div>
+                      @if (nodeContact(child)) {
+                        <div class="member-contact">📞 {{ nodeContact(child) }}</div>
+                      }
+                      <div class="member-actions">
+                        <button type="button" (click)="selectNode(child)">Inspect</button>
+                        @if (showsNominatedAction(child)) {
+                          <a routerLink="/organisation/nominated-body" [queryParams]="{ scopeId: child.id }">Nominated</a>
+                        }
+                      </div>
+                    </div>
+                  </article>
+                }
+              </div>
+            </div>
+          } @else {
+            <div class="detail-empty">
+              <p>This node has no direct children. Use the member view to inspect its leaf entries.</p>
+            </div>
+          }
+
+        } @else {
+          <div class="detail-empty detail-empty--hero">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+              <rect x="6" y="10" width="36" height="6" rx="3" fill="currentColor" opacity="0.15"/>
+              <rect x="12" y="22" width="24" height="5" rx="2.5" fill="currentColor" opacity="0.12"/>
+              <rect x="18" y="33" width="12" height="5" rx="2.5" fill="currentColor" opacity="0.09"/>
+            </svg>
+            <p>Select a state or branch from the list on the left to view its details.</p>
+          </div>
+        }
+
+      </section>
+    </div>
+  </div>
+</section>
+
+<!-- ── Recursive branch template ── -->
+<ng-template #branchTemplate let-nodes let-level="level">
+  @for (node of nodes; track node.id) {
+    <li class="acc-item" [attr.data-level]="level">
+
+      <button
+        type="button"
+        class="acc-row"
+        [class.acc-row--active]="selectedNode()?.id === node.id"
+        [class.acc-row--expanded]="node.children.length && isExpanded(node)"
+        [style.padding-left.px]="level * 22 + 14"
+        (click)="selectAndToggle(node, $event)"
+        [attr.aria-expanded]="node.children.length ? isExpanded(node) : null"
+        [attr.title]="node.title"
+      >
+        @if (node.children.length) {
+          <span class="acc-chevron" aria-hidden="true">
+            <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
+              <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        } @else {
+          <span class="acc-dot" aria-hidden="true"></span>
+        }
+        <span class="acc-label">
+          <span class="acc-label__badge">{{ nodeKind(node) }}</span>
+          <span class="acc-label__title">{{ node.title }}</span>
+        </span>
+      </button>
+
+      @if (node.children.length && isExpanded(node)) {
+        <ul class="accordion-list acc-children" [attr.data-level]="level + 1" [style.--guide-indent.px]="level * 22 + 22">
+          <ng-container *ngTemplateOutlet="branchTemplate; context: { $implicit: node.children, level: level + 1 }"></ng-container>
+        </ul>
+      }
+
+    </li>
+  }
+</ng-template>
+
+<app-footer></app-footer>

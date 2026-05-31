@@ -182,11 +182,76 @@ export interface AdminDirectoryEntry {
 }
 
 export interface AdminOrgNode {
-  id: number;
-  parentId: number | null;
+  id: string;
+  parentId: string | null;
   title: string;
   subtitle: string;
+  contact?: string;
   order: number;
+  description: string;
+  level: 'state' | 'district' | 'taluk';
+  location: {
+    state: string;
+    district: string;
+    taluk: string;
+  };
+  sidebarLabel: string;
+  imageUrl: string;
+  imageAlt: string;
+  isActive: boolean;
+}
+
+interface OrganizationStructureApiNode {
+  _id?: string;
+  id: string;
+  name: string;
+  designation: string;
+  contact?: string;
+  description: string;
+  image?: {
+    url?: string;
+    alt?: string;
+  };
+  level: 'state' | 'district' | 'taluk';
+  location?: {
+    state?: string;
+    district?: string;
+    taluk?: string;
+  };
+  sidebarLabel?: string;
+  displayOrder?: number;
+  isActive?: boolean;
+  parentNodeId?: string | null;
+  children?: OrganizationStructureApiNode[];
+}
+
+interface OrganizationStructureApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    tree: OrganizationStructureApiNode[];
+  };
+}
+
+interface OrganizationStructureCreateOrUpdatePayload {
+  name: string;
+  designation: string;
+  contact: string;
+  description: string;
+  image: {
+    url: string;
+    alt: string;
+  };
+  level: 'state' | 'district' | 'taluk';
+  location: {
+    state: string;
+    district: string;
+    taluk: string;
+  };
+  sidebarLabel: string;
+  displayOrder: number;
+  isActive: boolean;
+  parentNodeId: string | null;
 }
 
 export interface AdminScholarshipApplication {
@@ -353,7 +418,6 @@ type SiteContentKey =
   | 'adm_past_presidents'
   | 'adm_events'
   | 'adm_directory_entries'
-  | 'adm_org_nodes'
   | 'adm_founders'
   | 'adm_tickers';
 
@@ -375,6 +439,7 @@ interface HostelSingleApiResponse {
 
 const SITE_CONTENT_API_BASE = buildApiUrl('/api/v1/site-content');
 const HOSTELS_API_BASE = buildApiUrl('/api/v1/hostels');
+const ORG_STRUCTURE_API_BASE = buildApiUrl('/api/v1/organization-structure');
 
 const MANAGED_UPLOAD_PREFIX = '/uploads/';
 const DEFAULT_ICON_IMAGE = '/uploads/placeholders/default-icon.svg';
@@ -616,35 +681,7 @@ const DEFAULT_DIRECTORY_ENTRIES: AdminDirectoryEntry[] = [
   { id: 10, name: 'ವೀರಶೈವ ಮಸಣ, ಕಲಬುರಗಿ', state: 'ಕರ್ನಾಟಕ', district: 'ಕಲಬುರಗಿ', address: 'ವಿಶ್ವನಾಥ ನಗರ, ಕಲಬುರಗಿ - ೫೮೫ ೧೦೨', contact: '08472-245678', type: 'crematory' },
 ];
 
-const DEFAULT_ORG_NODES: AdminOrgNode[] = [
-  { id: 1, parentId: null, title: 'President', subtitle: '', order: 1 },
-  { id: 2, parentId: 1, title: 'Representative General Body', subtitle: '', order: 1 },
-  { id: 3, parentId: 1, title: 'Working Committee', subtitle: '', order: 2 },
-  { id: 4, parentId: 1, title: 'Office Bearers', subtitle: '', order: 3 },
-  { id: 5, parentId: 1, title: 'Nominated National Level Wings', subtitle: '', order: 4 },
-  { id: 6, parentId: 1, title: 'Nominated Sub-Committees', subtitle: '', order: 5 },
-  { id: 7, parentId: 1, title: 'State Units', subtitle: '', order: 6 },
-  { id: 8, parentId: 5, title: "Women's Wing", subtitle: '', order: 1 },
-  { id: 9, parentId: 5, title: 'Youth Wing', subtitle: '', order: 2 },
-  { id: 10, parentId: 5, title: 'Think Tank', subtitle: '', order: 3 },
-  { id: 11, parentId: 6, title: 'Krishi Samithi', subtitle: '', order: 1 },
-  { id: 12, parentId: 6, title: 'Industries & Commerce', subtitle: '', order: 2 },
-  { id: 13, parentId: 6, title: 'Etc.', subtitle: '', order: 3 },
-  { id: 14, parentId: 7, title: 'Dist Units', subtitle: '', order: 1 },
-  { id: 15, parentId: 14, title: 'Taluk Units', subtitle: '', order: 1 },
-  { id: 16, parentId: 14, title: 'Mahanagara Palike Units', subtitle: '', order: 2 },
-  { id: 17, parentId: 14, title: "Nominated Women's Wing", subtitle: '', order: 3 },
-  { id: 18, parentId: 14, title: 'Nominated Youth Wing', subtitle: '', order: 4 },
-  { id: 19, parentId: 14, title: 'Etc.', subtitle: '', order: 5 },
-  { id: 20, parentId: 16, title: 'Assembly Units', subtitle: '', order: 1 },
-  { id: 21, parentId: 20, title: 'Municipal Council Units', subtitle: '', order: 1 },
-  { id: 22, parentId: 20, title: 'City Municipality Units', subtitle: '', order: 2 },
-  { id: 23, parentId: 20, title: 'Town Municipality Units', subtitle: '', order: 3 },
-  { id: 24, parentId: 20, title: 'Grama Panchayath Units', subtitle: '', order: 4 },
-  { id: 25, parentId: 20, title: "Nominated Women's Wing", subtitle: '', order: 5 },
-  { id: 26, parentId: 20, title: 'Nominated Youth Wing', subtitle: '', order: 6 },
-  { id: 27, parentId: 20, title: 'Etc.', subtitle: '', order: 7 },
-];
+const DEFAULT_ORG_NODES: AdminOrgNode[] = [];
 
 function cloneData<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -681,6 +718,7 @@ export class AdminDataService {
 
   constructor() {
     void this.hydrateContentFromApi();
+    void this.loadOrganizationStructureFromApi();
     void this.refreshGalleryFromApi();
     void this.loadHostelsFromApi();
   }
@@ -754,11 +792,6 @@ export class AdminDataService {
     if (items['adm_directory_entries'] !== undefined) {
       const next = cloneData(items['adm_directory_entries'] as AdminDirectoryEntry[]);
       this.directoryEntries.set(next);
-    }
-
-    if (items['adm_org_nodes'] !== undefined) {
-      const next = this.normalizeOrgNodes(cloneData(items['adm_org_nodes'] as AdminOrgNode[]));
-      this.orgNodes.set(next);
     }
 
     if (items['adm_founders'] !== undefined) {
@@ -862,13 +895,113 @@ export class AdminDataService {
 
   private normalizeOrgNodes(items: AdminOrgNode[]) {
     return items
-      .map(item => ({
-        ...item,
-        title: item.title.trim(),
-        subtitle: item.subtitle.trim(),
-        order: Number.isFinite(item.order) ? item.order : 0,
-      }))
-      .sort((a, b) => a.order - b.order || a.id - b.id);
+      .map(item => {
+        const level: 'state' | 'district' | 'taluk' = item.level === 'district' || item.level === 'taluk'
+          ? item.level
+          : 'state';
+
+        return {
+          ...item,
+          title: String(item.title || '').trim(),
+          subtitle: String(item.subtitle || '').trim(),
+          order: Number.isFinite(item.order) ? item.order : 0,
+          description: String(item.description || '').trim(),
+          level,
+          location: {
+            state: String(item.location?.state || '').trim(),
+            district: String(item.location?.district || '').trim(),
+            taluk: String(item.location?.taluk || '').trim(),
+          },
+          sidebarLabel: String(item.sidebarLabel || '').trim(),
+          imageUrl: this.toManagedAssetUrl(String(item.imageUrl || '')),
+          imageAlt: String(item.imageAlt || '').trim(),
+          isActive: item.isActive !== false,
+        };
+      })
+      .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
+  }
+
+  private flattenOrganizationTree(nodes: OrganizationStructureApiNode[]) {
+    const items: OrganizationStructureApiNode[] = [];
+
+    const visit = (node: OrganizationStructureApiNode) => {
+      items.push(node);
+
+      for (const child of node.children || []) {
+        visit(child);
+      }
+    };
+
+    for (const node of nodes) {
+      visit(node);
+    }
+
+    return items;
+  }
+
+  private mapOrganizationApiNodeToAdminNode(node: OrganizationStructureApiNode): AdminOrgNode {
+    const resolvedId = String(node.id || node._id || '').trim();
+
+    return {
+      id: resolvedId,
+      parentId: node.parentNodeId ? String(node.parentNodeId) : null,
+      title: String(node.designation || '').trim(),
+      subtitle: String(node.name || '').trim(),
+      contact: String(node.contact || '').trim(),
+      order: Number.isFinite(node.displayOrder) ? Number(node.displayOrder) : 0,
+      description: String(node.description || '').trim(),
+      level: node.level,
+      location: {
+        state: String(node.location?.state || '').trim(),
+        district: String(node.location?.district || '').trim(),
+        taluk: String(node.location?.taluk || '').trim(),
+      },
+      sidebarLabel: String(node.sidebarLabel || '').trim(),
+      imageUrl: this.toManagedAssetUrl(String(node.image?.url || '')),
+      imageAlt: String(node.image?.alt || '').trim(),
+      isActive: node.isActive !== false,
+    };
+  }
+
+  private mapAdminNodeToOrganizationPayload(node: Omit<AdminOrgNode, 'id'>): OrganizationStructureCreateOrUpdatePayload {
+    return {
+      name: String(node.subtitle || '').trim(),
+      designation: String(node.title || '').trim(),
+      contact: String(node.contact || '').trim(),
+      description: String(node.description || '').trim(),
+      image: {
+        url: String(node.imageUrl || '').trim(),
+        alt: String(node.imageAlt || '').trim(),
+      },
+      level: node.level,
+      location: {
+        state: String(node.location.state || '').trim(),
+        district: String(node.location.district || '').trim(),
+        taluk: String(node.location.taluk || '').trim(),
+      },
+      sidebarLabel: String(node.sidebarLabel || '').trim(),
+      displayOrder: Number.isFinite(node.order) ? node.order : 0,
+      isActive: node.isActive !== false,
+      parentNodeId: node.parentId ? String(node.parentId) : null,
+    };
+  }
+
+  async loadOrganizationStructureFromApi(includeInactive = true) {
+    try {
+      const response = await firstValueFrom(this.http.get<OrganizationStructureApiResponse>(ORG_STRUCTURE_API_BASE, {
+        params: {
+          includeInactive: includeInactive ? 'true' : 'false',
+        },
+      }));
+
+      const tree = response?.data?.tree || [];
+      const nodes = this.flattenOrganizationTree(tree)
+        .map((node) => this.mapOrganizationApiNodeToAdminNode(node))
+        .filter((node) => node.id && node.id !== 'undefined' && node.id !== 'null');
+      this.orgNodes.set(this.normalizeOrgNodes(nodes));
+    } catch {
+      // Keep the in-memory data when API is unavailable.
+    }
   }
 
   private async loadHostelsFromApi() {
@@ -1188,12 +1321,6 @@ export class AdminDataService {
     void this.persistContent('adm_directory_entries', next);
   }
 
-  private saveOrgNodes(items: AdminOrgNode[]) {
-    const next = this.normalizeOrgNodes(cloneData(items));
-    this.orgNodes.set(next);
-    void this.persistContent('adm_org_nodes', next);
-  }
-
   addDirectoryEntry(item: Omit<AdminDirectoryEntry, 'id'>) {
     this.saveDirectoryEntries([...this.directoryEntries(), { ...item, id: Date.now() }]);
   }
@@ -1206,37 +1333,64 @@ export class AdminDataService {
     this.saveDirectoryEntries(this.directoryEntries().filter(item => item.id !== id));
   }
 
-  private nextOrgNodeOrder(parentId: number | null) {
+  private nextOrgNodeOrder(parentId: string | null) {
     return this.orgNodes()
       .filter(item => item.parentId === parentId)
       .reduce((maxOrder, item) => Math.max(maxOrder, item.order), 0) + 1;
   }
 
-  addOrgNode(item: Omit<AdminOrgNode, 'id'>) {
-    const order = item.order > 0 ? item.order : this.nextOrgNodeOrder(item.parentId);
-    this.saveOrgNodes([...this.orgNodes(), { ...item, order, id: Date.now() }]);
+  async addOrgNode(item: Omit<AdminOrgNode, 'id'>) {
+    const payload = this.mapAdminNodeToOrganizationPayload({
+      ...item,
+      order: item.order > 0 ? item.order : this.nextOrgNodeOrder(item.parentId),
+    });
+
+    await firstValueFrom(this.http.post(ORG_STRUCTURE_API_BASE, payload, {
+      headers: this.authHeaders(),
+    }));
+
+    await this.loadOrganizationStructureFromApi(true);
   }
 
-  updateOrgNode(id: number, patch: Partial<Omit<AdminOrgNode, 'id'>>) {
-    this.saveOrgNodes(this.orgNodes().map(item => item.id === id ? { ...item, ...patch } : item));
-  }
+  async updateOrgNode(id: string, patch: Partial<Omit<AdminOrgNode, 'id'>>) {
+    const existing = this.orgNodes().find((item) => item.id === id);
 
-  deleteOrgNode(id: number) {
-    const descendants = new Set<number>();
-    const queue = [id];
-
-    while (queue.length) {
-      const currentId = queue.shift() as number;
-      descendants.add(currentId);
-
-      for (const child of this.orgNodes()) {
-        if (child.parentId === currentId && !descendants.has(child.id)) {
-          queue.push(child.id);
-        }
-      }
+    if (!existing) {
+      return;
     }
 
-    this.saveOrgNodes(this.orgNodes().filter(item => !descendants.has(item.id)));
+    const merged: Omit<AdminOrgNode, 'id'> = {
+      parentId: patch.parentId !== undefined ? patch.parentId : existing.parentId,
+      title: patch.title !== undefined ? patch.title : existing.title,
+      subtitle: patch.subtitle !== undefined ? patch.subtitle : existing.subtitle,
+      order: patch.order !== undefined ? patch.order : existing.order,
+      description: patch.description !== undefined ? patch.description : existing.description,
+      level: patch.level !== undefined ? patch.level : existing.level,
+      location: patch.location !== undefined ? patch.location : existing.location,
+      sidebarLabel: patch.sidebarLabel !== undefined ? patch.sidebarLabel : existing.sidebarLabel,
+      imageUrl: patch.imageUrl !== undefined ? patch.imageUrl : existing.imageUrl,
+      imageAlt: patch.imageAlt !== undefined ? patch.imageAlt : existing.imageAlt,
+      isActive: patch.isActive !== undefined ? patch.isActive : existing.isActive,
+    };
+
+    await firstValueFrom(this.http.patch(`${ORG_STRUCTURE_API_BASE}/${id}`, this.mapAdminNodeToOrganizationPayload(merged), {
+      headers: this.authHeaders(),
+    }));
+
+    await this.loadOrganizationStructureFromApi(true);
+  }
+
+  async deleteOrgNode(id: string) {
+    await firstValueFrom(this.http.delete(`${ORG_STRUCTURE_API_BASE}/${id}`, {
+      headers: this.authHeaders(),
+    }));
+
+    await this.loadOrganizationStructureFromApi(true);
+  }
+
+  async uploadOrgMemberImage(file: File) {
+    const uploaded = await this.uploadImage(file, 'leaders');
+    return this.toManagedAssetUrl(uploaded.src);
   }
 
   async refreshGalleryFromApi() {

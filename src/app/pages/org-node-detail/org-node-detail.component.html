@@ -1,0 +1,52 @@
+<app-navbar></app-navbar>
+
+<section class="node-page">
+  <div class="node-shell">
+    @if (node(); as currentNode) {
+      <div class="page-head">
+        <div class="page-head__actions">
+          <a routerLink="/organisation/state-committee" class="back-link">Back to State Tree</a>
+          <a routerLink="/" class="back-link back-link--muted">Back to Home</a>
+        </div>
+        <p class="eyebrow">Focused Member View</p>
+        <h1>{{ currentNode.title }}</h1>
+        <p class="intro">{{ currentNode.path.join(' / ') }}</p>
+
+        <div class="stats-row">
+          @for (stat of statCards(); track stat.label) {
+            <div class="stat-card">
+              <span>{{ stat.label }}</span>
+              <strong>{{ stat.value }}</strong>
+            </div>
+          }
+        </div>
+      </div>
+
+      @if (members().length) {
+        <div class="member-grid">
+          @for (member of members(); track member.id) {
+            <article class="member-card">
+              <span class="member-card__label">Level {{ member.depth + 1 }}</span>
+              @if (member.imageUrl) {
+                <img class="member-card__photo" [src]="member.imageUrl" [alt]="member.imageAlt || member.subtitle || member.title" loading="lazy" decoding="async" />
+              }
+              <h2 class="member-card__title">{{ member.title }}</h2>
+              <p class="member-card__meta">{{ memberMeta(member) }}</p>
+              <p class="member-card__meta">{{ member.location.state }} @if (member.location.district) { / {{ member.location.district }} } @if (member.location.taluk) { / {{ member.location.taluk }} }</p>
+            </article>
+          }
+        </div>
+      } @else {
+        <div class="empty-card">
+          <p>No members or nested units have been added for {{ currentNode.title }} yet.</p>
+        </div>
+      }
+    } @else {
+      <div class="empty-card">
+        <p>The selected organisation node could not be found.</p>
+      </div>
+    }
+  </div>
+</section>
+
+<app-footer></app-footer>

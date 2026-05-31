@@ -1,0 +1,58 @@
+<app-navbar></app-navbar>
+
+<section class="nb-page">
+  <div class="nb-shell">
+    <div class="nb-head">
+      <a routerLink="/" class="back-link">Back to Home</a>
+      <p class="eyebrow">Organisation Structure</p>
+      <h1>NOMINATED BODY</h1>
+      <p class="intro">Members and representatives currently configured under the Nominated Body.</p>
+    </div>
+
+    @if (members().length) {
+      <div class="member-grid">
+        @for (member of members(); track member.id) {
+          <article class="member-card">
+            <div class="member-image-frame">
+              @if (member.imageUrl) {
+                <img
+                  class="member-image"
+                  [src]="member.imageUrl"
+                  [alt]="member.imageAlt || member.subtitle || member.title"
+                  loading="lazy"
+                  decoding="async"
+                />
+              } @else {
+                <div class="member-image-placeholder" aria-hidden="true">
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                    <circle cx="24" cy="18" r="10" stroke="currentColor" stroke-width="2" opacity="0.35"/>
+                    <path d="M6 44c0-9.941 8.059-18 18-18s18 8.059 18 18" stroke="currentColor" stroke-width="2" opacity="0.25"/>
+                  </svg>
+                </div>
+              }
+            </div>
+            <div class="member-info">
+              <div class="member-name">{{ memberName(member) }}</div>
+              @if (memberDesignation(member); as desig) {
+                <div class="member-designation">{{ desig }}</div>
+              }
+              @if (memberDesc(member)) {
+                <div class="member-desc">{{ memberDesc(member) }}</div>
+              }
+              @if (memberContact(member)) {
+                <div class="member-contact">📞 {{ memberContact(member) }}</div>
+              }
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <div class="empty-card">
+        <p>No nominated body members have been added yet.</p>
+      </div>
+    }
+  </div>
+</section>
+
+<app-footer></app-footer>
+

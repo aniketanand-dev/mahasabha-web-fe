@@ -1,52 +1,80 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
-import { AdminDataService, AdminOrgNode } from '../../services/admin-data.service';
+import { RouterLink } from '@angular/router';
+import { AdminDataService } from '../../services/admin-data.service';
 import { LanguageService } from '../../services/language.service';
-
-interface OrgLevel {
-  depth: number;
-  nodes: AdminOrgNode[];
-}
+import { buildOrgTree, findOrgNode, OrgTreeNode } from '../../utils/org-structure';
 
 @Component({
   selector: 'app-org-chart',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './org-chart.component.html',
   styleUrls: ['./org-chart.component.scss']
 })
 export class OrgChartComponent {
-  protected lang = inject(LanguageService);
+  protected readonly lang = inject(LanguageService);
   private readonly data = inject(AdminDataService);
 
-  protected readonly levels = computed(() => this.buildLevels(this.data.orgNodes()));
+  private readonly tree = computed(() => buildOrgTree(this.data.orgNodes()));
+  private readonly displayRoots = computed(() => {
+    const tree = this.tree();
 
-  private buildLevels(nodes: AdminOrgNode[]): OrgLevel[] {
-    const sortedNodes = [...nodes].sort((a, b) => a.order - b.order || a.id - b.id);
-    const childrenByParent = new Map<number | null, AdminOrgNode[]>();
-    const levels: OrgLevel[] = [];
-
-    for (const node of sortedNodes) {
-      const siblings = childrenByParent.get(node.parentId) ?? [];
-      siblings.push(node);
-      childrenByParent.set(node.parentId, siblings);
+    if (tree.length === 1 && tree[0].children.length) {
+      return tree[0].children;
     }
 
-    let currentLevel = childrenByParent.get(null) ?? [];
-    let depth = 0;
+    return tree;
+  });
 
-    while (currentLevel.length) {
-      levels.push({ depth, nodes: currentLevel });
+  protected readonly structure = computed(() => {
+    const roots = this.displayRoots();
+    const presidentNode = findOrgNode(roots, [
+      ['president-office'],
+      ['president', 'office'],
+      ['president', 'body'],
+      ['office', 'bearers'],
+      ['president'],
+    ]) ?? roots[0] ?? null;
+    const workingNode = findOrgNode(roots, [
+      ['working'],
+      ['central', 'committee'],
+    ]) ?? roots[1] ?? null;
+    const stateNode = findOrgNode(roots, [
+      ['state', 'committee'],
+      ['state'],
+    ]);
+    const representativeNode = findOrgNode(roots, [
+      ['representative', 'general', 'body'],
+      ['general', 'body'],
+      ['representative'],
+    ]) ?? roots[2] ?? null;
+    const nominatedNode = findOrgNode(this.tree(), [
+      ['nominated', 'body'],
+      ['nominated'],
+    ]);
+    const presidentDisplayNode = presidentNode
+      ? findOrgNode([presidentNode], [
+        ['president-office'],
+        ['national', 'president'],
+        ['president'],
+      ], presidentNode.id) ?? presidentNode.children[0] ?? presidentNode
+      : null;
 
-      const nextLevel: AdminOrgNode[] = [];
-      for (const node of currentLevel) {
-        nextLevel.push(...(childrenByParent.get(node.id) ?? []));
-      }
+    return {
+      presidentNode,
+      workingNode,
+      stateNode,
+      statePreviewNodes: stateNode?.children.slice(0, 4) ?? [],
+      representativeNode,
+      nominatedNode,
+      presidentPhoto: presidentDisplayNode?.imageUrl || this.data.presidentNoteContent().photoUrl,
+      presidentName: presidentDisplayNode?.subtitle || this.lang.t('presNote.name'),
+      presidentDescription: presidentDisplayNode?.description || presidentDisplayNode?.title || this.lang.t('presNote.desg'),
+    };
+  });
 
-      currentLevel = nextLevel;
-      depth += 1;
-    }
-
-    return levels;
+  protected cardTitle(node: OrgTreeNode | null, fallback: string): string {
+    return node?.title || fallback;
   }
 }

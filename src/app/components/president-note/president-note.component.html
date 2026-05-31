@@ -5,15 +5,24 @@
     </h2>
     <p class="section-subtitle">{{ lang.t('presNote.subtitle') }}</p>
     <div class="ornament">✦ ✦ ✦</div>
-    <div class="president-inner">
-      <div class="president-photo-wrap">
-        <img class="president-photo" [src]="data.presidentNoteContent().photoUrl" alt="Current President">
-        <div class="president-name">{{ lang.t('presNote.name') }}</div>
-        <div class="president-desg">{{ lang.t('presNote.desg') }}</div>
-      </div>
-      <div class="president-note-text">
-        <blockquote>{{ lang.t('presNote.quote') }}</blockquote>
-        <p>{{ lang.t('presNote.body') }}</p>
+    <div class="president-shell">
+      <div class="president-inner">
+        <aside class="president-profile-card">
+          <div class="president-photo-frame">
+            <img class="president-photo" [src]="data.presidentNoteContent().photoUrl" alt="Current President">
+          </div>
+          <div class="president-profile-copy">
+            <div class="president-name">{{ lang.t('presNote.name') }}</div>
+            <div class="president-desg">{{ lang.t('presNote.desg') }}</div>
+          </div>
+        </aside>
+
+        <article class="president-note-card">
+          <div class="president-note-text">
+            <blockquote>{{ lang.t('presNote.quote') }}</blockquote>
+            <p>{{ lang.t('presNote.body') }}</p>
+          </div>
+        </article>
       </div>
     </div>
   </div>

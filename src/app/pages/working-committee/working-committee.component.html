@@ -1,0 +1,58 @@
+<app-navbar></app-navbar>
+
+<section class="committee-page">
+  <div class="committee-shell">
+    <div class="page-head">
+      <a routerLink="/" class="back-link">Back to Home</a>
+      <p class="eyebrow">Organisation Structure</p>
+      <h1>{{ workingTitle() }}</h1>
+      <p class="intro">
+        This page shows the members and linked units currently configured under the working or central committee.
+      </p>
+
+      @if (nominatedNode(); as nominated) {
+        <a routerLink="/organisation/nominated-body" class="linked-body-card linked-body-card--link">
+          <span>Linked body</span>
+          <strong>{{ nominated.title }}</strong>
+        </a>
+      }
+    </div>
+
+    @if (members().length) {
+      <div class="member-grid">
+        @for (member of members(); track member.id) {
+          <article class="member-card">
+            <div class="member-image-frame">
+              @if (member.imageUrl) {
+                <img class="member-image" [src]="member.imageUrl" [alt]="member.imageAlt || member.subtitle || member.title" loading="lazy" decoding="async" />
+              } @else {
+                <div class="member-image-placeholder" aria-hidden="true">
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                    <circle cx="24" cy="18" r="10" stroke="currentColor" stroke-width="2" opacity="0.35"/>
+                    <path d="M6 44c0-9.941 8.059-18 18-18s18 8.059 18 18" stroke="currentColor" stroke-width="2" opacity="0.25"/>
+                  </svg>
+                </div>
+              }
+            </div>
+            <div class="member-info">
+              <div class="member-name">{{ memberName(member) }}</div>
+              @if (memberTitle(member); as designation) {
+                <div class="member-designation">{{ designation }}</div>
+              }
+              <div class="member-desc">{{ memberMeta(member) }}</div>
+              @if (memberContact(member)) {
+                <div class="member-contact">📞 {{ memberContact(member) }}</div>
+              }
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <div class="empty-card">
+        <p>No working committee members have been added yet.</p>
+      </div>
+    }
+  </div>
+</section>
+
+<app-footer></app-footer>
