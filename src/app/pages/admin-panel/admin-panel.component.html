@@ -8,6 +8,11 @@
       </div>
     </div>
 
+    <a routerLink="/" class="btn-site sidebar-site-link" aria-label="View Site">
+      <span class="sidebar-site-link__icon">🏠</span>
+      <span class="sidebar-site-link__label">View Site</span>
+    </a>
+
     <nav class="admin-nav">
       <div class="nav-group-title">Structure</div>
       <button [class.active]="activeTab() === 'header'" (click)="setTab('header')">
@@ -70,8 +75,6 @@
 
     <div class="sidebar-footer">
       <div class="admin-user">👤 Admin</div>
-      <button class="btn-logout" (click)="logout()">🔓 Logout</button>
-      <a routerLink="/" class="btn-site">🏠 View Site</a>
     </div>
   </aside>
 
@@ -97,1166 +100,1316 @@
           @if (activeTab() === 'ticker') { <h2>📢 Announcements</h2> }
           @if (activeTab() === 'hostels') { <h2>🏨 Hostels</h2> }
           @if (activeTab() === 'footer') { <h2>🔻 Footer</h2> }
-          <p class="tab-note">All admin image uploads now save into this project locally, and replacing or deleting a record removes the old managed file from disk.</p>
+          <p class="tab-note">All admin image uploads now save into this project locally, and replacing or deleting a
+            record removes the old managed file from disk.</p>
         </div>
-        <div class="admin-visitor-stats">
-          <div class="admin-visitor-stat-card">
-            <span class="admin-visitor-stat-label">Total Visits</span>
-            <strong class="admin-visitor-stat-value">{{ visitorStats().totalVisits }}</strong>
+        <div class="tab-header-side">
+          <div class="admin-top-actions">
+            <div class="admin-actions-menu">
+              <button type="button" class="scholarship-kebab-btn" aria-label="Admin actions"
+                (click)="toggleAdminActionsMenu()">⋮</button>
+              @if (adminActionsMenuOpen()) {
+              <div class="scholarship-kebab-popover">
+                <button type="button" class="scholarship-kebab-popover-item"
+                  (click)="logoutFromAdminMenu()">Logout</button>
+              </div>
+              }
+            </div>
           </div>
-          <div class="admin-visitor-stat-card">
-            <span class="admin-visitor-stat-label">Unique Visitors</span>
-            <strong class="admin-visitor-stat-value">{{ visitorStats().uniqueVisitors }}</strong>
+          <div class="admin-visitor-stats">
+            <div class="admin-visitor-stat-card">
+              <span class="admin-visitor-stat-label">Total Visits</span>
+              <strong class="admin-visitor-stat-value">{{ visitorStats().totalVisits }}</strong>
+            </div>
+            <div class="admin-visitor-stat-card">
+              <span class="admin-visitor-stat-label">Unique Visitors</span>
+              <strong class="admin-visitor-stat-value">{{ visitorStats().uniqueVisitors }}</strong>
+            </div>
+            <div class="admin-visitor-stat-card admin-visitor-stat-card--wide">
+              <span class="admin-visitor-stat-label">Last Visit</span>
+              <strong class="admin-visitor-stat-value admin-visitor-stat-value--small">{{ visitorStatsLastSeenLabel
+                }}</strong>
+            </div>
+            <button class="btn-cancel admin-visitor-refresh" [disabled]="visitorStatsLoading()"
+              (click)="loadVisitorStats()">
+              @if (visitorStatsLoading()) { Refreshing... } @else { Refresh Visitors }
+            </button>
           </div>
-          <div class="admin-visitor-stat-card admin-visitor-stat-card--wide">
-            <span class="admin-visitor-stat-label">Last Visit</span>
-            <strong class="admin-visitor-stat-value admin-visitor-stat-value--small">{{ visitorStatsLastSeenLabel }}</strong>
-          </div>
-          <button class="btn-cancel admin-visitor-refresh" [disabled]="visitorStatsLoading()" (click)="loadVisitorStats()">
-            @if (visitorStatsLoading()) { Refreshing... } @else { Refresh Visitors }
-          </button>
         </div>
       </div>
 
       @if (visitorStatsError()) {
-        <div class="gallery-status gallery-error">{{ visitorStatsError() }}</div>
+      <div class="gallery-status gallery-error">{{ visitorStatsError() }}</div>
       }
 
       <div class="content-stack">
         @if (mediaError() && activeTab() !== 'org') {
-          <div class="gallery-status gallery-error">{{ mediaError() }}</div>
+        <div class="gallery-status gallery-error">{{ mediaError() }}</div>
         }
 
         @if (mediaBusy()) {
-          <div class="gallery-status">Processing image request...</div>
+        <div class="gallery-status">Processing image request...</div>
         }
 
         @if (hasTextFields(activeTab())) {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Section Text</h3>
-                <p>These overrides replace the displayed labels and content on the website.</p>
-              </div>
-              <div class="form-actions compact-actions">
-                <button class="btn-save" (click)="saveTextFields(activeTab())">Save Text</button>
-                <button class="btn-cancel" (click)="resetTextFields(activeTab())">Reset Text</button>
-              </div>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Section Text</h3>
+              <p>These overrides replace the displayed labels and content on the website.</p>
             </div>
-            <div class="text-field-grid">
-              @for (field of textFieldsFor(activeTab()); track field.key) {
-                <div class="form-row text-field-card" [class.span-two]="field.multiline">
-                  <label>{{ field.label }}</label>
-                  @if (field.multiline) {
-                    <textarea [(ngModel)]="textDrafts[field.key]" class="form-input form-textarea" [rows]="field.rows || 4"></textarea>
-                  } @else {
-                    <input [(ngModel)]="textDrafts[field.key]" class="form-input" />
-                  }
-                  <div class="field-key">{{ field.key }}</div>
-                </div>
+            <div class="form-actions compact-actions">
+              <button class="btn-save" (click)="saveTextFields(activeTab())">Save Text</button>
+              <button class="btn-cancel" (click)="resetTextFields(activeTab())">Reset Text</button>
+            </div>
+          </div>
+          <div class="text-field-grid">
+            @for (field of textFieldsFor(activeTab()); track field.key) {
+            <div class="form-row text-field-card" [class.span-two]="field.multiline">
+              <label>{{ field.label }}</label>
+              @if (field.multiline) {
+              <textarea [(ngModel)]="textDrafts[field.key]" class="form-input form-textarea"
+                [rows]="field.rows || 4"></textarea>
+              } @else {
+              <input [(ngModel)]="textDrafts[field.key]" class="form-input" />
               }
+              <div class="field-key">{{ field.key }}</div>
             </div>
-          </section>
+            }
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'header') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Navbar Branding</h3>
-                <p>Update the logo and organisation name shown in the header.</p>
-              </div>
-              <button class="btn-save" (click)="saveNavbarContent()">Save Header</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Navbar Branding</h3>
+              <p>Update the logo and organisation name shown in the header.</p>
             </div>
-            <div class="form-grid-2">
-              <div class="form-row">
-                <label>Current Logo</label>
-                <img class="founder-thumb" [src]="navbarContent.logoUrl" />
-              </div>
-              <div class="form-row">
-                <label>Upload Logo</label>
-                <input type="file" accept="image/*" class="form-input" (change)="onNavbarLogoSelected($event)" />
-                @if (selectedFileName(navbarLogoFile)) {
-                  <div class="field-key">Selected: {{ selectedFileName(navbarLogoFile) }}</div>
-                }
-              </div>
-              <div class="form-row span-two">
-                <label>Current By-law PDF</label>
-                @if (navbarContent.byeLawUrl) {
-                  <div class="form-actions">
-                    <a [href]="navbarContent.byeLawUrl" target="_blank" rel="noopener noreferrer" class="admin-btn">Open Current PDF</a>
-                    <button type="button" class="btn-delete sm" (click)="deleteByeLaw()">Delete PDF</button>
-                  </div>
-                } @else {
-                  <div class="field-key">No by-law PDF uploaded yet.</div>
-                }
-              </div>
-              <div class="form-row span-two">
-                <label>Upload By-law PDF</label>
-                <input type="file" accept="application/pdf" class="form-input" (change)="onByeLawSelected($event)" />
-                @if (selectedFileName(byeLawFile)) {
-                  <div class="field-key">Selected: {{ selectedFileName(byeLawFile) }}</div>
-                }
-              </div>
-              <div class="form-row">
-                <label>Name Kannada</label>
-                <input [(ngModel)]="navbarContent.nameKn" class="form-input" />
-              </div>
-              <div class="form-row span-two">
-                <label>Name English</label>
-                <input [(ngModel)]="navbarContent.nameEn" class="form-input" />
-              </div>
+            <button class="btn-save" (click)="saveNavbarContent()">Save Header</button>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>Current Logo</label>
+              <img class="founder-thumb" [src]="navbarContent.logoUrl" />
             </div>
-          </section>
+            <div class="form-row">
+              <label>Upload Logo</label>
+              <input type="file" accept="image/*" class="form-input" (change)="onNavbarLogoSelected($event)" />
+              @if (selectedFileName(navbarLogoFile)) {
+              <div class="field-key">Selected: {{ selectedFileName(navbarLogoFile) }}</div>
+              }
+            </div>
+            <div class="form-row span-two">
+              <label>Current By-law PDF</label>
+              @if (navbarContent.byeLawUrl) {
+              <div class="form-actions">
+                <a [href]="navbarContent.byeLawUrl" target="_blank" rel="noopener noreferrer" class="admin-btn">Open
+                  Current PDF</a>
+                <button type="button" class="btn-delete sm" (click)="deleteByeLaw()">Delete PDF</button>
+              </div>
+              } @else {
+              <div class="field-key">No by-law PDF uploaded yet.</div>
+              }
+            </div>
+            <div class="form-row span-two">
+              <label>Upload By-law PDF</label>
+              <input type="file" accept="application/pdf" class="form-input" (change)="onByeLawSelected($event)" />
+              @if (selectedFileName(byeLawFile)) {
+              <div class="field-key">Selected: {{ selectedFileName(byeLawFile) }}</div>
+              }
+            </div>
+            <div class="form-row">
+              <label>Name Kannada</label>
+              <input [(ngModel)]="navbarContent.nameKn" class="form-input" />
+            </div>
+            <div class="form-row span-two">
+              <label>Name English</label>
+              <input [(ngModel)]="navbarContent.nameEn" class="form-input" />
+            </div>
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'magazine') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Magazine PDF</h3>
-                <p>Upload the latest magazine PDF for the public navbar link. Files are stored in the backend uploads/magazines folder.</p>
-              </div>
-              <button class="btn-save" (click)="saveNavbarContent()">Save Magazine</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Magazine PDF</h3>
+              <p>Upload the latest magazine PDF for the public navbar link. Files are stored in the backend
+                uploads/magazines folder.</p>
             </div>
-            <div class="form-grid-2">
-              <div class="form-row span-two">
-                <label>Current Magazine PDF</label>
-                @if (navbarContent.magazineUrl) {
-                  <div class="form-actions">
-                    <a [href]="navbarContent.magazineUrl" target="_blank" rel="noopener noreferrer" class="admin-btn">Open Current PDF</a>
-                    <button type="button" class="btn-delete sm" (click)="deleteMagazine()">Delete PDF</button>
-                  </div>
-                } @else {
-                  <div class="field-key">No magazine PDF uploaded yet.</div>
-                }
+            <button class="btn-save" (click)="saveNavbarContent()">Save Magazine</button>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-row span-two">
+              <label>Current Magazine PDF</label>
+              @if (navbarContent.magazineUrl) {
+              <div class="form-actions">
+                <a [href]="navbarContent.magazineUrl" target="_blank" rel="noopener noreferrer" class="admin-btn">Open
+                  Current PDF</a>
+                <button type="button" class="btn-delete sm" (click)="deleteMagazine()">Delete PDF</button>
               </div>
-              <div class="form-row span-two">
-                <label>Upload Magazine PDF</label>
-                <input type="file" accept="application/pdf" class="form-input" (change)="onMagazineSelected($event)" />
-                @if (selectedFileName(magazineFile)) {
-                  <div class="field-key">Selected: {{ selectedFileName(magazineFile) }}</div>
-                }
-              </div>
+              } @else {
+              <div class="field-key">No magazine PDF uploaded yet.</div>
+              }
             </div>
-          </section>
+            <div class="form-row span-two">
+              <label>Upload Magazine PDF</label>
+              <input type="file" accept="application/pdf" class="form-input" (change)="onMagazineSelected($event)" />
+              @if (selectedFileName(magazineFile)) {
+              <div class="field-key">Selected: {{ selectedFileName(magazineFile) }}</div>
+              }
+            </div>
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'vachana') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Daily Vachana</h3>
-                <p>Add one visible vachana for the landing page so visitors can read it immediately when the site opens.</p>
-              </div>
-              <button class="btn-save" (click)="saveDailyVachanaContent()">Save Vachana</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Daily Vachana</h3>
+              <p>Add one visible vachana for the landing page so visitors can read it immediately when the site opens.
+              </p>
             </div>
-            <div class="form-grid-2">
-              <div class="form-row span-two">
-                <label class="checkbox-label">
-                  <input type="checkbox" [(ngModel)]="dailyVachanaContent.enabled" />
-                  <span>Show this vachana on the homepage</span>
-                </label>
-              </div>
-              <div class="form-row span-two">
-                <label>Card Title</label>
-                <input [(ngModel)]="dailyVachanaContent.title" class="form-input" placeholder="Vachana of the Day" />
-              </div>
-              <div class="form-row span-two">
-                <label>Vachana Text</label>
-                <textarea [(ngModel)]="dailyVachanaContent.quote" class="form-input form-textarea" rows="6" placeholder="Enter the daily vachana text"></textarea>
-              </div>
-              <div class="form-row">
-                <label>Author</label>
-                <input [(ngModel)]="dailyVachanaContent.author" class="form-input" placeholder="Basavanna" />
-              </div>
-              <div class="form-row">
-                <label>Last Updated</label>
-                <input [value]="dailyVachanaContent.updatedAt | date:'medium'" class="form-input" readonly />
-              </div>
-              <div class="form-row span-two">
-                <label>Short Reflection</label>
-                <textarea [(ngModel)]="dailyVachanaContent.reflection" class="form-input form-textarea" rows="3" placeholder="Optional short meaning or reflection"></textarea>
-              </div>
+            <button class="btn-save" (click)="saveDailyVachanaContent()">Save Vachana</button>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-row span-two">
+              <label class="checkbox-label">
+                <input type="checkbox" [(ngModel)]="dailyVachanaContent.enabled" />
+                <span>Show this vachana on the homepage</span>
+              </label>
             </div>
-          </section>
+            <div class="form-row span-two">
+              <label>Card Title</label>
+              <input [(ngModel)]="dailyVachanaContent.title" class="form-input" placeholder="Vachana of the Day" />
+            </div>
+            <div class="form-row span-two">
+              <label>Vachana Text</label>
+              <textarea [(ngModel)]="dailyVachanaContent.quote" class="form-input form-textarea" rows="6"
+                placeholder="Enter the daily vachana text"></textarea>
+            </div>
+            <div class="form-row">
+              <label>Author</label>
+              <input [(ngModel)]="dailyVachanaContent.author" class="form-input" placeholder="Basavanna" />
+            </div>
+            <div class="form-row">
+              <label>Last Updated</label>
+              <input [value]="dailyVachanaContent.updatedAt | date:'medium'" class="form-input" readonly />
+            </div>
+            <div class="form-row span-two">
+              <label>Short Reflection</label>
+              <textarea [(ngModel)]="dailyVachanaContent.reflection" class="form-input form-textarea" rows="3"
+                placeholder="Optional short meaning or reflection"></textarea>
+            </div>
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'hero') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Hero Media</h3>
-                <p>Manage the logo, subtitle, scroll label, and stats cards shown on the homepage hero.</p>
-              </div>
-              <button class="btn-save" (click)="saveHeroContent()">Save Hero</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Hero Media</h3>
+              <p>Manage the logo, subtitle, scroll label, and stats cards shown on the homepage hero.</p>
             </div>
-            <div class="form-grid-2">
-              <div class="form-row">
-                <label>Current Logo</label>
-                <img class="founder-thumb" [src]="heroContent.logoUrl" />
-              </div>
-              <div class="form-row">
-                <label>Upload Logo</label>
-                <input type="file" accept="image/*" class="form-input" (change)="onHeroLogoSelected($event)" />
-                @if (selectedFileName(heroLogoFile)) {
-                  <div class="field-key">Selected: {{ selectedFileName(heroLogoFile) }}</div>
-                }
-              </div>
-              <div class="form-row">
-                <label>English Title</label>
-                <input [(ngModel)]="heroContent.englishTitle" class="form-input" />
-              </div>
-              <div class="form-row span-two">
-                <label>Scroll Label</label>
-                <input [(ngModel)]="heroContent.scrollLabel" class="form-input" />
-              </div>
+            <button class="btn-save" (click)="saveHeroContent()">Save Hero</button>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>Current Logo</label>
+              <img class="founder-thumb" [src]="heroContent.logoUrl" />
             </div>
-
-            <div class="subsection-head">
-              <h4>Hero Stats</h4>
-              <button class="btn-add" (click)="addHeroStat()">+ Add Stat</button>
-            </div>
-            <div class="stats-list">
-              @for (stat of heroContent.stats; track stat.id) {
-                <div class="stat-row">
-                  <div class="form-row">
-                    <label>Value</label>
-                    <input [(ngModel)]="stat.value" class="form-input" />
-                  </div>
-                  <div class="form-row">
-                    <label>Label</label>
-                    <input [(ngModel)]="stat.label" class="form-input" />
-                  </div>
-                  <button class="btn-delete mini-btn" (click)="deleteHeroStat(stat.id)">Delete</button>
-                </div>
+            <div class="form-row">
+              <label>Upload Logo</label>
+              <input type="file" accept="image/*" class="form-input" (change)="onHeroLogoSelected($event)" />
+              @if (selectedFileName(heroLogoFile)) {
+              <div class="field-key">Selected: {{ selectedFileName(heroLogoFile) }}</div>
               }
             </div>
-          </section>
+            <div class="form-row">
+              <label>English Title</label>
+              <input [(ngModel)]="heroContent.englishTitle" class="form-input" />
+            </div>
+            <div class="form-row span-two">
+              <label>Scroll Label</label>
+              <input [(ngModel)]="heroContent.scrollLabel" class="form-input" />
+            </div>
+          </div>
+
+          <div class="subsection-head">
+            <h4>Hero Stats</h4>
+            <button class="btn-add" (click)="addHeroStat()">+ Add Stat</button>
+          </div>
+          <div class="stats-list">
+            @for (stat of heroContent.stats; track stat.id) {
+            <div class="stat-row">
+              <div class="form-row">
+                <label>Value</label>
+                <input [(ngModel)]="stat.value" class="form-input" />
+              </div>
+              <div class="form-row">
+                <label>Label</label>
+                <input [(ngModel)]="stat.label" class="form-input" />
+              </div>
+              <button class="btn-delete mini-btn" (click)="deleteHeroStat(stat.id)">Delete</button>
+            </div>
+            }
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'president') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>President Photo</h3>
-                <p>Text comes from the section text panel above. Use this card for image content.</p>
-              </div>
-              <button class="btn-save" (click)="savePresidentNoteContent()">Save President Note</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>President Photo</h3>
+              <p>Text comes from the section text panel above. Use this card for image content.</p>
             </div>
-            <div class="form-row">
-              <label>Current Photo</label>
-              <img class="founder-thumb" [src]="presidentNoteContent.photoUrl" />
-            </div>
-            <div class="form-row">
-              <label>Upload Photo</label>
-              <input type="file" accept="image/*" class="form-input" (change)="onPresidentPhotoSelected($event)" />
-              @if (selectedFileName(presidentPhotoFile)) {
-                <div class="field-key">Selected: {{ selectedFileName(presidentPhotoFile) }}</div>
-              }
-            </div>
-          </section>
+            <button class="btn-save" (click)="savePresidentNoteContent()">Save President Note</button>
+          </div>
+          <div class="form-row">
+            <label>Current Photo</label>
+            <img class="founder-thumb" [src]="presidentNoteContent.photoUrl" />
+          </div>
+          <div class="form-row">
+            <label>Upload Photo</label>
+            <input type="file" accept="image/*" class="form-input" (change)="onPresidentPhotoSelected($event)" />
+            @if (selectedFileName(presidentPhotoFile)) {
+            <div class="field-key">Selected: {{ selectedFileName(presidentPhotoFile) }}</div>
+            }
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'org') {
-          <section class="form-card section-card">
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Organisation Structure</h3>
+              <p>Build the hierarchy shown on the website. Add top-level committees or nested child units to match your
+                PDF chart.</p>
+            </div>
+          </div>
+
+          <div class="form-actions compact-actions">
+            <button class="btn-add" (click)="startQuickAddOrgNode('president')">+ President</button>
+            <button class="btn-add" (click)="startQuickAddOrgNode('office-bearer')">+ Office Bearer</button>
+            <button class="btn-add" (click)="startQuickAddOrgNode('working')">+ General Working Member</button>
+            <button class="btn-add" (click)="startQuickAddOrgNode('nominated')">+ Nominated Member</button>
+            <button class="btn-add" (click)="startQuickAddOrgNode('representative')">+ Representative Member</button>
+            <button class="btn-add" (click)="startQuickAddOrgNode('state')">+ State Committee State</button>
+          </div>
+          <div class="org-guide-grid">
+            <article class="org-guide-card">
+              <h4>Section Members</h4>
+              <p>President, Office Bearers, General Working Committee, Representative, and Nominated are member
+                sections. Use quick add for members.</p>
+            </article>
+            <article class="org-guide-card">
+              <h4>State > District / City</h4>
+              <p>Use <strong>+ State Committee State</strong> first, then add district or city / GBA child nodes under that state.</p>
+            </article>
+            <article class="org-guide-card">
+              <h4>District / City Branches</h4>
+              <p>District nodes can add taluk children. City / GBA nodes can add corporation children, and corporations can add assembly children.</p>
+            </article>
+            <article class="org-guide-card">
+              <h4>Taluk > CMC/GP / Assembly</h4>
+              <p>From a taluk row, click <strong>+ CMC/GP / Assembly</strong> and enter the exact branch name.</p>
+            </article>
+            <article class="org-guide-card">
+              <h4>Members</h4>
+              <p>Use member actions on any branch row to add people under that specific level.</p>
+            </article>
+          </div>
+
+          @if (showOrgNodeAdd()) {
+          <div #orgNodeAddForm class="form-section-block">
             <div class="card-head">
               <div>
-                <h3>Organisation Structure</h3>
-                <p>Build the hierarchy shown on the website. Add top-level committees or nested child units to match your PDF chart.</p>
+                <h4>{{ orgAddHeading(newOrgNode) }}</h4>
+                <p class="org-add-subtitle">{{ orgSaveTargetHint(newOrgNode) }}</p>
               </div>
             </div>
-
-            <div class="form-actions compact-actions">
-              <button class="btn-add" (click)="startQuickAddOrgNode('president')">+ President</button>
-              <button class="btn-add" (click)="startQuickAddOrgNode('working')">+ Working Member</button>
-              <button class="btn-add" (click)="startQuickAddOrgNode('nominated')">+ Nominated Member</button>
-              <button class="btn-add" (click)="startQuickAddOrgNode('representative')">+ Representative Member</button>
-              <button class="btn-add" (click)="startQuickAddOrgNode('state')">+ State Committee State</button>
+            <div class="org-form-summary">
+              <span class="org-summary-chip"><strong>Mode:</strong> {{ orgFormModeLabel(newOrgNode) }}</span>
+              <span class="org-summary-chip"><strong>Type:</strong> {{ orgFormTypeBadge(newOrgNode) }}</span>
+              <span class="org-summary-chip"><strong>Parent:</strong> {{ orgSelectedParentLabel(newOrgNode) }}</span>
+              <span class="org-summary-chip"><strong>Level:</strong> {{ newOrgNode.level }}</span>
             </div>
-            <div class="org-guide-grid">
-              <article class="org-guide-card">
-                <h4>State > District > Taluk</h4>
-                <p>Use <strong>+ State Committee State</strong> first, then add district and taluk child nodes.</p>
-              </article>
-              <article class="org-guide-card">
-                <h4>Taluk > CMC/TMC/GP</h4>
-                <p>From a taluk row, click <strong>+ CMC/TMC/GP</strong> and enter the exact branch name.</p>
-              </article>
-              <article class="org-guide-card">
-                <h4>Members</h4>
-                <p>Use member actions on any branch row to add people under that specific level.</p>
-              </article>
-            </div>
+            <div class="form-grid-2">
+              @if (requiresOrgHierarchyControls(newOrgNode) || isHierarchyMemberForm(newOrgNode)) {
+              <div class="form-row">
+                <label>Parent Item</label>
+                <select [(ngModel)]="newOrgNode.parentId" (ngModelChange)="onNewOrgParentChanged($event)"
+                  class="form-input">
+                  <option [ngValue]="null">Top level</option>
+                  @for (option of orgParentOptionsForForm(newOrgNode); track option.id) {
+                  <option [ngValue]="option.id">{{ orgNodePath(option) }}</option>
+                  }
+                </select>
+              </div>
+              @if (requiresOrgDisplayOrder(newOrgNode)) {
+              <div class="form-row">
+                <label>Display Order</label>
+                <input [(ngModel)]="newOrgNode.order" type="number" min="0" class="form-input" />
+              </div>
+              }
+              }
+              @if (requiresOrgTitleInput(newOrgNode)) {
+              <div class="form-row">
+                <label>{{ orgTitleFieldLabel(newOrgNode) }}</label>
+                <input [(ngModel)]="newOrgNode.title" class="form-input"
+                  [placeholder]="orgTitlePlaceholder(newOrgNode)" />
+              </div>
+              }
+              @if (!isStructuralHierarchyEntry(newOrgNode)) {
+              <div class="form-row">
+                <label>Member Name *</label>
+                <input [(ngModel)]="newOrgNode.subtitle" class="form-input" placeholder="Full member name" />
+              </div>
+              }
+              @if (requiresOrgLocation(newOrgNode)) {
+              <div class="form-row">
+                <label>Hierarchy Level *</label>
+                <select [(ngModel)]="newOrgNode.level" class="form-input">
+                  <option value="state">state</option>
+                  <option value="district">district</option>
+                  <option value="city">city / GBA</option>
+                  <option value="corporation">corporation</option>
+                  <option value="assembly">assembly</option>
+                  <option value="taluk">taluk</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label>State *</label>
+                <input [(ngModel)]="newOrgNode.state" class="form-input" placeholder="Karnataka"
+                  [readOnly]="isOrgStateLocked(newOrgNode)" />
+              </div>
+              @if (isStructuralHierarchyEntry(newOrgNode)) {
+              <div class="form-row span-two">
+                <label>{{ structuralHierarchyLabel(newOrgNode) }} Entry</label>
+                <div class="field-key">{{ orgStructuralEntryHelpText(newOrgNode) }}</div>
+              </div>
+              }
+              @if (showOrgDistrictField(newOrgNode)) {
+              <div class="form-row">
+                <label>District @if (newOrgNode.level !== 'state') { * }</label>
+                <input [(ngModel)]="newOrgNode.district" class="form-input" placeholder="Bengaluru Urban"
+                  [readOnly]="isOrgDistrictLocked(newOrgNode)" />
+              </div>
+              }
+              @if (showOrgTalukField(newOrgNode)) {
+              <div class="form-row">
+                <label>Taluk *</label>
+                <input [(ngModel)]="newOrgNode.taluk" class="form-input" placeholder="Bengaluru North"
+                  [readOnly]="isOrgTalukLocked(newOrgNode)" />
+              </div>
+              }
+              } @else {
+              <div class="form-row span-two">
+                <label>Member Section</label>
+                <div class="field-key">For President, Office Bearers, General Working Committee, Representative,
+                  Nominated, and local-unit members, member name, image, description, and contact are supported.</div>
+              </div>
+              }
+              <!-- <div class="form-row span-two">
+                <label>Contact (Phone / Email / Any)</label>
+                <input [(ngModel)]="newOrgNode.contact" class="form-input"
+                  placeholder="+91..., name@domain.com, or any contact text" />
+              </div> -->
+              @if (!isStructuralHierarchyEntry(newOrgNode)) {
 
-            @if (showOrgNodeAdd()) {
-              <div #orgNodeAddForm class="form-section-block">
-                <div class="card-head">
-                  <div>
-                    <h4>{{ orgAddHeading(newOrgNode) }}</h4>
-                    <p class="org-add-subtitle">{{ orgSaveTargetHint(newOrgNode) }}</p>
-                  </div>
+              <div class="form-row span-two">
+                <label>Contact (Phone / Email / Any)</label>
+                <input [(ngModel)]="newOrgNode.contact" class="form-input" placeholder="+91..., name@domain.com" />
+              </div>
+
+              @if (requiresOrgImageFields(newOrgNode)) {
+
+              <div class="form-row">
+                <label>Image</label>
+
+                <input type="file" accept="image/*" class="form-input" (change)="onNewOrgNodeImageSelected($event)" />
+
+                @if (selectedFileName(newOrgNodeImageFile)) {
+                <div class="field-key">
+                  Selected: {{ selectedFileName(newOrgNodeImageFile) }}
                 </div>
+                }
+              </div>
+
+              <div class="form-row">
+                <label>Image Alt Text</label>
+
+                <input [(ngModel)]="newOrgNode.imageAlt" class="form-input" placeholder="Member photo alt text" />
+              </div>
+
+              }
+
+              <!-- <div class="form-row span-two">
+                <label>Description</label>
+
+                <textarea [(ngModel)]="newOrgNode.description" class="form-input form-textarea" rows="3"
+                  placeholder="Member description"></textarea>
+              </div> -->
+
+              }
+              <div class="form-row span-two">
+                <label class="checkbox-label">
+                  <input type="checkbox" [(ngModel)]="newOrgNode.isActive" />
+                  <span>Show in public organization pages</span>
+                </label>
+              </div>
+            </div>
+            @if (mediaError()) {
+            <div class="gallery-status gallery-error">{{ mediaError() }}</div>
+            }
+            <div class="form-actions">
+              <button class="btn-save" (click)="addOrgNode()">{{ orgSaveButtonLabel(newOrgNode) }}</button>
+              <button class="btn-cancel" (click)="cancelAddOrgNode()">Cancel</button>
+            </div>
+          </div>
+          }
+
+          @if (orgNodeItems().length === 0) {
+          <div class="empty-state">
+            <span>🏛</span>
+            <p>No organisation items added yet.</p>
+          </div>
+          }
+
+          <div class="items-list">
+            @for (entry of orgNodesForDisplay(); track entry.node.id) {
+            <div class="item-row org-row-admin" [class.org-row-admin--section]="isOrgSectionHeader(entry.node)"
+              [class.org-row-admin--member]="isOrgSectionMember(entry.node)">
+              @if (editingOrgNodeId() === entry.node.id) {
+              <div class="item-edit-fields">
                 <div class="org-form-summary">
-                  <span class="org-summary-chip"><strong>Type:</strong> {{ orgFormTypeBadge(newOrgNode) }}</span>
-                  <span class="org-summary-chip"><strong>Parent:</strong> {{ orgSelectedParentLabel(newOrgNode) }}</span>
-                  <span class="org-summary-chip"><strong>Level:</strong> {{ newOrgNode.level }}</span>
+                  <span class="org-summary-chip"><strong>Mode:</strong> {{ orgFormModeLabel(editOrgNode) }}</span>
+                  <span class="org-summary-chip"><strong>Type:</strong> {{ orgFormTypeBadge(editOrgNode) }}</span>
+                  <span class="org-summary-chip"><strong>Parent:</strong> {{ orgSelectedParentLabel(editOrgNode)
+                    }}</span>
+                  <span class="org-summary-chip"><strong>Level:</strong> {{ editOrgNode.level }}</span>
                 </div>
                 <div class="form-grid-2">
-                  @if (requiresOrgHierarchyControls(newOrgNode)) {
-                    <div class="form-row">
-                      <label>Parent Item</label>
-                      <select [(ngModel)]="newOrgNode.parentId" (ngModelChange)="onNewOrgParentChanged($event)" class="form-input">
-                        <option [ngValue]="null">Top level</option>
-                        @for (option of orgParentOptions(); track option.id) {
-                          <option [ngValue]="option.id">{{ orgNodePath(option) }}</option>
-                        }
-                      </select>
-                    </div>
-                    @if (requiresOrgDisplayOrder(newOrgNode)) {
-                      <div class="form-row">
-                        <label>Display Order</label>
-                        <input [(ngModel)]="newOrgNode.order" type="number" min="0" class="form-input" />
-                      </div>
-                    }
-                  }
-                  @if (requiresOrgTitleInput(newOrgNode)) {
-                    <div class="form-row">
-                      <label>{{ orgTitleFieldLabel(newOrgNode) }}</label>
-                      <input [(ngModel)]="newOrgNode.title" class="form-input" [placeholder]="orgTitlePlaceholder(newOrgNode)" />
-                    </div>
-                  }
-                  @if (!isStructuralHierarchyEntry(newOrgNode)) {
-                    <div class="form-row">
-                      <label>Member Name *</label>
-                      <input [(ngModel)]="newOrgNode.subtitle" class="form-input" placeholder="Full member name" />
-                    </div>
-                  }
-                  @if (requiresOrgLocation(newOrgNode)) {
-                    <div class="form-row">
-                      <label>Hierarchy Level *</label>
-                      <select [(ngModel)]="newOrgNode.level" class="form-input">
-                        <option value="state">state</option>
-                        <option value="district">district</option>
-                        <option value="taluk">taluk</option>
-                      </select>
-                    </div>
-                    <div class="form-row">
-                      <label>State *</label>
-                      <input [(ngModel)]="newOrgNode.state" class="form-input" placeholder="Karnataka" />
-                    </div>
-                    @if (isStructuralHierarchyEntry(newOrgNode)) {
-                      <div class="form-row span-two">
-                        <label>{{ structuralHierarchyLabel(newOrgNode) }} Entry</label>
-                        <div class="field-key">{{ orgStructuralEntryHelpText(newOrgNode) }}</div>
-                      </div>
-                    }
-                    <div class="form-row">
-                      <label>District</label>
-                      <input [(ngModel)]="newOrgNode.district" class="form-input" placeholder="Bengaluru Urban" />
-                    </div>
-                    <div class="form-row">
-                      <label>Taluk</label>
-                      <input [(ngModel)]="newOrgNode.taluk" class="form-input" placeholder="Bengaluru North" />
-                    </div>
-                  } @else {
-                    <div class="form-row span-two">
-                      <label>Member Section</label>
-                      <div class="field-key">For President, Working Committee, Representative, Nominated, and Taluk Committee members, member name, image, description, and contact are supported.</div>
-                    </div>
-                  }
-                  <div class="form-row span-two">
-                    <label>Contact (Phone / Email / Any)</label>
-                    <input [(ngModel)]="newOrgNode.contact" class="form-input" placeholder="+91..., name@domain.com, or any contact text" />
-                  </div>
-                  @if (requiresOrgImageFields(newOrgNode)) {
-                    <div class="form-row">
-                      <label>Image</label>
-                      <input type="file" accept="image/*" class="form-input" (change)="onNewOrgNodeImageSelected($event)" />
-                      @if (selectedFileName(newOrgNodeImageFile)) {
-                        <div class="field-key">Selected: {{ selectedFileName(newOrgNodeImageFile) }}</div>
+                  @if (requiresOrgHierarchyControls(editOrgNode) || isHierarchyMemberForm(editOrgNode)) {
+                  <div class="form-row">
+                    <label>Parent Item</label>
+                    <select [(ngModel)]="editOrgNode.parentId" (ngModelChange)="onEditOrgParentChanged($event)"
+                      class="form-input">
+                      <option [ngValue]="null">Top level</option>
+                      @for (option of orgParentOptionsForForm(editOrgNode, entry.node.id); track option.id) {
+                      <option [ngValue]="option.id">{{ orgNodePath(option) }}</option>
                       }
-                    </div>
-                    <div class="form-row">
-                      <label>Image Alt Text</label>
-                      <input [(ngModel)]="newOrgNode.imageAlt" class="form-input" placeholder="Member photo alt text" />
-                    </div>
+                    </select>
+                  </div>
+                  @if (requiresOrgDisplayOrder(editOrgNode)) {
+                  <div class="form-row">
+                    <label>Display Order</label>
+                    <input [(ngModel)]="editOrgNode.order" type="number" min="0" class="form-input" />
+                  </div>
+                  }
+                  }
+                  @if (requiresOrgTitleInput(editOrgNode, entry.node.id)) {
+                  <div class="form-row">
+                    <label>{{ orgTitleFieldLabel(editOrgNode) }}</label>
+                    <input [(ngModel)]="editOrgNode.title" class="form-input"
+                      [placeholder]="orgTitlePlaceholder(editOrgNode)" />
+                  </div>
+                  }
+                  @if (requiresOrgLocation(editOrgNode)) {
+                  <div class="form-row">
+                    <label>Hierarchy Level</label>
+                    <select [(ngModel)]="editOrgNode.level" class="form-input">
+                      <option value="state">state</option>
+                      <option value="district">district</option>
+                      <option value="city">city / GBA</option>
+                      <option value="corporation">corporation</option>
+                      <option value="assembly">assembly</option>
+                      <option value="taluk">taluk</option>
+                    </select>
+                  </div>
+                  <div class="form-row">
+                    <label>State</label>
+                    <input [(ngModel)]="editOrgNode.state" class="form-input"
+                      [readOnly]="isOrgStateLocked(editOrgNode)" />
+                  </div>
+                  @if (isStructuralHierarchyEntry(editOrgNode)) {
+                  <div class="form-row span-two">
+                    <label>{{ structuralHierarchyLabel(editOrgNode) }} Entry</label>
+                    <div class="field-key">{{ orgStructuralEntryHelpText(editOrgNode) }}</div>
+                  </div>
+                  }
+                  @if (showOrgDistrictField(editOrgNode)) {
+                  <div class="form-row">
+                    <label>District @if (editOrgNode.level !== 'state') { * }</label>
+                    <input [(ngModel)]="editOrgNode.district" class="form-input"
+                      [readOnly]="isOrgDistrictLocked(editOrgNode)" />
+                  </div>
+                  }
+                  @if (showOrgTalukField(editOrgNode)) {
+                  <div class="form-row">
+                    <label>Taluk *</label>
+                    <input [(ngModel)]="editOrgNode.taluk" class="form-input"
+                      [readOnly]="isOrgTalukLocked(editOrgNode)" />
+                  </div>
+                  }
+                  } @else {
+                  <div class="form-row span-two">
+                    <label>Member Section</label>
+                    <div class="field-key">Location is not required for this member section. Use member name, image,
+                      description, and contact.</div>
+                  </div>
+                  }
+                  <!-- <div class="form-row span-two">
+                    <label>Contact (Phone / Email / Any)</label>
+                    <input [(ngModel)]="editOrgNode.contact" class="form-input"
+                      placeholder="+91..., name@domain.com, or any contact text" />
+                  </div> -->
+                  @if (requiresOrgImageFields(editOrgNode)) {
+                  <div class="form-row">
+                    <label>Image</label>
+                    <input type="file" accept="image/*" class="form-input"
+                      (change)="onEditOrgNodeImageSelected($event)" />
+                    @if (selectedFileName(editOrgNodeImageFile)) {
+                    <div class="field-key">Selected: {{ selectedFileName(editOrgNodeImageFile) }}</div>
+                    }
+                  </div>
+                  <div class="form-row">
+                    <label>Image Alt Text</label>
+                    <input [(ngModel)]="editOrgNode.imageAlt" class="form-input" />
+                  </div>
                   }
                   <div class="form-row span-two">
                     <label>Description</label>
-                    <textarea [(ngModel)]="newOrgNode.description" class="form-input form-textarea" rows="3" placeholder="Member description"></textarea>
+                    <textarea [(ngModel)]="editOrgNode.description" class="form-input form-textarea"
+                      rows="3"></textarea>
                   </div>
                   <div class="form-row span-two">
                     <label class="checkbox-label">
-                      <input type="checkbox" [(ngModel)]="newOrgNode.isActive" />
+                      <input type="checkbox" [(ngModel)]="editOrgNode.isActive" />
                       <span>Show in public organization pages</span>
                     </label>
                   </div>
                 </div>
                 @if (mediaError()) {
-                  <div class="gallery-status gallery-error">{{ mediaError() }}</div>
+                <div class="gallery-status gallery-error">{{ mediaError() }}</div>
                 }
                 <div class="form-actions">
-                  <button class="btn-save" (click)="addOrgNode()">Save Item</button>
-                  <button class="btn-cancel" (click)="cancelAddOrgNode()">Cancel</button>
+                  <button class="btn-save sm" (click)="saveOrgNode(entry.node.id)">{{ orgSaveButtonLabel(editOrgNode)
+                    }}</button>
+                  <button class="btn-cancel sm" (click)="cancelEditOrgNode()">Cancel</button>
                 </div>
               </div>
-            }
-
-            @if (orgNodeItems().length === 0) {
-              <div class="empty-state">
-                <span>🏛</span>
-                <p>No organisation items added yet.</p>
-              </div>
-            }
-
-            <div class="items-list">
-              @for (entry of orgNodesForDisplay(); track entry.node.id) {
-                <div
-                  class="item-row org-row-admin"
-                  [class.org-row-admin--section]="isOrgSectionHeader(entry.node)"
-                  [class.org-row-admin--member]="isOrgSectionMember(entry.node)"
-                >
-                  @if (editingOrgNodeId() === entry.node.id) {
-                    <div class="item-edit-fields">
-                      <div class="form-grid-2">
-                        @if (requiresOrgHierarchyControls(editOrgNode)) {
-                          <div class="form-row">
-                            <label>Parent Item</label>
-                            <select [(ngModel)]="editOrgNode.parentId" (ngModelChange)="onEditOrgParentChanged($event)" class="form-input">
-                              <option [ngValue]="null">Top level</option>
-                              @for (option of orgParentOptions(entry.node.id); track option.id) {
-                                <option [ngValue]="option.id">{{ orgNodePath(option) }}</option>
-                              }
-                            </select>
-                          </div>
-                          @if (requiresOrgDisplayOrder(editOrgNode)) {
-                            <div class="form-row">
-                              <label>Display Order</label>
-                              <input [(ngModel)]="editOrgNode.order" type="number" min="0" class="form-input" />
-                            </div>
-                          }
-                        }
-                        @if (requiresOrgTitleInput(editOrgNode, entry.node.id)) {
-                          <div class="form-row">
-                            <label>{{ orgTitleFieldLabel(editOrgNode) }}</label>
-                            <input [(ngModel)]="editOrgNode.title" class="form-input" [placeholder]="orgTitlePlaceholder(editOrgNode)" />
-                          </div>
-                        }
-                        @if (!isStructuralHierarchyEntry(editOrgNode)) {
-                          <div class="form-row">
-                            <label>Member Name</label>
-                            <input [(ngModel)]="editOrgNode.subtitle" class="form-input" />
-                          </div>
-                        }
-                        @if (requiresOrgLocation(editOrgNode)) {
-                          <div class="form-row">
-                            <label>Hierarchy Level</label>
-                            <select [(ngModel)]="editOrgNode.level" class="form-input">
-                              <option value="state">state</option>
-                              <option value="district">district</option>
-                              <option value="taluk">taluk</option>
-                            </select>
-                          </div>
-                          <div class="form-row">
-                            <label>State</label>
-                            <input [(ngModel)]="editOrgNode.state" class="form-input" />
-                          </div>
-                          @if (isStructuralHierarchyEntry(editOrgNode)) {
-                            <div class="form-row span-two">
-                              <label>{{ structuralHierarchyLabel(editOrgNode) }} Entry</label>
-                              <div class="field-key">{{ orgStructuralEntryHelpText(editOrgNode) }}</div>
-                            </div>
-                          }
-                          <div class="form-row">
-                            <label>District</label>
-                            <input [(ngModel)]="editOrgNode.district" class="form-input" />
-                          </div>
-                          <div class="form-row">
-                            <label>Taluk</label>
-                            <input [(ngModel)]="editOrgNode.taluk" class="form-input" />
-                          </div>
-                        } @else {
-                          <div class="form-row span-two">
-                            <label>Member Section</label>
-                            <div class="field-key">Location is not required for this member section. Use member name, image, description, and contact.</div>
-                          </div>
-                        }
-                        <div class="form-row span-two">
-                          <label>Contact (Phone / Email / Any)</label>
-                          <input [(ngModel)]="editOrgNode.contact" class="form-input" placeholder="+91..., name@domain.com, or any contact text" />
-                        </div>
-                        @if (requiresOrgImageFields(editOrgNode)) {
-                          <div class="form-row">
-                            <label>Image</label>
-                            <input type="file" accept="image/*" class="form-input" (change)="onEditOrgNodeImageSelected($event)" />
-                            @if (selectedFileName(editOrgNodeImageFile)) {
-                              <div class="field-key">Selected: {{ selectedFileName(editOrgNodeImageFile) }}</div>
-                            }
-                          </div>
-                          <div class="form-row">
-                            <label>Image Alt Text</label>
-                            <input [(ngModel)]="editOrgNode.imageAlt" class="form-input" />
-                          </div>
-                        }
-                        <div class="form-row span-two">
-                          <label>Description</label>
-                          <textarea [(ngModel)]="editOrgNode.description" class="form-input form-textarea" rows="3"></textarea>
-                        </div>
-                        <div class="form-row span-two">
-                          <label class="checkbox-label">
-                            <input type="checkbox" [(ngModel)]="editOrgNode.isActive" />
-                            <span>Show in public organization pages</span>
-                          </label>
-                        </div>
-                      </div>
-                      @if (mediaError()) {
-                        <div class="gallery-status gallery-error">{{ mediaError() }}</div>
-                      }
-                      <div class="form-actions">
-                        <button class="btn-save sm" (click)="saveOrgNode(entry.node.id)">Save</button>
-                        <button class="btn-cancel sm" (click)="cancelEditOrgNode()">Cancel</button>
-                      </div>
-                    </div>
+              } @else {
+              <div class="item-info org-item-info" [class.org-item-info--section]="isOrgSectionHeader(entry.node)"
+                [class.org-item-info--member]="isOrgSectionMember(entry.node)"
+                [style.padding-left.px]="entry.depth * 22">
+                <div class="org-item-meta">
+                  @if (isOrgSectionHeader(entry.node) || isTalukCommitteeContainerNode(entry.node)) {
+                  <span class="org-section-chip">{{ orgNodeBadgeLabel(entry.node) }}</span>
                   } @else {
-                    <div
-                      class="item-info org-item-info"
-                      [class.org-item-info--section]="isOrgSectionHeader(entry.node)"
-                      [class.org-item-info--member]="isOrgSectionMember(entry.node)"
-                      [style.padding-left.px]="entry.depth * 22"
-                    >
-                      <div class="org-item-meta">
-                        @if (isOrgSectionHeader(entry.node) || isTalukCommitteeContainerNode(entry.node)) {
-                          <span class="org-section-chip">{{ orgNodeBadgeLabel(entry.node) }}</span>
-                        } @else {
-                          <span class="org-member-chip">{{ orgNodeBadgeLabel(entry.node) }}</span>
-                        }
-                        <span class="org-depth-chip">{{ entry.node.level }}</span>
-                        <span class="org-order-chip">Order {{ entry.node.order }}</span>
-                        @if (!entry.node.isActive) {
-                          <span class="org-order-chip">Hidden</span>
-                        }
-                      </div>
-                      <div class="item-title">{{ entry.node.title }}</div>
-                      @if (entry.node.subtitle || entry.node.description) {
-                        <div class="item-bio">{{ entry.node.subtitle }}</div>
-                        @if (entry.node.description) {
-                          <div class="item-sub">{{ entry.node.description }}</div>
-                        }
-                      }
-                      @if (isOrgSectionMember(entry.node)) {
-                        <div class="item-sub">Under {{ orgSectionLabel(entry.node) }}</div>
-                      }
-                      <div class="item-sub">{{ orgNodePath(entry.node) }}</div>
-                      <div class="item-sub">
-                        {{ entry.node.location.state }}
-                        @if (entry.node.location.district) { / {{ entry.node.location.district }} }
-                        @if (entry.node.location.taluk) { / {{ entry.node.location.taluk }} }
-                      </div>
-                    </div>
-                    <div class="item-actions">
-                      @if (canAddOrgMember(entry.node)) {
-                        <button class="btn-add" (click)="startAddOrgMember(entry.node)">{{ orgMemberActionLabel(entry.node) }}</button>
-                      }
-                      @if (canAddOrgChild(entry.node)) {
-                        <button class="btn-add" (click)="startAddOrgNode(entry.node)">{{ orgChildActionLabel(entry.node) }}</button>
-                      }
-                      <button class="btn-edit" (click)="startEditOrgNode(entry.node)">Edit</button>
-                      <button class="btn-delete" (click)="deleteOrgNode(entry.node.id)">Delete</button>
-                    </div>
+                  <span class="org-member-chip">{{ orgNodeBadgeLabel(entry.node) }}</span>
+                  }
+                  <span class="org-depth-chip">{{ entry.node.level }}</span>
+                  <span class="org-order-chip">Order {{ entry.node.order }}</span>
+                  @if (!entry.node.isActive) {
+                  <span class="org-order-chip">Hidden</span>
                   }
                 </div>
+                <div class="item-title">{{ entry.node.title }}</div>
+                @if (entry.node.subtitle || entry.node.description) {
+                <div class="item-bio">{{ entry.node.subtitle }}</div>
+                @if (entry.node.description) {
+                <div class="item-sub">{{ entry.node.description }}</div>
+                }
+                }
+                @if (isOrgSectionMember(entry.node)) {
+                <div class="item-sub">Under {{ orgSectionLabel(entry.node) }}</div>
+                }
+                <div class="item-sub">{{ orgNodePath(entry.node) }}</div>
+                <div class="item-sub">
+                  {{ entry.node.location.state }}
+                  @if (entry.node.location.district) { / {{ entry.node.location.district }} }
+                  @if (entry.node.location.taluk) { / {{ entry.node.location.taluk }} }
+                </div>
+              </div>
+              <div class="item-actions">
+                @if (canAddOrgMember(entry.node)) {
+                <button class="btn-add" (click)="startAddOrgMember(entry.node)">{{ orgMemberActionLabel(entry.node)
+                  }}</button>
+                }
+                @if (canAddStateNominatedMember(entry.node)) {
+                <button class="btn-add" (click)="startAddStateNominatedMember(entry.node)">+ Nominated Member</button>
+                }
+                @if (showsSplitStateBranchActions(entry.node)) {
+                <button class="btn-add" (click)="startAddOrgNodeAtLevel(entry.node, 'district')">+ District</button>
+                <button class="btn-add" (click)="startAddOrgNodeAtLevel(entry.node, 'city')">+ City / GBA</button>
+                } @else if (canAddOrgChild(entry.node)) {
+                <button class="btn-add" (click)="startAddOrgNode(entry.node)">{{ orgChildActionLabel(entry.node)
+                  }}</button>
+                }
+                <button class="btn-edit" (click)="startEditOrgNode(entry.node)">Edit</button>
+                <button class="btn-delete" (click)="deleteOrgNode(entry.node.id)">Delete</button>
+              </div>
               }
             </div>
-          </section>
+            }
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'leaders') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Leader Cards</h3>
-                <p>Add, edit, or remove community leader cards shown on the homepage.</p>
-              </div>
-              <button class="btn-add" (click)="showCmLeaderAdd.set(!showCmLeaderAdd())">+ Add Leader</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Leader Cards</h3>
+              <p>Add, edit, or remove community leader cards shown on the homepage.</p>
             </div>
+            <button class="btn-add" (click)="showCmLeaderAdd.set(!showCmLeaderAdd())">+ Add Leader</button>
+          </div>
 
-            @if (showCmLeaderAdd()) {
-              <div class="form-section-block">
+          @if (showCmLeaderAdd()) {
+          <div class="form-section-block">
+            <div class="form-grid-2">
+              <div class="form-row"><label>Name</label><input [(ngModel)]="newCmLeader.name" class="form-input" /></div>
+              <div class="form-row"><label>State / Role</label><input [(ngModel)]="newCmLeader.state"
+                  class="form-input" /></div>
+              <div class="form-row"><label>Party / Note</label><input [(ngModel)]="newCmLeader.party"
+                  class="form-input" /></div>
+              <div class="form-row"><label>Leader Photo *</label><input type="file" accept="image/*" class="form-input"
+                  (change)="onNewCmLeaderFileSelected($event)" /></div>
+            </div>
+            @if (selectedFileName(newCmLeaderFile)) {
+            <div class="field-key">Selected: {{ selectedFileName(newCmLeaderFile) }}</div>
+            }
+            <div class="form-actions">
+              <button class="btn-save" (click)="addCmLeader()">Save Leader</button>
+              <button class="btn-cancel" (click)="showCmLeaderAdd.set(false)">Cancel</button>
+            </div>
+          </div>
+          }
+
+          <div class="items-list">
+            @for (leader of cmLeaderItems(); track leader.id) {
+            <div class="item-row">
+              @if (editingCmLeaderId() === leader.id) {
+              <img class="founder-thumb" [src]="editCmLeader.img || leader.img" />
+              <div class="item-edit-fields">
                 <div class="form-grid-2">
-                  <div class="form-row"><label>Name</label><input [(ngModel)]="newCmLeader.name" class="form-input" /></div>
-                  <div class="form-row"><label>State / Role</label><input [(ngModel)]="newCmLeader.state" class="form-input" /></div>
-                  <div class="form-row"><label>Party / Note</label><input [(ngModel)]="newCmLeader.party" class="form-input" /></div>
-                  <div class="form-row"><label>Leader Photo *</label><input type="file" accept="image/*" class="form-input" (change)="onNewCmLeaderFileSelected($event)" /></div>
+                  <div class="form-row"><label>Name</label><input [(ngModel)]="editCmLeader.name" class="form-input" />
+                  </div>
+                  <div class="form-row"><label>State / Role</label><input [(ngModel)]="editCmLeader.state"
+                      class="form-input" /></div>
+                  <div class="form-row"><label>Party / Note</label><input [(ngModel)]="editCmLeader.party"
+                      class="form-input" /></div>
+                  <div class="form-row"><label>Replace Photo</label><input type="file" accept="image/*"
+                      class="form-input" (change)="onEditCmLeaderFileSelected($event)" /></div>
                 </div>
-                @if (selectedFileName(newCmLeaderFile)) {
-                  <div class="field-key">Selected: {{ selectedFileName(newCmLeaderFile) }}</div>
+                @if (selectedFileName(editCmLeaderFile)) {
+                <div class="field-key">Selected: {{ selectedFileName(editCmLeaderFile) }}</div>
                 }
                 <div class="form-actions">
-                  <button class="btn-save" (click)="addCmLeader()">Save Leader</button>
-                  <button class="btn-cancel" (click)="showCmLeaderAdd.set(false)">Cancel</button>
+                  <button class="btn-save sm" (click)="saveCmLeader(leader.id)">Save</button>
+                  <button class="btn-cancel sm" (click)="editingCmLeaderId.set(null)">Cancel</button>
                 </div>
               </div>
-            }
-
-            <div class="items-list">
-              @for (leader of cmLeaderItems(); track leader.id) {
-                <div class="item-row">
-                  @if (editingCmLeaderId() === leader.id) {
-                    <img class="founder-thumb" [src]="editCmLeader.img || leader.img" />
-                    <div class="item-edit-fields">
-                      <div class="form-grid-2">
-                        <div class="form-row"><label>Name</label><input [(ngModel)]="editCmLeader.name" class="form-input" /></div>
-                        <div class="form-row"><label>State / Role</label><input [(ngModel)]="editCmLeader.state" class="form-input" /></div>
-                        <div class="form-row"><label>Party / Note</label><input [(ngModel)]="editCmLeader.party" class="form-input" /></div>
-                        <div class="form-row"><label>Replace Photo</label><input type="file" accept="image/*" class="form-input" (change)="onEditCmLeaderFileSelected($event)" /></div>
-                      </div>
-                      @if (selectedFileName(editCmLeaderFile)) {
-                        <div class="field-key">Selected: {{ selectedFileName(editCmLeaderFile) }}</div>
-                      }
-                      <div class="form-actions">
-                        <button class="btn-save sm" (click)="saveCmLeader(leader.id)">Save</button>
-                        <button class="btn-cancel sm" (click)="editingCmLeaderId.set(null)">Cancel</button>
-                      </div>
-                    </div>
-                  } @else {
-                    <img class="founder-thumb" [src]="leader.img" />
-                    <div class="item-info">
-                      <div class="item-title">{{ leader.name }}</div>
-                      <div class="item-sub">{{ leader.state }}</div>
-                      <div class="item-bio">{{ leader.party }}</div>
-                    </div>
-                    <div class="item-actions">
-                      <button class="btn-edit" (click)="startEditCmLeader(leader)">Edit</button>
-                      <button class="btn-delete" (click)="deleteCmLeader(leader.id)">Delete</button>
-                    </div>
-                  }
-                </div>
+              } @else {
+              <img class="founder-thumb" [src]="leader.img" />
+              <div class="item-info">
+                <div class="item-title">{{ leader.name }}</div>
+                <div class="item-sub">{{ leader.state }}</div>
+                <div class="item-bio">{{ leader.party }}</div>
+              </div>
+              <div class="item-actions">
+                <button class="btn-edit" (click)="startEditCmLeader(leader)">Edit</button>
+                <button class="btn-delete" (click)="deleteCmLeader(leader.id)">Delete</button>
+              </div>
               }
             </div>
-          </section>
+            }
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'bhavan') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Bhavan Details</h3>
-                <p>Update gallery images and contact information used in the Bhavan section.</p>
-              </div>
-              <button class="btn-save" (click)="saveBhavanContent()">Save Bhavan</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Bhavan Details</h3>
+              <p>Update gallery images and contact information used in the Bhavan section.</p>
             </div>
-            <div class="form-grid-2">
-              <div class="form-row"><label>Primary Image</label><img class="item-thumb" [src]="bhavanContent.imageUrls[0]" /></div>
-              <div class="form-row"><label>Upload Primary</label><input type="file" accept="image/*" class="form-input" (change)="onBhavanImageSelected(0, $event)" /></div>
-              <div class="form-row"><label>Secondary Image</label><img class="item-thumb" [src]="bhavanContent.imageUrls[1]" /></div>
-              <div class="form-row"><label>Upload Secondary</label><input type="file" accept="image/*" class="form-input" (change)="onBhavanImageSelected(1, $event)" /></div>
-              <div class="form-row"><label>Third Image</label><img class="item-thumb" [src]="bhavanContent.imageUrls[2]" /></div>
-              <div class="form-row"><label>Upload Third</label><input type="file" accept="image/*" class="form-input" (change)="onBhavanImageSelected(2, $event)" /></div>
-              <div class="form-row span-two"><label>Address</label><textarea [(ngModel)]="bhavanContent.address" class="form-input form-textarea" rows="4"></textarea></div>
-              <div class="form-row"><label>Phone</label><input [(ngModel)]="bhavanContent.phone" class="form-input" /></div>
-              <div class="form-row"><label>Email</label><input [(ngModel)]="bhavanContent.email" class="form-input" /></div>
+            <button class="btn-save" (click)="saveBhavanContent()">Save Bhavan</button>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-row"><label>Primary Image</label><img class="item-thumb"
+                [src]="bhavanContent.imageUrls[0]" /></div>
+            <div class="form-row"><label>Upload Primary</label><input type="file" accept="image/*" class="form-input"
+                (change)="onBhavanImageSelected(0, $event)" /></div>
+            <div class="form-row"><label>Secondary Image</label><img class="item-thumb"
+                [src]="bhavanContent.imageUrls[1]" /></div>
+            <div class="form-row"><label>Upload Secondary</label><input type="file" accept="image/*" class="form-input"
+                (change)="onBhavanImageSelected(1, $event)" /></div>
+            <div class="form-row"><label>Third Image</label><img class="item-thumb"
+                [src]="bhavanContent.imageUrls[2]" /></div>
+            <div class="form-row"><label>Upload Third</label><input type="file" accept="image/*" class="form-input"
+                (change)="onBhavanImageSelected(2, $event)" /></div>
+            <div class="form-row span-two"><label>Address</label><textarea [(ngModel)]="bhavanContent.address"
+                class="form-input form-textarea" rows="4"></textarea></div>
+            <div class="form-row"><label>Phone</label><input [(ngModel)]="bhavanContent.phone" class="form-input" />
             </div>
-          </section>
+            <div class="form-row"><label>Email</label><input [(ngModel)]="bhavanContent.email" class="form-input" />
+            </div>
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'past-presidents') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Past President Cards</h3>
-                <p>These cards are shown on the public timeline grid.</p>
-              </div>
-              <button class="btn-add" (click)="showPastPresidentAdd.set(!showPastPresidentAdd())">+ Add Record</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Past President Cards</h3>
+              <p>These cards are shown on the public timeline grid.</p>
             </div>
+            <button class="btn-add" (click)="showPastPresidentAdd.set(!showPastPresidentAdd())">+ Add Record</button>
+          </div>
 
-            @if (showPastPresidentAdd()) {
-              <div class="form-section-block">
+          @if (showPastPresidentAdd()) {
+          <div class="form-section-block">
+            <div class="form-grid-2">
+              <div class="form-row"><label>Name</label><input [(ngModel)]="newPastPresident.name" class="form-input" />
+              </div>
+              <div class="form-row"><label>Tenure</label><input [(ngModel)]="newPastPresident.tenure"
+                  class="form-input" /></div>
+              <div class="form-row span-two"><label>Photo *</label><input type="file" accept="image/*"
+                  class="form-input" (change)="onNewPastPresidentFileSelected($event)" /></div>
+            </div>
+            @if (selectedFileName(newPastPresidentFile)) {
+            <div class="field-key">Selected: {{ selectedFileName(newPastPresidentFile) }}</div>
+            }
+            <div class="form-actions">
+              <button class="btn-save" (click)="addPastPresident()">Save Record</button>
+              <button class="btn-cancel" (click)="showPastPresidentAdd.set(false)">Cancel</button>
+            </div>
+          </div>
+          }
+
+          <div class="items-list">
+            @for (president of pastPresidentItems(); track president.id) {
+            <div class="item-row">
+              @if (editingPastPresidentId() === president.id) {
+              <img class="founder-thumb" [src]="editPastPresident.img || president.img" />
+              <div class="item-edit-fields">
                 <div class="form-grid-2">
-                  <div class="form-row"><label>Name</label><input [(ngModel)]="newPastPresident.name" class="form-input" /></div>
-                  <div class="form-row"><label>Tenure</label><input [(ngModel)]="newPastPresident.tenure" class="form-input" /></div>
-                  <div class="form-row span-two"><label>Photo *</label><input type="file" accept="image/*" class="form-input" (change)="onNewPastPresidentFileSelected($event)" /></div>
+                  <div class="form-row"><label>Name</label><input [(ngModel)]="editPastPresident.name"
+                      class="form-input" /></div>
+                  <div class="form-row"><label>Tenure</label><input [(ngModel)]="editPastPresident.tenure"
+                      class="form-input" /></div>
+                  <div class="form-row span-two"><label>Replace Photo</label><input type="file" accept="image/*"
+                      class="form-input" (change)="onEditPastPresidentFileSelected($event)" /></div>
                 </div>
-                @if (selectedFileName(newPastPresidentFile)) {
-                  <div class="field-key">Selected: {{ selectedFileName(newPastPresidentFile) }}</div>
+                @if (selectedFileName(editPastPresidentFile)) {
+                <div class="field-key">Selected: {{ selectedFileName(editPastPresidentFile) }}</div>
                 }
                 <div class="form-actions">
-                  <button class="btn-save" (click)="addPastPresident()">Save Record</button>
-                  <button class="btn-cancel" (click)="showPastPresidentAdd.set(false)">Cancel</button>
+                  <button class="btn-save sm" (click)="savePastPresident(president.id)">Save</button>
+                  <button class="btn-cancel sm" (click)="editingPastPresidentId.set(null)">Cancel</button>
                 </div>
               </div>
-            }
-
-            <div class="items-list">
-              @for (president of pastPresidentItems(); track president.id) {
-                <div class="item-row">
-                  @if (editingPastPresidentId() === president.id) {
-                    <img class="founder-thumb" [src]="editPastPresident.img || president.img" />
-                    <div class="item-edit-fields">
-                      <div class="form-grid-2">
-                        <div class="form-row"><label>Name</label><input [(ngModel)]="editPastPresident.name" class="form-input" /></div>
-                        <div class="form-row"><label>Tenure</label><input [(ngModel)]="editPastPresident.tenure" class="form-input" /></div>
-                        <div class="form-row span-two"><label>Replace Photo</label><input type="file" accept="image/*" class="form-input" (change)="onEditPastPresidentFileSelected($event)" /></div>
-                      </div>
-                      @if (selectedFileName(editPastPresidentFile)) {
-                        <div class="field-key">Selected: {{ selectedFileName(editPastPresidentFile) }}</div>
-                      }
-                      <div class="form-actions">
-                        <button class="btn-save sm" (click)="savePastPresident(president.id)">Save</button>
-                        <button class="btn-cancel sm" (click)="editingPastPresidentId.set(null)">Cancel</button>
-                      </div>
-                    </div>
-                  } @else {
-                    <img class="founder-thumb" [src]="president.img" />
-                    <div class="item-info">
-                      <div class="item-title">{{ president.name }}</div>
-                      <div class="item-sub">{{ president.tenure }}</div>
-                    </div>
-                    <div class="item-actions">
-                      <button class="btn-edit" (click)="startEditPastPresident(president)">Edit</button>
-                      <button class="btn-delete" (click)="deletePastPresident(president.id)">Delete</button>
-                    </div>
-                  }
-                </div>
+              } @else {
+              <img class="founder-thumb" [src]="president.img" />
+              <div class="item-info">
+                <div class="item-title">{{ president.name }}</div>
+                <div class="item-sub">{{ president.tenure }}</div>
+              </div>
+              <div class="item-actions">
+                <button class="btn-edit" (click)="startEditPastPresident(president)">Edit</button>
+                <button class="btn-delete" (click)="deletePastPresident(president.id)">Delete</button>
+              </div>
               }
             </div>
-          </section>
+            }
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'events') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Event Cards</h3>
-                <p>Manage upcoming, past, and president event cards.</p>
-              </div>
-              <button class="btn-add" (click)="showEventAdd.set(!showEventAdd())">+ Add Event</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Event Cards</h3>
+              <p>Manage upcoming, past, and president event cards.</p>
             </div>
+            <button class="btn-add" (click)="showEventAdd.set(!showEventAdd())">+ Add Event</button>
+          </div>
 
-            @if (showEventAdd()) {
-              <div class="form-section-block">
+          @if (showEventAdd()) {
+          <div class="form-section-block">
+            <div class="form-grid-2">
+              <div class="form-row">
+                <label>Category</label>
+                <select [(ngModel)]="newEvent.category" class="form-input">
+                  @for (category of eventCategories; track category) {
+                  <option [value]="category">{{ category }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-row">
+                <label>Badge</label>
+                <select [(ngModel)]="newEvent.badgeClass" class="form-input">
+                  @for (badge of eventBadges; track badge) {
+                  <option [value]="badge">{{ badge }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-row"><label>Date</label><input [(ngModel)]="newEvent.date" class="form-input" /></div>
+              <div class="form-row"><label>Title</label><input [(ngModel)]="newEvent.title" class="form-input" /></div>
+              <div class="form-row span-two"><label>Event Image *</label><input type="file" accept="image/*"
+                  class="form-input" (change)="onNewEventFileSelected($event)" /></div>
+              <div class="form-row span-two"><label>Link</label><input [(ngModel)]="newEvent.link" class="form-input" />
+              </div>
+              <div class="form-row span-two"><label>Description</label><textarea [(ngModel)]="newEvent.description"
+                  class="form-input form-textarea" rows="3"></textarea></div>
+            </div>
+            @if (selectedFileName(newEventFile)) {
+            <div class="field-key">Selected: {{ selectedFileName(newEventFile) }}</div>
+            }
+            <div class="form-actions">
+              <button class="btn-save" (click)="addEvent()">Save Event</button>
+              <button class="btn-cancel" (click)="showEventAdd.set(false)">Cancel</button>
+            </div>
+          </div>
+          }
+
+          <div class="items-list">
+            @for (event of eventItems(); track event.id) {
+            <div class="item-row">
+              @if (editingEventId() === event.id) {
+              <img class="item-thumb" [src]="editEvent.img || event.img" />
+              <div class="item-edit-fields">
                 <div class="form-grid-2">
                   <div class="form-row">
                     <label>Category</label>
-                    <select [(ngModel)]="newEvent.category" class="form-input">
+                    <select [(ngModel)]="editEvent.category" class="form-input">
                       @for (category of eventCategories; track category) {
-                        <option [value]="category">{{ category }}</option>
+                      <option [value]="category">{{ category }}</option>
                       }
                     </select>
                   </div>
                   <div class="form-row">
                     <label>Badge</label>
-                    <select [(ngModel)]="newEvent.badgeClass" class="form-input">
+                    <select [(ngModel)]="editEvent.badgeClass" class="form-input">
                       @for (badge of eventBadges; track badge) {
-                        <option [value]="badge">{{ badge }}</option>
+                      <option [value]="badge">{{ badge }}</option>
                       }
                     </select>
                   </div>
-                  <div class="form-row"><label>Date</label><input [(ngModel)]="newEvent.date" class="form-input" /></div>
-                  <div class="form-row"><label>Title</label><input [(ngModel)]="newEvent.title" class="form-input" /></div>
-                  <div class="form-row span-two"><label>Event Image *</label><input type="file" accept="image/*" class="form-input" (change)="onNewEventFileSelected($event)" /></div>
-                  <div class="form-row span-two"><label>Link</label><input [(ngModel)]="newEvent.link" class="form-input" /></div>
-                  <div class="form-row span-two"><label>Description</label><textarea [(ngModel)]="newEvent.description" class="form-input form-textarea" rows="3"></textarea></div>
+                  <div class="form-row"><label>Date</label><input [(ngModel)]="editEvent.date" class="form-input" />
+                  </div>
+                  <div class="form-row"><label>Title</label><input [(ngModel)]="editEvent.title" class="form-input" />
+                  </div>
+                  <div class="form-row span-two"><label>Replace Image</label><input type="file" accept="image/*"
+                      class="form-input" (change)="onEditEventFileSelected($event)" /></div>
+                  <div class="form-row span-two"><label>Link</label><input [(ngModel)]="editEvent.link"
+                      class="form-input" /></div>
+                  <div class="form-row span-two"><label>Description</label><textarea [(ngModel)]="editEvent.description"
+                      class="form-input form-textarea" rows="3"></textarea></div>
                 </div>
-                @if (selectedFileName(newEventFile)) {
-                  <div class="field-key">Selected: {{ selectedFileName(newEventFile) }}</div>
+                @if (selectedFileName(editEventFile)) {
+                <div class="field-key">Selected: {{ selectedFileName(editEventFile) }}</div>
                 }
                 <div class="form-actions">
-                  <button class="btn-save" (click)="addEvent()">Save Event</button>
-                  <button class="btn-cancel" (click)="showEventAdd.set(false)">Cancel</button>
+                  <button class="btn-save sm" (click)="saveEvent(event.id)">Save</button>
+                  <button class="btn-cancel sm" (click)="editingEventId.set(null)">Cancel</button>
                 </div>
               </div>
-            }
-
-            <div class="items-list">
-              @for (event of eventItems(); track event.id) {
-                <div class="item-row">
-                  @if (editingEventId() === event.id) {
-                    <img class="item-thumb" [src]="editEvent.img || event.img" />
-                    <div class="item-edit-fields">
-                      <div class="form-grid-2">
-                        <div class="form-row">
-                          <label>Category</label>
-                          <select [(ngModel)]="editEvent.category" class="form-input">
-                            @for (category of eventCategories; track category) {
-                              <option [value]="category">{{ category }}</option>
-                            }
-                          </select>
-                        </div>
-                        <div class="form-row">
-                          <label>Badge</label>
-                          <select [(ngModel)]="editEvent.badgeClass" class="form-input">
-                            @for (badge of eventBadges; track badge) {
-                              <option [value]="badge">{{ badge }}</option>
-                            }
-                          </select>
-                        </div>
-                        <div class="form-row"><label>Date</label><input [(ngModel)]="editEvent.date" class="form-input" /></div>
-                        <div class="form-row"><label>Title</label><input [(ngModel)]="editEvent.title" class="form-input" /></div>
-                        <div class="form-row span-two"><label>Replace Image</label><input type="file" accept="image/*" class="form-input" (change)="onEditEventFileSelected($event)" /></div>
-                        <div class="form-row span-two"><label>Link</label><input [(ngModel)]="editEvent.link" class="form-input" /></div>
-                        <div class="form-row span-two"><label>Description</label><textarea [(ngModel)]="editEvent.description" class="form-input form-textarea" rows="3"></textarea></div>
-                      </div>
-                      @if (selectedFileName(editEventFile)) {
-                        <div class="field-key">Selected: {{ selectedFileName(editEventFile) }}</div>
-                      }
-                      <div class="form-actions">
-                        <button class="btn-save sm" (click)="saveEvent(event.id)">Save</button>
-                        <button class="btn-cancel sm" (click)="editingEventId.set(null)">Cancel</button>
-                      </div>
-                    </div>
-                  } @else {
-                    <img class="item-thumb" [src]="event.img" />
-                    <div class="item-info">
-                      <div class="item-title">{{ event.title }}</div>
-                      <div class="item-sub">{{ event.date }} | {{ event.category }} | {{ event.badgeClass }}</div>
-                      <div class="item-bio">{{ truncate(event.description, 140) }}</div>
-                    </div>
-                    <div class="item-actions">
-                      <button class="btn-edit" (click)="startEditEvent(event)">Edit</button>
-                      <button class="btn-delete" (click)="deleteEvent(event.id)">Delete</button>
-                    </div>
-                  }
-                </div>
+              } @else {
+              <img class="item-thumb" [src]="event.img" />
+              <div class="item-info">
+                <div class="item-title">{{ event.title }}</div>
+                <div class="item-sub">{{ event.date }} | {{ event.category }} | {{ event.badgeClass }}</div>
+                <div class="item-bio">{{ truncate(event.description, 140) }}</div>
+              </div>
+              <div class="item-actions">
+                <button class="btn-edit" (click)="startEditEvent(event)">Edit</button>
+                <button class="btn-delete" (click)="deleteEvent(event.id)">Delete</button>
+              </div>
               }
             </div>
-          </section>
+            }
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'gallery') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Gallery Media</h3>
-                <p>Manage the slideshow and gallery thumbnails on the homepage. Uploaded files are stored in the backend uploads/gallery folder.</p>
-              </div>
-              <button class="btn-add" (click)="showGalleryAdd.set(!showGalleryAdd())">+ Add Media</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Gallery Media</h3>
+              <p>Manage the slideshow and gallery thumbnails on the homepage. Uploaded files are stored in the backend
+                uploads/gallery folder.</p>
             </div>
+            <button class="btn-add" (click)="showGalleryAdd.set(!showGalleryAdd())">+ Add Media</button>
+          </div>
 
-            @if (galleryError()) {
-              <div class="gallery-status gallery-error">{{ galleryError() }}</div>
-            }
+          @if (galleryError()) {
+          <div class="gallery-status gallery-error">{{ galleryError() }}</div>
+          }
 
-            @if (galleryBusy()) {
-              <div class="gallery-status">Processing gallery request...</div>
-            }
+          @if (galleryBusy()) {
+          <div class="gallery-status">Processing gallery request...</div>
+          }
 
-            @if (showGalleryAdd()) {
-              <div class="form-section-block">
-                <div class="form-row">
-                  <label>Media File *</label>
-                  <input type="file" accept="image/*,video/*" class="form-input" (change)="onNewGalleryFileSelected($event)" />
-                </div>
-                <div class="form-row">
-                  <label>Caption</label>
-                  <input [(ngModel)]="newGallery.caption" placeholder="Enter caption" class="form-input" />
-                </div>
+          @if (showGalleryAdd()) {
+          <div class="form-section-block">
+            <div class="form-row">
+              <label>Media File *</label>
+              <input type="file" accept="image/*,video/*" class="form-input"
+                (change)="onNewGalleryFileSelected($event)" />
+            </div>
+            <div class="form-row">
+              <label>Caption</label>
+              <input [(ngModel)]="newGallery.caption" placeholder="Enter caption" class="form-input" />
+            </div>
+            <div class="form-actions">
+              <button class="btn-save" [disabled]="galleryBusy()" (click)="addGallery()">Add Media</button>
+              <button class="btn-cancel" [disabled]="galleryBusy()" (click)="cancelGalleryAdd()">Cancel</button>
+            </div>
+          </div>
+          }
+
+          <div class="items-list">
+            @for (item of galleryItems(); track item.id) {
+            <div class="item-row">
+              @if (editingGalleryId() === item.id) {
+              @if ((editGallery.src || item.src) && editGallery.mediaType === 'video') {
+              <video class="item-thumb" [src]="editGallery.src || item.src" muted playsinline
+                preload="metadata"></video>
+              } @else {
+              <img class="item-thumb" [src]="editGallery.src || item.src" loading="lazy" />
+              }
+              <div class="item-edit-fields">
+                <div class="form-row"><label>Replace Media</label><input type="file" accept="image/*,video/*"
+                    class="form-input" (change)="onEditGalleryFileSelected($event)" /></div>
+                <div class="form-row"><label>Caption</label><input [(ngModel)]="editGallery.caption"
+                    class="form-input" /></div>
                 <div class="form-actions">
-                  <button class="btn-save" [disabled]="galleryBusy()" (click)="addGallery()">Add Media</button>
-                  <button class="btn-cancel" [disabled]="galleryBusy()" (click)="cancelGalleryAdd()">Cancel</button>
+                  <button class="btn-save sm" [disabled]="galleryBusy()" (click)="saveGallery(item.id)">Save</button>
+                  <button class="btn-cancel sm" [disabled]="galleryBusy()" (click)="cancelGalleryEdit()">Cancel</button>
                 </div>
               </div>
-            }
-
-            <div class="items-list">
-              @for (item of galleryItems(); track item.id) {
-                <div class="item-row">
-                  @if (editingGalleryId() === item.id) {
-                    @if ((editGallery.src || item.src) && editGallery.mediaType === 'video') {
-                      <video class="item-thumb" [src]="editGallery.src || item.src" muted playsinline preload="metadata"></video>
-                    } @else {
-                      <img class="item-thumb" [src]="editGallery.src || item.src" loading="lazy" />
-                    }
-                    <div class="item-edit-fields">
-                      <div class="form-row"><label>Replace Media</label><input type="file" accept="image/*,video/*" class="form-input" (change)="onEditGalleryFileSelected($event)" /></div>
-                      <div class="form-row"><label>Caption</label><input [(ngModel)]="editGallery.caption" class="form-input" /></div>
-                      <div class="form-actions">
-                        <button class="btn-save sm" [disabled]="galleryBusy()" (click)="saveGallery(item.id)">Save</button>
-                        <button class="btn-cancel sm" [disabled]="galleryBusy()" (click)="cancelGalleryEdit()">Cancel</button>
-                      </div>
-                    </div>
-                  } @else {
-                    @if (item.mediaType === 'video') {
-                      <video class="item-thumb" [src]="item.src" muted playsinline preload="metadata"></video>
-                    } @else {
-                      <img class="item-thumb" [src]="item.src" loading="lazy" />
-                    }
-                    <div class="item-info">
-                      <div class="item-title">{{ item.caption || '(no caption)' }}</div>
-                      <div class="item-sub">{{ item.mediaType === 'video' ? 'Video' : 'Image' }}</div>
-                      <div class="item-sub">{{ item.src }}</div>
-                    </div>
-                    <div class="item-actions">
-                      <button class="btn-edit" [disabled]="galleryBusy()" (click)="startEditGallery(item)">Edit</button>
-                      <button class="btn-delete" [disabled]="galleryBusy()" (click)="deleteGallery(item.id)">Delete</button>
-                    </div>
-                  }
-                </div>
+              } @else {
+              @if (item.mediaType === 'video') {
+              <video class="item-thumb" [src]="item.src" muted playsinline preload="metadata"></video>
+              } @else {
+              <img class="item-thumb" [src]="item.src" loading="lazy" />
+              }
+              <div class="item-info">
+                <div class="item-title">{{ item.caption || '(no caption)' }}</div>
+                <div class="item-sub">{{ item.mediaType === 'video' ? 'Video' : 'Image' }}</div>
+                <div class="item-sub">{{ item.src }}</div>
+              </div>
+              <div class="item-actions">
+                <button class="btn-edit" [disabled]="galleryBusy()" (click)="startEditGallery(item)">Edit</button>
+                <button class="btn-delete" [disabled]="galleryBusy()" (click)="deleteGallery(item.id)">Delete</button>
+              </div>
               }
             </div>
-          </section>
+            }
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'directory') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Directory Entries</h3>
-                <p>Manage public hostel and crematory directory entries shown in the directory section.</p>
-              </div>
-              <button class="btn-add" (click)="showDirectoryAdd.set(!showDirectoryAdd())">+ Add Entry</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Directory Entries</h3>
+              <p>Manage public hostel and crematory directory entries shown in the directory section.</p>
             </div>
+            <button class="btn-add" (click)="showDirectoryAdd.set(!showDirectoryAdd())">+ Add Entry</button>
+          </div>
 
-            @if (showDirectoryAdd()) {
-              <div class="form-section-block">
+          @if (showDirectoryAdd()) {
+          <div class="form-section-block">
+            <div class="form-grid-2">
+              <div class="form-row"><label>Name</label><input [(ngModel)]="newDirectoryEntry.name" class="form-input" />
+              </div>
+              <div class="form-row">
+                <label>Type</label>
+                <select [(ngModel)]="newDirectoryEntry.type" class="form-input">
+                  <option value="hostel">hostel</option>
+                  <option value="crematory">crematory</option>
+                </select>
+              </div>
+              <div class="form-row"><label>State</label><input [(ngModel)]="newDirectoryEntry.state"
+                  class="form-input" /></div>
+              <div class="form-row"><label>District</label><input [(ngModel)]="newDirectoryEntry.district"
+                  class="form-input" /></div>
+              <div class="form-row span-two"><label>Address</label><textarea [(ngModel)]="newDirectoryEntry.address"
+                  class="form-input form-textarea" rows="3"></textarea></div>
+              <div class="form-row span-two"><label>Contact</label><input [(ngModel)]="newDirectoryEntry.contact"
+                  class="form-input" /></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn-save" (click)="addDirectoryEntry()">Save Entry</button>
+              <button class="btn-cancel" (click)="showDirectoryAdd.set(false)">Cancel</button>
+            </div>
+          </div>
+          }
+
+          <div class="items-list">
+            @for (entry of directoryItems(); track entry.id) {
+            <div class="item-row">
+              @if (editingDirectoryId() === entry.id) {
+              <div class="item-edit-fields">
                 <div class="form-grid-2">
-                  <div class="form-row"><label>Name</label><input [(ngModel)]="newDirectoryEntry.name" class="form-input" /></div>
+                  <div class="form-row"><label>Name</label><input [(ngModel)]="editDirectoryEntry.name"
+                      class="form-input" /></div>
                   <div class="form-row">
                     <label>Type</label>
-                    <select [(ngModel)]="newDirectoryEntry.type" class="form-input">
+                    <select [(ngModel)]="editDirectoryEntry.type" class="form-input">
                       <option value="hostel">hostel</option>
                       <option value="crematory">crematory</option>
                     </select>
                   </div>
-                  <div class="form-row"><label>State</label><input [(ngModel)]="newDirectoryEntry.state" class="form-input" /></div>
-                  <div class="form-row"><label>District</label><input [(ngModel)]="newDirectoryEntry.district" class="form-input" /></div>
-                  <div class="form-row span-two"><label>Address</label><textarea [(ngModel)]="newDirectoryEntry.address" class="form-input form-textarea" rows="3"></textarea></div>
-                  <div class="form-row span-two"><label>Contact</label><input [(ngModel)]="newDirectoryEntry.contact" class="form-input" /></div>
+                  <div class="form-row"><label>State</label><input [(ngModel)]="editDirectoryEntry.state"
+                      class="form-input" /></div>
+                  <div class="form-row"><label>District</label><input [(ngModel)]="editDirectoryEntry.district"
+                      class="form-input" /></div>
+                  <div class="form-row span-two"><label>Address</label><textarea
+                      [(ngModel)]="editDirectoryEntry.address" class="form-input form-textarea" rows="3"></textarea>
+                  </div>
+                  <div class="form-row span-two"><label>Contact</label><input [(ngModel)]="editDirectoryEntry.contact"
+                      class="form-input" /></div>
                 </div>
                 <div class="form-actions">
-                  <button class="btn-save" (click)="addDirectoryEntry()">Save Entry</button>
-                  <button class="btn-cancel" (click)="showDirectoryAdd.set(false)">Cancel</button>
+                  <button class="btn-save sm" (click)="saveDirectoryEntry(entry.id)">Save</button>
+                  <button class="btn-cancel sm" (click)="editingDirectoryId.set(null)">Cancel</button>
                 </div>
               </div>
-            }
-
-            <div class="items-list">
-              @for (entry of directoryItems(); track entry.id) {
-                <div class="item-row">
-                  @if (editingDirectoryId() === entry.id) {
-                    <div class="item-edit-fields">
-                      <div class="form-grid-2">
-                        <div class="form-row"><label>Name</label><input [(ngModel)]="editDirectoryEntry.name" class="form-input" /></div>
-                        <div class="form-row">
-                          <label>Type</label>
-                          <select [(ngModel)]="editDirectoryEntry.type" class="form-input">
-                            <option value="hostel">hostel</option>
-                            <option value="crematory">crematory</option>
-                          </select>
-                        </div>
-                        <div class="form-row"><label>State</label><input [(ngModel)]="editDirectoryEntry.state" class="form-input" /></div>
-                        <div class="form-row"><label>District</label><input [(ngModel)]="editDirectoryEntry.district" class="form-input" /></div>
-                        <div class="form-row span-two"><label>Address</label><textarea [(ngModel)]="editDirectoryEntry.address" class="form-input form-textarea" rows="3"></textarea></div>
-                        <div class="form-row span-two"><label>Contact</label><input [(ngModel)]="editDirectoryEntry.contact" class="form-input" /></div>
-                      </div>
-                      <div class="form-actions">
-                        <button class="btn-save sm" (click)="saveDirectoryEntry(entry.id)">Save</button>
-                        <button class="btn-cancel sm" (click)="editingDirectoryId.set(null)">Cancel</button>
-                      </div>
-                    </div>
-                  } @else {
-                    <div class="item-info">
-                      <div class="item-title">{{ entry.name }}</div>
-                      <div class="item-sub">{{ entry.type }} | {{ entry.state }} | {{ entry.district }}</div>
-                      <div class="item-bio">{{ truncate(entry.address, 140) }}</div>
-                    </div>
-                    <div class="item-actions">
-                      <button class="btn-edit" (click)="startEditDirectoryEntry(entry)">Edit</button>
-                      <button class="btn-delete" (click)="deleteDirectoryEntry(entry.id)">Delete</button>
-                    </div>
-                  }
-                </div>
+              } @else {
+              <div class="item-info">
+                <div class="item-title">{{ entry.name }}</div>
+                <div class="item-sub">{{ entry.type }} | {{ entry.state }} | {{ entry.district }}</div>
+                <div class="item-bio">{{ truncate(entry.address, 140) }}</div>
+              </div>
+              <div class="item-actions">
+                <button class="btn-edit" (click)="startEditDirectoryEntry(entry)">Edit</button>
+                <button class="btn-delete" (click)="deleteDirectoryEntry(entry.id)">Delete</button>
+              </div>
               }
             </div>
-          </section>
+            }
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'ticker') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Announcements</h3>
-                <p>Items here scroll in the announcement ticker on the homepage.</p>
-              </div>
-              <button class="btn-add" (click)="showTickerAdd.set(!showTickerAdd())">+ Add Announcement</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Announcements</h3>
+              <p>Items here scroll in the announcement ticker on the homepage.</p>
             </div>
+            <button class="btn-add" (click)="showTickerAdd.set(!showTickerAdd())">+ Add Announcement</button>
+          </div>
 
-            @if (showTickerAdd()) {
-              <div class="form-section-block">
-                <div class="form-row">
-                  <label>Announcement Text</label>
-                  <input [(ngModel)]="newTickerText" placeholder="Enter announcement text..." class="form-input" />
-                </div>
-                <div class="form-row">
-                  <label>Announcement Link</label>
-                  <input [(ngModel)]="newTickerLink" placeholder="https://example.com" class="form-input" />
-                </div>
+          @if (showTickerAdd()) {
+          <div class="form-section-block">
+            <div class="form-row">
+              <label>Announcement Text</label>
+              <input [(ngModel)]="newTickerText" placeholder="Enter announcement text..." class="form-input" />
+            </div>
+            <div class="form-row">
+              <label>Announcement Link</label>
+              <input [(ngModel)]="newTickerLink" placeholder="https://example.com" class="form-input" />
+            </div>
+            <div class="form-actions">
+              <button class="btn-save" (click)="addTicker()">Add</button>
+              <button class="btn-cancel" (click)="showTickerAdd.set(false)">Cancel</button>
+            </div>
+          </div>
+          }
+
+          @if (tickerItems().length === 0) {
+          <div class="empty-state"><span>📢</span>
+            <p>No announcements yet.</p>
+          </div>
+          }
+
+          <div class="items-list">
+            @for (t of tickerItems(); track t.id) {
+            <div class="item-row ticker-row">
+              @if (editingTickerId() === t.id) {
+              <div class="item-edit-fields full-width-edit">
+                <div class="form-row"><label>Announcement</label><input [(ngModel)]="editTickerText"
+                    class="form-input" /></div>
+                <div class="form-row"><label>Announcement Link</label><input [(ngModel)]="editTickerLink"
+                    class="form-input" /></div>
                 <div class="form-actions">
-                  <button class="btn-save" (click)="addTicker()">Add</button>
-                  <button class="btn-cancel" (click)="showTickerAdd.set(false)">Cancel</button>
+                  <button class="btn-save sm" (click)="saveTicker(t.id)">Save</button>
+                  <button class="btn-cancel sm" (click)="editingTickerId.set(null)">Cancel</button>
                 </div>
               </div>
-            }
-
-            @if (tickerItems().length === 0) {
-              <div class="empty-state"><span>📢</span><p>No announcements yet.</p></div>
-            }
-
-            <div class="items-list">
-              @for (t of tickerItems(); track t.id) {
-                <div class="item-row ticker-row">
-                  @if (editingTickerId() === t.id) {
-                    <div class="item-edit-fields full-width-edit">
-                      <div class="form-row"><label>Announcement</label><input [(ngModel)]="editTickerText" class="form-input" /></div>
-                      <div class="form-row"><label>Announcement Link</label><input [(ngModel)]="editTickerLink" class="form-input" /></div>
-                      <div class="form-actions">
-                        <button class="btn-save sm" (click)="saveTicker(t.id)">Save</button>
-                        <button class="btn-cancel sm" (click)="editingTickerId.set(null)">Cancel</button>
-                      </div>
-                    </div>
-                  } @else {
-                    <span class="ticker-icon">📢</span>
-                    <div class="item-info"><div class="item-title">{{ t.text }}</div></div>
-                    <div class="item-actions">
-                      <button class="btn-edit" (click)="startEditTicker(t)">Edit</button>
-                      <button class="btn-delete" (click)="deleteTicker(t.id)">Delete</button>
-                    </div>
-                  }
-                </div>
+              } @else {
+              <span class="ticker-icon">📢</span>
+              <div class="item-info">
+                <div class="item-title">{{ t.text }}</div>
+              </div>
+              <div class="item-actions">
+                <button class="btn-edit" (click)="startEditTicker(t)">Edit</button>
+                <button class="btn-delete" (click)="deleteTicker(t.id)">Delete</button>
+              </div>
               }
             </div>
-          </section>
+            }
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'scholarships') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>All Scholarship Applications</h3>
-                <p>Review submitted applications with pagination, export the list to Excel, or download all uploaded files as a ZIP named with student name and Aadhaar number.</p>
-              </div>
-              <div class="form-actions compact-actions scholarship-head-actions">
-                <label class="scholarship-filter-field scholarship-head-year-field">
-                  <span>Academic Year</span>
-                  <select [ngModel]="scholarshipSelectedAcademicYearId()" (ngModelChange)="onScholarshipAcademicYearChanged($event)" class="form-input scholarship-filter-select">
-                    @for (year of scholarshipAcademicYearOptions(); track year._id) {
-                      <option [value]="year._id">{{ year.label }}</option>
-                    }
-                  </select>
-                </label>
-                <div class="scholarship-head-buttons">
-                  <!-- <button class="btn-cancel scholarship-head-button" [disabled]="scholarshipLoading()" (click)="addScholarshipAcademicYear()">Add Next Year</button> -->
-                  <button class="btn-save scholarship-head-button" [disabled]="scholarshipLoading()" (click)="loadScholarshipApplications(scholarshipPage())">Refresh</button>
-                  <button class="btn-add scholarship-head-button" [disabled]="scholarshipExporting()" (click)="exportScholarshipsToExcel()">
-                    @if (scholarshipExporting()) { Exporting... } @else { Download Excel }
-                  </button>
-                  <button class="btn-add scholarship-head-button" [disabled]="scholarshipZipExporting()" (click)="downloadScholarshipUploadsZip()">
-                    @if (scholarshipZipExporting()) { Preparing ZIP... } @else { Download ZIP }
-                  </button>
-                </div>
-                <div class="scholarship-settings-actions">
-                  <button type="button" class="scholarship-kebab-btn" aria-label="Scholarship settings" (click)="toggleScholarshipSettingsMenu()">⋮</button>
-                  @if (scholarshipSettingsMenuOpen()) {
-                    <div class="scholarship-kebab-popover">
-                      <button type="button" class="scholarship-kebab-popover-item" (click)="openScholarshipSettingsDialog()">Portal Settings</button>
-                    </div>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>All Scholarship Applications</h3>
+              <p>Review submitted applications with pagination, export the list to Excel, or download all uploaded files
+                as a ZIP named with student name and Aadhaar number.</p>
+            </div>
+            <div class="form-actions compact-actions scholarship-head-actions">
+              <label class="scholarship-filter-field scholarship-head-year-field">
+                <span>Academic Year</span>
+                <select [ngModel]="scholarshipSelectedAcademicYearId()"
+                  (ngModelChange)="onScholarshipAcademicYearChanged($event)"
+                  class="form-input scholarship-filter-select">
+                  @for (year of scholarshipAcademicYearOptions(); track year._id) {
+                  <option [value]="year._id">{{ year.label }}</option>
                   }
+                </select>
+              </label>
+              <div class="scholarship-head-buttons">
+                <!-- <button class="btn-cancel scholarship-head-button" [disabled]="scholarshipLoading()" (click)="addScholarshipAcademicYear()">Add Next Year</button> -->
+                <button class="btn-save scholarship-head-button" [disabled]="scholarshipLoading()"
+                  (click)="loadScholarshipApplications(scholarshipPage())">Refresh</button>
+                <button class="btn-add scholarship-head-button" [disabled]="scholarshipExporting()"
+                  (click)="exportScholarshipsToExcel()">
+                  @if (scholarshipExporting()) { Exporting... } @else { Download Excel }
+                </button>
+                <button class="btn-add scholarship-head-button" [disabled]="scholarshipZipExporting()"
+                  (click)="downloadScholarshipUploadsZip()">
+                  @if (scholarshipZipExporting()) { Preparing ZIP... } @else { Download ZIP }
+                </button>
+              </div>
+              <div class="scholarship-settings-actions">
+                <button type="button" class="scholarship-kebab-btn" aria-label="Scholarship settings"
+                  (click)="toggleScholarshipSettingsMenu()">⋮</button>
+                @if (scholarshipSettingsMenuOpen()) {
+                <div class="scholarship-kebab-popover">
+                  <button type="button" class="scholarship-kebab-popover-item"
+                    (click)="openScholarshipSettingsDialog()">Portal Settings</button>
                 </div>
+                }
               </div>
             </div>
+          </div>
 
-            @if (scholarshipError()) {
-              <div class="gallery-status gallery-error">{{ scholarshipError() }}</div>
-            }
+          @if (scholarshipError()) {
+          <div class="gallery-status gallery-error">{{ scholarshipError() }}</div>
+          }
 
-            @if (scholarshipLoading()) {
-              <div class="gallery-status">Loading scholarship applications...</div>
-            }
+          @if (scholarshipLoading()) {
+          <div class="gallery-status">Loading scholarship applications...</div>
+          }
 
-            @if (scholarshipSummary().totalApplications > 0) {
-              <div class="scholarship-dashboard">
-                <div class="scholarship-kpi-grid">
-                  <article class="scholarship-summary-card scholarship-summary-card--accent scholarship-summary-card--kpi">
-                    <span class="scholarship-card-label">Total No. of Applications Received</span>
-                    <strong class="scholarship-card-value">{{ scholarshipSummary().totalApplications }}</strong>
-                  </article>
+          @if (scholarshipSummary().totalApplications > 0) {
+          <div class="scholarship-dashboard">
+            <div class="scholarship-kpi-grid">
+              <article class="scholarship-summary-card scholarship-summary-card--accent scholarship-summary-card--kpi">
+                <span class="scholarship-card-label">Total No. of Applications Received</span>
+                <strong class="scholarship-card-value">{{ scholarshipSummary().totalApplications }}</strong>
+              </article>
 
-                  <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--kpi">
-                    <span class="scholarship-card-label">Total No. of Boys</span>
-                    <strong class="scholarship-card-value">{{ scholarshipSummary().boys }}</strong>
-                  </article>
+              <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--kpi">
+                <span class="scholarship-card-label">Total No. of Boys</span>
+                <strong class="scholarship-card-value">{{ scholarshipSummary().boys }}</strong>
+              </article>
 
-                  <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--kpi">
-                    <span class="scholarship-card-label">Total No. of Girls</span>
-                    <strong class="scholarship-card-value">{{ scholarshipSummary().girls }}</strong>
-                  </article>
+              <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--kpi">
+                <span class="scholarship-card-label">Total No. of Girls</span>
+                <strong class="scholarship-card-value">{{ scholarshipSummary().girls }}</strong>
+              </article>
 
-                  <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--detail">
-                    <span class="scholarship-card-label">10th Std</span>
-                    <div class="scholarship-card-lines">
-                      <span>Boys: {{ scholarshipSummary().tenth.boys }}</span>
-                      <span>Girls: {{ scholarshipSummary().tenth.girls }}</span>
-                      <span>Total: {{ scholarshipSummary().tenth.total }}</span>
-                    </div>
-                  </article>
-
-                  <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--detail">
-                    <span class="scholarship-card-label">12th Std</span>
-                    <div class="scholarship-card-lines">
-                      <span>Boys: {{ scholarshipSummary().twelfth.boys }}</span>
-                      <span>Girls: {{ scholarshipSummary().twelfth.girls }}</span>
-                      <span>Total: {{ scholarshipSummary().twelfth.total }}</span>
-                    </div>
-                  </article>
-
-                  <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--detail">
-                    <span class="scholarship-card-label">Out of Out</span>
-                    <div class="scholarship-card-lines">
-                      <span>10th: {{ scholarshipSummary().outOfOut.tenth }}</span>
-                      <span>12th: {{ scholarshipSummary().outOfOut.twelfth }}</span>
-                      <span>Total: {{ scholarshipSummary().outOfOut.total }}</span>
-                    </div>
-                  </article>
+              <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--detail">
+                <span class="scholarship-card-label">10th Std</span>
+                <div class="scholarship-card-lines">
+                  <span>Boys: {{ scholarshipSummary().tenth.boys }}</span>
+                  <span>Girls: {{ scholarshipSummary().tenth.girls }}</span>
+                  <span>Total: {{ scholarshipSummary().tenth.total }}</span>
                 </div>
+              </article>
 
-                <div class="scholarship-insights-grid">
-                  <article class="scholarship-panel scholarship-panel--board">
-                    <div class="scholarship-panel-head">
-                      <h4>Board Wise</h4>
-                      <span>{{ scholarshipSummary().boards.length }} boards</span>
-                    </div>
-                    <div class="scholarship-board-list">
-                      @for (board of scholarshipSummary().boards; track board.key) {
-                        <div class="scholarship-board-row">
-                          <span class="scholarship-board-name">{{ board.label }}</span>
-                          <span>B: {{ board.boys }}</span>
-                          <span>G: {{ board.girls }}</span>
-                          <strong>{{ board.total }}</strong>
-                        </div>
-                      }
-                    </div>
-                  </article>
-
-                  <article class="scholarship-panel scholarship-panel--ranges">
-                    <div class="scholarship-panel-head">
-                      <h4>Percentage Distribution</h4>
-                      <span>{{ scholarshipSummary().ranges.length }} slabs</span>
-                    </div>
-                    <div class="scholarship-range-grid">
-                      @for (range of scholarshipSummary().ranges; track range.key) {
-                        <article class="scholarship-range-card">
-                          <h4>{{ range.label }}</h4>
-                          <div class="scholarship-range-lines">
-                            <span>10th B: {{ range.tenth.boys }} G: {{ range.tenth.girls }}</span>
-                            <span>12th B: {{ range.twelfth.boys }} G: {{ range.twelfth.girls }}</span>
-                          </div>
-                        </article>
-                      }
-                    </div>
-                  </article>
+              <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--detail">
+                <span class="scholarship-card-label">12th Std</span>
+                <div class="scholarship-card-lines">
+                  <span>Boys: {{ scholarshipSummary().twelfth.boys }}</span>
+                  <span>Girls: {{ scholarshipSummary().twelfth.girls }}</span>
+                  <span>Total: {{ scholarshipSummary().twelfth.total }}</span>
                 </div>
+              </article>
 
-                <!-- <div class="scholarship-dump-strip">
+              <article class="scholarship-summary-card scholarship-summary-card--pill scholarship-summary-card--detail">
+                <span class="scholarship-card-label">Out of Out</span>
+                <div class="scholarship-card-lines">
+                  <span>10th: {{ scholarshipSummary().outOfOut.tenth }}</span>
+                  <span>12th: {{ scholarshipSummary().outOfOut.twelfth }}</span>
+                  <span>Total: {{ scholarshipSummary().outOfOut.total }}</span>
+                </div>
+              </article>
+            </div>
+
+            <div class="scholarship-insights-grid">
+              <article class="scholarship-panel scholarship-panel--board">
+                <div class="scholarship-panel-head">
+                  <h4>Board Wise</h4>
+                  <span>{{ scholarshipSummary().boards.length }} boards</span>
+                </div>
+                <div class="scholarship-board-list">
+                  @for (board of scholarshipSummary().boards; track board.key) {
+                  <div class="scholarship-board-row">
+                    <span class="scholarship-board-name">{{ board.label }}</span>
+                    <span>B: {{ board.boys }}</span>
+                    <span>G: {{ board.girls }}</span>
+                    <strong>{{ board.total }}</strong>
+                  </div>
+                  }
+                </div>
+              </article>
+
+              <article class="scholarship-panel scholarship-panel--ranges">
+                <div class="scholarship-panel-head">
+                  <h4>Percentage Distribution</h4>
+                  <span>{{ scholarshipSummary().ranges.length }} slabs</span>
+                </div>
+                <div class="scholarship-range-grid">
+                  @for (range of scholarshipSummary().ranges; track range.key) {
+                  <article class="scholarship-range-card">
+                    <h4>{{ range.label }}</h4>
+                    <div class="scholarship-range-lines">
+                      <span>10th B: {{ range.tenth.boys }} G: {{ range.tenth.girls }}</span>
+                      <span>12th B: {{ range.twelfth.boys }} G: {{ range.twelfth.girls }}</span>
+                    </div>
+                  </article>
+                  }
+                </div>
+              </article>
+            </div>
+
+            <!-- <div class="scholarship-dump-strip">
                   <span class="scholarship-dump-label">Excel or CSV Dump</span>
                   <div class="scholarship-dump-tags">
                     <span>District wise</span>
@@ -1267,549 +1420,596 @@
                     <p>{{ scholarshipSummary().others }} applications use a gender value outside the boys and girls counters.</p>
                   }
                 </div> -->
-              </div>
-            }
-
-            <div class="scholarship-table-toolbar">
-                <label class="scholarship-filter-field scholarship-search-field">
-                  <span>Search Student</span>
-                  <input
-                    class="form-input scholarship-filter-select"
-                    type="text"
-                    placeholder="Name, application no, registration, Aadhaar, mobile"
-                    [ngModel]="scholarshipSearchDraft()"
-                    (ngModelChange)="onScholarshipSearchDraftChanged($event)"
-                    (keydown.enter)="$event.preventDefault(); applyScholarshipSearch()"
-                  />
-                  <small class="scholarship-search-hint">Search starts after 3 characters and works across all admin scholarship lists.</small>
-                </label>
-                <label class="scholarship-filter-field">
-                  <span>State</span>
-                  <select class="form-input scholarship-filter-select" [ngModel]="scholarshipSelectedState()" (ngModelChange)="onScholarshipStateChanged($event)">
-                    <option value="">All states</option>
-                    @for (state of scholarshipStateOptions; track state) {
-                      <option [value]="state">{{ state }}</option>
-                    }
-                  </select>
-                </label>
-                <label class="scholarship-filter-field">
-                  <span>District</span>
-                  <select class="form-input scholarship-filter-select" [ngModel]="scholarshipSelectedDistrict()" [disabled]="!scholarshipSelectedState()" (ngModelChange)="onScholarshipDistrictChanged($event)">
-                    <option value="">All districts</option>
-                    @for (district of scholarshipDistrictOptions; track district) {
-                      <option [value]="district">{{ district }}</option>
-                    }
-                  </select>
-                </label>
-                <label class="scholarship-filter-field">
-                  <span>Taluk</span>
-                  <select class="form-input scholarship-filter-select" [ngModel]="scholarshipSelectedTaluk()" [disabled]="!scholarshipSelectedDistrict()" (ngModelChange)="onScholarshipTalukChanged($event)">
-                    <option value="">All taluks</option>
-                    @for (taluk of scholarshipTalukOptions; track taluk) {
-                      <option [value]="taluk">{{ taluk }}</option>
-                    }
-                  </select>
-                </label>
-                <label class="scholarship-filter-field">
-                  <span>Submitted From</span>
-                  <input
-                    class="form-input scholarship-filter-select"
-                    type="date"
-                    [ngModel]="scholarshipSubmittedFrom()"
-                    (ngModelChange)="onScholarshipSubmittedFromChanged($event)"
-                  />
-                </label>
-                <label class="scholarship-filter-field">
-                  <span>Submitted To</span>
-                  <input
-                    class="form-input scholarship-filter-select"
-                    type="date"
-                    [ngModel]="scholarshipSubmittedTo()"
-                    (ngModelChange)="onScholarshipSubmittedToChanged($event)"
-                  />
-                </label>
-                <div class="scholarship-table-toolbar-actions">
-                  @if (scholarshipSelectedState() || scholarshipSelectedDistrict() || scholarshipSelectedTaluk()) {
-                    <button class="btn-cancel" [disabled]="scholarshipLoading()" (click)="clearScholarshipRegionFilters()">Clear Region</button>
-                  }
-                  @if (scholarshipSubmittedFrom() || scholarshipSubmittedTo()) {
-                    <button class="btn-cancel" [disabled]="scholarshipLoading()" (click)="clearScholarshipDateFilters()">Clear Date</button>
-                  }
-                  @if (scholarshipSearchTerm()) {
-                    <button class="btn-cancel" [disabled]="scholarshipLoading()" (click)="clearScholarshipSearch()">Clear</button>
-                  }
-                </div>
-            </div>
-            <div #scholarshipStatusTabs class="scholarship-status-tabs" role="tablist" aria-label="Scholarship status filters">
-                @for (tab of scholarshipListTabs; track tab.key) {
-                  <button
-                    type="button"
-                    class="scholarship-status-tab"
-                    [class.is-active]="scholarshipActiveListTab() === tab.key"
-                    [disabled]="scholarshipLoading()"
-                    (click)="setScholarshipListTab(tab.key)"
-                  >
-                    <span>{{ tab.label }}</span>
-                    <strong>{{ scholarshipTabCount(tab.key) }}</strong>
-                  </button>
-                }
-            </div>
-            <div class="scholarship-meta">Academic Year {{ scholarshipSelectedAcademicYearLabel() }} | Showing page {{ scholarshipPage() }} of {{ scholarshipTotalPages() || 1 }} | Total {{ scholarshipTotalItems() }} applications</div>
-            @if (scholarshipSearchTerm()) {
-              <div class="scholarship-search-meta">Search active for: <strong>{{ scholarshipSearchTerm() }}</strong></div>
-            }
-
-            @if (!scholarshipLoading() && scholarshipApplications().length === 0) {
-              <div class="empty-state"><span>🎓</span><p>No scholarship applications found.</p></div>
-            }
-
-            @if (scholarshipApplications().length > 0) {
-              <div class="scholarship-table-wrap">
-                <table class="scholarship-table">
-                  <thead>
-                    <tr>
-                      <th>App No</th>
-                      <th>Student</th>
-                      <th>Registration</th>
-                      <th>Mobile</th>
-                      <th>Address</th>
-                      <th>Academic</th>
-                      <th>Percentage</th>
-                      <th>Status</th>
-                      <th>Submitted</th>
-                      <th>Images</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (item of scholarshipApplications(); track item._id) {
-                      <tr>
-                        <td>
-                          <div class="td-title">{{ item.applicationNumber }}</div>
-                          <div class="td-sub">{{ item.academicYear }}</div>
-                        </td>
-                        <td>
-                          <div class="td-title">{{ item.firstName }} {{ item.middleName }} {{ item.lastName }}</div>
-                          <div class="td-sub">{{ item.gender }} | {{ item.registrationNo }}</div>
-                          <div class="td-sub">Father: {{ item.fatherName }}</div>
-                          <div class="td-sub">Mother: {{ item.motherName }}</div>
-                          <div class="td-sub">Email: {{ item.emailId }}</div>
-                          <div class="td-sub">Aadhaar: {{ item.aadhaarNumber }}</div>
-                        </td>
-                        <td>{{ item.registrationNo }}</td>
-                        <td>{{ item.mobile }}</td>
-                        <td>{{ item.village }}, {{ item.taluk }}, {{ item.district }}, {{ item.state }} - {{ item.pinCode }}</td>
-                        <td>
-                          <div class="td-title">{{ item.board }} | {{ item.standard }}</div>
-                          <div class="td-sub">Marks card verification available in image section</div>
-                        </td>
-                        <td>
-                          <div class="td-title">{{ item.percentage }}%</div>
-                          <div class="td-sub">{{ item.marksObtained }} / {{ item.totalMarks }}</div>
-                        </td>
-                        <td>
-                          <span class="scholarship-status-badge scholarship-status-badge--table" [class]="'scholarship-status-badge scholarship-status-badge--table ' + scholarshipStatusClass(item.status)">
-                            {{ scholarshipStatusLabel(item.status) }}
-                          </span>
-                        </td>
-                        <td>{{ item.submittedAt | date:'medium' }}</td>
-                        <td>
-                          <div class="scholarship-image-section">
-                            <div class="scholarship-image-grid">
-                              <button type="button" title="Open profile photo preview" (click)="openScholarshipApplicationImagePreview(item, 0)">
-                                @if (scholarshipDocumentKind(item.profilePhotoUrl) === 'image') {
-                                  <img [src]="imageUrl(item.profilePhotoUrl)" alt="Profile" loading="lazy" decoding="async" />
-                                } @else {
-                                  <span class="scholarship-document-tile">FILE</span>
-                                }
-                                <span>Photo</span>
-                              </button>
-                              <button type="button" title="Open caste certificate preview" (click)="openScholarshipApplicationImagePreview(item, 1)">
-                                @if (scholarshipDocumentKind(item.casteCertificateUrl) === 'image') {
-                                  <img [src]="imageUrl(item.casteCertificateUrl)" alt="Caste certificate" loading="lazy" decoding="async" />
-                                } @else {
-                                  <span class="scholarship-document-tile">PDF</span>
-                                }
-                                <span>Caste</span>
-                              </button>
-                              <button type="button" title="Open marks card preview" (click)="openScholarshipApplicationImagePreview(item, 2)">
-                                @if (scholarshipDocumentKind(item.marksCardUrl) === 'image') {
-                                  <img [src]="imageUrl(item.marksCardUrl)" alt="Marks card" loading="lazy" decoding="async" />
-                                } @else {
-                                  <span class="scholarship-document-tile">PDF</span>
-                                }
-                                <span>Marks</span>
-                              </button>
-                              @if (item.aadhaarCardUrl) {
-                                <button type="button" title="Open Aadhaar copy preview" (click)="openScholarshipApplicationImagePreview(item, 3)">
-                                  @if (scholarshipDocumentKind(item.aadhaarCardUrl) === 'image') {
-                                    <img [src]="imageUrl(item.aadhaarCardUrl)" alt="Aadhaar copy" loading="lazy" decoding="async" />
-                                  } @else {
-                                    <span class="scholarship-document-tile">PDF</span>
-                                  }
-                                  <span>Aadhaar Copy</span>
-                                </button>
-                              }
-                              @if (item.aadhaarOfflineFileUrl) {
-                                <a [href]="imageUrl(item.aadhaarOfflineFileUrl)" target="_blank" rel="noopener noreferrer" title="Open Aadhaar offline file" class="scholarship-file-tile">
-                                  <strong>Aadhaar</strong>
-                                  <span>XML/ZIP</span>
-                                </a>
-                              }
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-
-              <div class="pager-row">
-                <button class="btn-cancel" [disabled]="scholarshipPage() <= 1 || scholarshipLoading()" (click)="goToScholarshipPage(scholarshipPage() - 1)">Previous</button>
-                <span>Page {{ scholarshipPage() }} / {{ scholarshipTotalPages() || 1 }}</span>
-                <button class="btn-cancel" [disabled]="scholarshipPage() >= scholarshipTotalPages() || scholarshipLoading()" (click)="goToScholarshipPage(scholarshipPage() + 1)">Next</button>
-              </div>
-            }
-
-            @if (scholarshipImagePreviewSrc()) {
-              <div class="scholarship-image-lightbox" (click)="closeScholarshipImagePreview()">
-                <div class="scholarship-image-lightbox-content" (click)="$event.stopPropagation()">
-                  <div class="scholarship-image-preview-head">
-                    <div>
-                      <h4>{{ scholarshipImagePreviewDetails()?.title || scholarshipImagePreviewAlt() }}</h4>
-                      @if (scholarshipImagePreviewDetails()?.registrationNo || scholarshipImagePreviewDetails()?.aadhaarNumber || scholarshipImagePreviewDetails()?.percentage !== undefined) {
-                        <div class="scholarship-image-preview-meta">
-                          @if (scholarshipImagePreviewDetails()?.registrationNo) {
-                            <div class="scholarship-image-preview-chip scholarship-image-preview-chip--wide">
-                              <span>Registration No</span>
-                              <strong>{{ scholarshipImagePreviewDetails()?.registrationNo }}</strong>
-                            </div>
-                          }
-                          @if (scholarshipImagePreviewDetails()?.aadhaarNumber) {
-                            <div class="scholarship-image-preview-chip scholarship-image-preview-chip--wide">
-                              <span>Aadhaar Number</span>
-                              <strong>{{ scholarshipImagePreviewDetails()?.aadhaarNumber }}</strong>
-                            </div>
-                          }
-                          @if (scholarshipImagePreviewDetails()?.percentage !== undefined) {
-                          <div class="scholarship-image-preview-chip">
-                            <span>Total</span>
-                            <strong>{{ scholarshipImagePreviewDetails()?.totalMarks }}</strong>
-                          </div>
-                          <div class="scholarship-image-preview-chip">
-                            <span>Obtained</span>
-                            <strong>{{ scholarshipImagePreviewDetails()?.marksObtained }}</strong>
-                          </div>
-                          <div class="scholarship-image-preview-chip">
-                            <span>Percentage</span>
-                            <strong>{{ scholarshipImagePreviewDetails()?.percentage }}%</strong>
-                          </div>
-                          }
-                        </div>
-                      }
-                    </div>
-                  </div>
-                  <div class="scholarship-image-toolbar">
-                    <span>{{ scholarshipImagePreviewIndex() + 1 }} / {{ scholarshipImagePreviewItems().length }}</span>
-                    <span>{{ (scholarshipImageZoom() * 100).toFixed(0) }}%</span>
-                    <button type="button" class="scholarship-image-toolbar-btn" [disabled]="scholarshipImageZoom() <= 0.5" (click)="zoomOutScholarshipImage()">-</button>
-                    <button type="button" class="scholarship-image-toolbar-btn" [disabled]="scholarshipImageZoom() >= 3" (click)="zoomInScholarshipImage()">+</button>
-                    <button type="button" class="scholarship-image-toolbar-btn" [disabled]="scholarshipImageZoom() === 1" (click)="resetScholarshipImageZoom()">Reset</button>
-                    <button type="button" class="scholarship-image-toolbar-btn scholarship-image-toolbar-btn-primary" (click)="downloadScholarshipPreviewImage()">Download</button>
-                  </div>
-                  <button type="button" class="scholarship-image-lightbox-close" aria-label="Close image preview" (click)="closeScholarshipImagePreview()">×</button>
-                  <div
-                    #scholarshipImageStage
-                    class="scholarship-image-lightbox-stage"
-                    [class.is-draggable]="scholarshipImageZoom() > 1"
-                    [class.is-panning]="isScholarshipImagePanning"
-                    (mousedown)="startScholarshipImagePan($event, scholarshipImageStage)"
-                  >
-                    <button
-                      type="button"
-                      class="scholarship-image-nav scholarship-image-nav--prev"
-                      aria-label="Show previous image"
-                      [disabled]="scholarshipImagePreviewIndex() <= 0"
-                      (click)="$event.stopPropagation(); showPreviousScholarshipImage()"
-                    >
-                      ‹
-                    </button>
-                    @if (scholarshipImagePreviewKind() === 'pdf') {
-                      <object class="scholarship-document-frame" [data]="scholarshipImagePreviewSrc()" type="application/pdf" [attr.aria-label]="scholarshipImagePreviewAlt()"></object>
-                    } @else {
-                      <img [src]="scholarshipImagePreviewSrc()" [alt]="scholarshipImagePreviewAlt()" [style.transform]="'scale(' + scholarshipImageZoom() + ')'" />
-                    }
-                    <button
-                      type="button"
-                      class="scholarship-image-nav scholarship-image-nav--next"
-                      aria-label="Show next image"
-                      [disabled]="scholarshipImagePreviewIndex() >= scholarshipImagePreviewItems().length - 1"
-                      (click)="$event.stopPropagation(); showNextScholarshipImage()"
-                    >
-                      ›
-                    </button>
-                  </div>
-                  @if (scholarshipPreviewApplication(); as previewApplication) {
-                    <div class="scholarship-popup-review-panel">
-                      <div class="scholarship-popup-review-head">
-                        <div>
-                          <p class="scholarship-popup-review-eyebrow">Application Review</p>
-                          <strong>Update scholarship request status</strong>
-                        </div>
-                        <span class="scholarship-status-badge" [class.is-pending]="previewApplication.status === 'pending'" [class.is-accepted]="previewApplication.status === 'accepted'" [class.is-rejected]="previewApplication.status === 'rejected'">
-                          {{ scholarshipStatusLabel(previewApplication.status) }}
-                        </span>
-                      </div>
-                      <div class="scholarship-popup-review-grid" [class.has-rejection-comment]="scholarshipStatusDraft(previewApplication._id) === 'rejected'">
-                        <div class="scholarship-popup-review-field">
-                          <label>Decision</label>
-                          <select class="form-input scholarship-status-select scholarship-popup-status-select" [ngModel]="scholarshipStatusDraft(previewApplication._id)" (ngModelChange)="onScholarshipStatusDraftChanged(previewApplication._id, $event)">
-                            <option value="pending">Pending</option>
-                            <option value="accepted">Accepted</option>
-                            <option value="rejected">Rejected</option>
-                          </select>
-                        </div>
-                        @if (scholarshipStatusDraft(previewApplication._id) === 'rejected') {
-                          <div class="scholarship-popup-review-field scholarship-popup-review-field--comment">
-                            <label>Rejection Comment</label>
-                            <textarea
-                              class="form-input form-textarea scholarship-reject-textarea scholarship-popup-review-textarea"
-                              rows="3"
-                              placeholder="Enter a clear reason for rejection"
-                              [ngModel]="scholarshipCommentDraft(previewApplication._id)"
-                              (ngModelChange)="onScholarshipCommentDraftChanged(previewApplication._id, $event)"
-                            ></textarea>
-                          </div>
-                        }
-                        <div class="scholarship-popup-review-field scholarship-popup-review-field--action">
-                          <label>Apply Change</label>
-                          <button class="btn-save sm scholarship-popup-update-btn" [disabled]="scholarshipStatusUpdating()[previewApplication._id]" (click)="updateScholarshipStatus(previewApplication)">
-                            @if (scholarshipStatusUpdating()[previewApplication._id]) { Saving... } @else { Save Status }
-                          </button>
-                        </div>
-                      </div>
-                      @if (scholarshipStatusDraft(previewApplication._id) !== 'rejected' && previewApplication.rejectionComment) {
-                        <div class="scholarship-status-note scholarship-status-note--review">Previous rejection note: {{ previewApplication.rejectionComment }}</div>
-                      }
-                    </div>
-                  }
-                </div>
-              </div>
-            }
-          </section>
-
-          @if (scholarshipSettingsDialogOpen()) {
-            <div class="scholarship-settings-modal-backdrop" (click)="closeScholarshipSettingsDialog()">
-              <section class="scholarship-settings-modal" (click)="$event.stopPropagation()">
-                <div class="scholarship-settings-modal-head">
-                  <div>
-                    <p class="scholarship-settings-modal-eyebrow">Scholarship Portal</p>
-                    <h3>Portal Settings</h3>
-                    <p>Set the exact closing date and time for public applications. After this time, the Apply button is disabled and the form is hidden.</p>
-                  </div>
-                  <button type="button" class="scholarship-settings-close" aria-label="Close scholarship settings" (click)="closeScholarshipSettingsDialog()">✕</button>
-                </div>
-                <div class="form-grid-2 scholarship-settings-grid">
-                  <div class="form-row">
-                    <label>Display Year</label>
-                    <input [(ngModel)]="scholarshipSettings.displayYear" class="form-input" placeholder="2025-26" />
-                  </div>
-                  <div class="form-row">
-                    <label>Application Closing Date & Time</label>
-                    <input [(ngModel)]="scholarshipSettings.applicationDeadline" type="datetime-local" class="form-input" />
-                  </div>
-                  <div class="form-row">
-                    <label>Portal Status</label>
-                    <input [value]="data.isScholarshipApplicationsOpen() ? 'Open' : 'Closed'" class="form-input" readonly />
-                  </div>
-                  <div class="form-row span-two">
-                    <label>Closed Title</label>
-                    <input [(ngModel)]="scholarshipSettings.closedTitle" class="form-input" placeholder="Scholarship Applications Closed" />
-                  </div>
-                  <div class="form-row span-two">
-                    <label>Closed Message</label>
-                    <textarea [(ngModel)]="scholarshipSettings.closedMessage" class="form-input form-textarea" rows="3" placeholder="Tell visitors that the deadline has passed."></textarea>
-                  </div>
-                </div>
-                <div class="form-actions scholarship-settings-modal-actions">
-                  <button type="button" class="btn-save" (click)="saveScholarshipSettings()">Save Scholarship Settings</button>
-                  <button type="button" class="btn-cancel" (click)="closeScholarshipSettingsDialog()">Cancel</button>
-                </div>
-              </section>
-            </div>
+          </div>
           }
+
+          <div class="scholarship-table-toolbar">
+            <label class="scholarship-filter-field scholarship-search-field">
+              <span>Search Student</span>
+              <input class="form-input scholarship-filter-select" type="text"
+                placeholder="Name, application no, registration, Aadhaar, mobile" [ngModel]="scholarshipSearchDraft()"
+                (ngModelChange)="onScholarshipSearchDraftChanged($event)"
+                (keydown.enter)="$event.preventDefault(); applyScholarshipSearch()" />
+              <small class="scholarship-search-hint">Search starts after 3 characters and works across all admin
+                scholarship lists.</small>
+            </label>
+            <label class="scholarship-filter-field">
+              <span>State</span>
+              <select class="form-input scholarship-filter-select" [ngModel]="scholarshipSelectedState()"
+                (ngModelChange)="onScholarshipStateChanged($event)">
+                <option value="">All states</option>
+                @for (state of scholarshipStateOptions; track state) {
+                <option [value]="state">{{ state }}</option>
+                }
+              </select>
+            </label>
+            <label class="scholarship-filter-field">
+              <span>District</span>
+              <select class="form-input scholarship-filter-select" [ngModel]="scholarshipSelectedDistrict()"
+                [disabled]="!scholarshipSelectedState()" (ngModelChange)="onScholarshipDistrictChanged($event)">
+                <option value="">All districts</option>
+                @for (district of scholarshipDistrictOptions; track district) {
+                <option [value]="district">{{ district }}</option>
+                }
+              </select>
+            </label>
+            <label class="scholarship-filter-field">
+              <span>Taluk</span>
+              <select class="form-input scholarship-filter-select" [ngModel]="scholarshipSelectedTaluk()"
+                [disabled]="!scholarshipSelectedDistrict()" (ngModelChange)="onScholarshipTalukChanged($event)">
+                <option value="">All taluks</option>
+                @for (taluk of scholarshipTalukOptions; track taluk) {
+                <option [value]="taluk">{{ taluk }}</option>
+                }
+              </select>
+            </label>
+            <label class="scholarship-filter-field">
+              <span>Submitted From</span>
+              <input class="form-input scholarship-filter-select" type="date" [ngModel]="scholarshipSubmittedFrom()"
+                (ngModelChange)="onScholarshipSubmittedFromChanged($event)" />
+            </label>
+            <label class="scholarship-filter-field">
+              <span>Submitted To</span>
+              <input class="form-input scholarship-filter-select" type="date" [ngModel]="scholarshipSubmittedTo()"
+                (ngModelChange)="onScholarshipSubmittedToChanged($event)" />
+            </label>
+            <div class="scholarship-table-toolbar-actions">
+              @if (scholarshipSelectedState() || scholarshipSelectedDistrict() || scholarshipSelectedTaluk()) {
+              <button class="btn-cancel" [disabled]="scholarshipLoading()"
+                (click)="clearScholarshipRegionFilters()">Clear Region</button>
+              }
+              @if (scholarshipSubmittedFrom() || scholarshipSubmittedTo()) {
+              <button class="btn-cancel" [disabled]="scholarshipLoading()" (click)="clearScholarshipDateFilters()">Clear
+                Date</button>
+              }
+              @if (scholarshipSearchTerm()) {
+              <button class="btn-cancel" [disabled]="scholarshipLoading()"
+                (click)="clearScholarshipSearch()">Clear</button>
+              }
+            </div>
+          </div>
+          <div #scholarshipStatusTabs class="scholarship-status-tabs" role="tablist"
+            aria-label="Scholarship status filters">
+            @for (tab of scholarshipListTabs; track tab.key) {
+            <button type="button" class="scholarship-status-tab"
+              [class.is-active]="scholarshipActiveListTab() === tab.key" [disabled]="scholarshipLoading()"
+              (click)="setScholarshipListTab(tab.key)">
+              <span>{{ tab.label }}</span>
+              <strong>{{ scholarshipTabCount(tab.key) }}</strong>
+            </button>
+            }
+          </div>
+          <div class="scholarship-meta">Academic Year {{ scholarshipSelectedAcademicYearLabel() }} | Showing page {{
+            scholarshipPage() }} of {{ scholarshipTotalPages() || 1 }} | Total {{ scholarshipTotalItems() }}
+            applications</div>
+          @if (scholarshipSearchTerm()) {
+          <div class="scholarship-search-meta">Search active for: <strong>{{ scholarshipSearchTerm() }}</strong></div>
+          }
+
+          @if (!scholarshipLoading() && scholarshipApplications().length === 0) {
+          <div class="empty-state"><span>🎓</span>
+            <p>No scholarship applications found.</p>
+          </div>
+          }
+
+          @if (scholarshipApplications().length > 0) {
+          <div class="scholarship-table-wrap">
+            <table class="scholarship-table">
+              <thead>
+                <tr>
+                  <th>App No</th>
+                  <th>Student</th>
+                  <th>Registration</th>
+                  <th>Mobile</th>
+                  <th>Address</th>
+                  <th>Academic</th>
+                  <th>Percentage</th>
+                  <th>Status</th>
+                  <th>Submitted</th>
+                  <th>Images</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of scholarshipApplications(); track item._id) {
+                <tr>
+                  <td>
+                    <div class="td-title">{{ item.applicationNumber }}</div>
+                    <div class="td-sub">{{ item.academicYear }}</div>
+                  </td>
+                  <td>
+                    <div class="td-title">{{ item.firstName }} {{ item.middleName }} {{ item.lastName }}</div>
+                    <div class="td-sub">{{ item.gender }} | {{ item.registrationNo }}</div>
+                    <div class="td-sub">Father: {{ item.fatherName }}</div>
+                    <div class="td-sub">Mother: {{ item.motherName }}</div>
+                    <div class="td-sub">Email: {{ item.emailId }}</div>
+                    <div class="td-sub">Aadhaar: {{ item.aadhaarNumber }}</div>
+                  </td>
+                  <td>{{ item.registrationNo }}</td>
+                  <td>{{ item.mobile }}</td>
+                  <td>{{ item.village }}, {{ item.taluk }}, {{ item.district }}, {{ item.state }} - {{ item.pinCode }}
+                  </td>
+                  <td>
+                    <div class="td-title">{{ item.board }} | {{ item.standard }}</div>
+                    <div class="td-sub">Marks card verification available in image section</div>
+                  </td>
+                  <td>
+                    <div class="td-title">{{ item.percentage }}%</div>
+                    <div class="td-sub">{{ item.marksObtained }} / {{ item.totalMarks }}</div>
+                  </td>
+                  <td>
+                    <span class="scholarship-status-badge scholarship-status-badge--table"
+                      [class]="'scholarship-status-badge scholarship-status-badge--table ' + scholarshipStatusClass(item.status)">
+                      {{ scholarshipStatusLabel(item.status) }}
+                    </span>
+                  </td>
+                  <td>{{ item.submittedAt | date:'medium' }}</td>
+                  <td>
+                    <div class="scholarship-image-section">
+                      <div class="scholarship-image-grid">
+                        <button type="button" title="Open profile photo preview"
+                          (click)="openScholarshipApplicationImagePreview(item, 0)">
+                          @if (scholarshipDocumentKind(item.profilePhotoUrl) === 'image') {
+                          <img [src]="imageUrl(item.profilePhotoUrl)" alt="Profile" loading="lazy" decoding="async" />
+                          } @else {
+                          <span class="scholarship-document-tile">FILE</span>
+                          }
+                          <span>Photo</span>
+                        </button>
+                        <button type="button" title="Open caste certificate preview"
+                          (click)="openScholarshipApplicationImagePreview(item, 1)">
+                          @if (scholarshipDocumentKind(item.casteCertificateUrl) === 'image') {
+                          <img [src]="imageUrl(item.casteCertificateUrl)" alt="Caste certificate" loading="lazy"
+                            decoding="async" />
+                          } @else {
+                          <span class="scholarship-document-tile">PDF</span>
+                          }
+                          <span>Caste</span>
+                        </button>
+                        <button type="button" title="Open marks card preview"
+                          (click)="openScholarshipApplicationImagePreview(item, 2)">
+                          @if (scholarshipDocumentKind(item.marksCardUrl) === 'image') {
+                          <img [src]="imageUrl(item.marksCardUrl)" alt="Marks card" loading="lazy" decoding="async" />
+                          } @else {
+                          <span class="scholarship-document-tile">PDF</span>
+                          }
+                          <span>Marks</span>
+                        </button>
+                        @if (item.aadhaarCardUrl) {
+                        <button type="button" title="Open Aadhaar copy preview"
+                          (click)="openScholarshipApplicationImagePreview(item, 3)">
+                          @if (scholarshipDocumentKind(item.aadhaarCardUrl) === 'image') {
+                          <img [src]="imageUrl(item.aadhaarCardUrl)" alt="Aadhaar copy" loading="lazy"
+                            decoding="async" />
+                          } @else {
+                          <span class="scholarship-document-tile">PDF</span>
+                          }
+                          <span>Aadhaar Copy</span>
+                        </button>
+                        }
+                        @if (item.aadhaarOfflineFileUrl) {
+                        <a [href]="imageUrl(item.aadhaarOfflineFileUrl)" target="_blank" rel="noopener noreferrer"
+                          title="Open Aadhaar offline file" class="scholarship-file-tile">
+                          <strong>Aadhaar</strong>
+                          <span>XML/ZIP</span>
+                        </a>
+                        }
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pager-row">
+            <button class="btn-cancel" [disabled]="scholarshipPage() <= 1 || scholarshipLoading()"
+              (click)="goToScholarshipPage(scholarshipPage() - 1)">Previous</button>
+            <span>Page {{ scholarshipPage() }} / {{ scholarshipTotalPages() || 1 }}</span>
+            <button class="btn-cancel" [disabled]="scholarshipPage() >= scholarshipTotalPages() || scholarshipLoading()"
+              (click)="goToScholarshipPage(scholarshipPage() + 1)">Next</button>
+          </div>
+          }
+
+          @if (scholarshipImagePreviewSrc()) {
+          <div class="scholarship-image-lightbox" (click)="closeScholarshipImagePreview()">
+            <div class="scholarship-image-lightbox-content" (click)="$event.stopPropagation()">
+              <div class="scholarship-image-preview-head">
+                <div>
+                  <h4>{{ scholarshipImagePreviewDetails()?.title || scholarshipImagePreviewAlt() }}</h4>
+                  @if (scholarshipImagePreviewDetails()?.registrationNo ||
+                  scholarshipImagePreviewDetails()?.aadhaarNumber || scholarshipImagePreviewDetails()?.percentage !==
+                  undefined) {
+                  <div class="scholarship-image-preview-meta">
+                    @if (scholarshipImagePreviewDetails()?.registrationNo) {
+                    <div class="scholarship-image-preview-chip scholarship-image-preview-chip--wide">
+                      <span>Registration No</span>
+                      <strong>{{ scholarshipImagePreviewDetails()?.registrationNo }}</strong>
+                    </div>
+                    }
+                    @if (scholarshipImagePreviewDetails()?.aadhaarNumber) {
+                    <div class="scholarship-image-preview-chip scholarship-image-preview-chip--wide">
+                      <span>Aadhaar Number</span>
+                      <strong>{{ scholarshipImagePreviewDetails()?.aadhaarNumber }}</strong>
+                    </div>
+                    }
+                    @if (scholarshipImagePreviewDetails()?.percentage !== undefined) {
+                    <div class="scholarship-image-preview-chip">
+                      <span>Total</span>
+                      <strong>{{ scholarshipImagePreviewDetails()?.totalMarks }}</strong>
+                    </div>
+                    <div class="scholarship-image-preview-chip">
+                      <span>Obtained</span>
+                      <strong>{{ scholarshipImagePreviewDetails()?.marksObtained }}</strong>
+                    </div>
+                    <div class="scholarship-image-preview-chip">
+                      <span>Percentage</span>
+                      <strong>{{ scholarshipImagePreviewDetails()?.percentage }}%</strong>
+                    </div>
+                    }
+                  </div>
+                  }
+                </div>
+              </div>
+              <div class="scholarship-image-toolbar">
+                <span>{{ scholarshipImagePreviewIndex() + 1 }} / {{ scholarshipImagePreviewItems().length }}</span>
+                <span>{{ (scholarshipImageZoom() * 100).toFixed(0) }}%</span>
+                <button type="button" class="scholarship-image-toolbar-btn" [disabled]="scholarshipImageZoom() <= 0.5"
+                  (click)="zoomOutScholarshipImage()">-</button>
+                <button type="button" class="scholarship-image-toolbar-btn" [disabled]="scholarshipImageZoom() >= 3"
+                  (click)="zoomInScholarshipImage()">+</button>
+                <button type="button" class="scholarship-image-toolbar-btn" [disabled]="scholarshipImageZoom() === 1"
+                  (click)="resetScholarshipImageZoom()">Reset</button>
+                <button type="button" class="scholarship-image-toolbar-btn scholarship-image-toolbar-btn-primary"
+                  (click)="downloadScholarshipPreviewImage()">Download</button>
+              </div>
+              <button type="button" class="scholarship-image-lightbox-close" aria-label="Close image preview"
+                (click)="closeScholarshipImagePreview()">×</button>
+              <div #scholarshipImageStage class="scholarship-image-lightbox-stage"
+                [class.is-draggable]="scholarshipImageZoom() > 1" [class.is-panning]="isScholarshipImagePanning"
+                (mousedown)="startScholarshipImagePan($event, scholarshipImageStage)">
+                <button type="button" class="scholarship-image-nav scholarship-image-nav--prev"
+                  aria-label="Show previous image" [disabled]="scholarshipImagePreviewIndex() <= 0"
+                  (click)="$event.stopPropagation(); showPreviousScholarshipImage()">
+                  ‹
+                </button>
+                @if (scholarshipImagePreviewKind() === 'pdf') {
+                <object class="scholarship-document-frame" [data]="scholarshipImagePreviewSrc()" type="application/pdf"
+                  [attr.aria-label]="scholarshipImagePreviewAlt()"></object>
+                } @else {
+                <img [src]="scholarshipImagePreviewSrc()" [alt]="scholarshipImagePreviewAlt()"
+                  [style.transform]="'scale(' + scholarshipImageZoom() + ')'" />
+                }
+                <button type="button" class="scholarship-image-nav scholarship-image-nav--next"
+                  aria-label="Show next image"
+                  [disabled]="scholarshipImagePreviewIndex() >= scholarshipImagePreviewItems().length - 1"
+                  (click)="$event.stopPropagation(); showNextScholarshipImage()">
+                  ›
+                </button>
+              </div>
+              @if (scholarshipPreviewApplication(); as previewApplication) {
+              <div class="scholarship-popup-review-panel">
+                <div class="scholarship-popup-review-head">
+                  <div>
+                    <p class="scholarship-popup-review-eyebrow">Application Review</p>
+                    <strong>Update scholarship request status</strong>
+                  </div>
+                  <span class="scholarship-status-badge" [class.is-pending]="previewApplication.status === 'pending'"
+                    [class.is-accepted]="previewApplication.status === 'accepted'"
+                    [class.is-rejected]="previewApplication.status === 'rejected'">
+                    {{ scholarshipStatusLabel(previewApplication.status) }}
+                  </span>
+                </div>
+                <div class="scholarship-popup-review-grid"
+                  [class.has-rejection-comment]="scholarshipStatusDraft(previewApplication._id) === 'rejected'">
+                  <div class="scholarship-popup-review-field">
+                    <label>Decision</label>
+                    <select class="form-input scholarship-status-select scholarship-popup-status-select"
+                      [ngModel]="scholarshipStatusDraft(previewApplication._id)"
+                      (ngModelChange)="onScholarshipStatusDraftChanged(previewApplication._id, $event)">
+                      <option value="pending">Pending</option>
+                      <option value="accepted">Accepted</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+                  @if (scholarshipStatusDraft(previewApplication._id) === 'rejected') {
+                  <div class="scholarship-popup-review-field scholarship-popup-review-field--comment">
+                    <label>Rejection Comment</label>
+                    <textarea
+                      class="form-input form-textarea scholarship-reject-textarea scholarship-popup-review-textarea"
+                      rows="3" placeholder="Enter a clear reason for rejection"
+                      [ngModel]="scholarshipCommentDraft(previewApplication._id)"
+                      (ngModelChange)="onScholarshipCommentDraftChanged(previewApplication._id, $event)"></textarea>
+                  </div>
+                  }
+                  <div class="scholarship-popup-review-field scholarship-popup-review-field--action">
+                    <label>Apply Change</label>
+                    <button class="btn-save sm scholarship-popup-update-btn"
+                      [disabled]="scholarshipStatusUpdating()[previewApplication._id]"
+                      (click)="updateScholarshipStatus(previewApplication)">
+                      @if (scholarshipStatusUpdating()[previewApplication._id]) { Saving... } @else { Save Status }
+                    </button>
+                  </div>
+                </div>
+                @if (scholarshipStatusDraft(previewApplication._id) !== 'rejected' &&
+                previewApplication.rejectionComment) {
+                <div class="scholarship-status-note scholarship-status-note--review">Previous rejection note: {{
+                  previewApplication.rejectionComment }}</div>
+                }
+              </div>
+              }
+            </div>
+          </div>
+          }
+        </section>
+
+        @if (scholarshipSettingsDialogOpen()) {
+        <div class="scholarship-settings-modal-backdrop" (click)="closeScholarshipSettingsDialog()">
+          <section class="scholarship-settings-modal" (click)="$event.stopPropagation()">
+            <div class="scholarship-settings-modal-head">
+              <div>
+                <p class="scholarship-settings-modal-eyebrow">Scholarship Portal</p>
+                <h3>Portal Settings</h3>
+                <p>Set the exact closing date and time for public applications. After this time, the Apply button is
+                  disabled and the form is hidden.</p>
+              </div>
+              <button type="button" class="scholarship-settings-close" aria-label="Close scholarship settings"
+                (click)="closeScholarshipSettingsDialog()">✕</button>
+            </div>
+            <div class="form-grid-2 scholarship-settings-grid">
+              <div class="form-row">
+                <label>Display Year</label>
+                <input [(ngModel)]="scholarshipSettings.displayYear" class="form-input" placeholder="2025-26" />
+              </div>
+              <div class="form-row">
+                <label>Application Closing Date & Time</label>
+                <input [(ngModel)]="scholarshipSettings.applicationDeadline" type="datetime-local" class="form-input" />
+              </div>
+              <div class="form-row">
+                <label>Portal Status</label>
+                <input [value]="data.isScholarshipApplicationsOpen() ? 'Open' : 'Closed'" class="form-input" readonly />
+              </div>
+              <div class="form-row span-two">
+                <label>Closed Title</label>
+                <input [(ngModel)]="scholarshipSettings.closedTitle" class="form-input"
+                  placeholder="Scholarship Applications Closed" />
+              </div>
+              <div class="form-row span-two">
+                <label>Closed Message</label>
+                <textarea [(ngModel)]="scholarshipSettings.closedMessage" class="form-input form-textarea" rows="3"
+                  placeholder="Tell visitors that the deadline has passed."></textarea>
+              </div>
+            </div>
+            <div class="form-actions scholarship-settings-modal-actions">
+              <button type="button" class="btn-save" (click)="saveScholarshipSettings()">Save Scholarship
+                Settings</button>
+              <button type="button" class="btn-cancel" (click)="closeScholarshipSettingsDialog()">Cancel</button>
+            </div>
+          </section>
+        </div>
+        }
         }
 
         @if (activeTab() === 'founders') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Founder Cards</h3>
-                <p>Manage founder and key person cards shown in the about section.</p>
-              </div>
-              <button class="btn-add" (click)="showFounderAdd.set(!showFounderAdd())">+ Add Person</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Founder Cards</h3>
+              <p>Manage founder and key person cards shown in the about section.</p>
             </div>
+            <button class="btn-add" (click)="showFounderAdd.set(!showFounderAdd())">+ Add Person</button>
+          </div>
 
-            @if (showFounderAdd()) {
-              <div class="form-section-block">
+          @if (showFounderAdd()) {
+          <div class="form-section-block">
+            <div class="form-grid-2">
+              <div class="form-row"><label>Name *</label><input [(ngModel)]="newFounder.name" placeholder="Full name"
+                  class="form-input" /></div>
+              <div class="form-row"><label>Title / Role</label><input [(ngModel)]="newFounder.title"
+                  placeholder="e.g. National President" class="form-input" /></div>
+              <div class="form-row span-two"><label>Photo *</label><input type="file" accept="image/*"
+                  class="form-input" (change)="onNewFounderFileSelected($event)" /></div>
+            </div>
+            @if (selectedFileName(newFounderFile)) {
+            <div class="field-key">Selected: {{ selectedFileName(newFounderFile) }}</div>
+            }
+            <div class="form-row"><label>Biography</label><textarea [(ngModel)]="newFounder.bio"
+                placeholder="Brief biography..." class="form-input form-textarea" rows="3"></textarea></div>
+            <div class="form-actions">
+              <button class="btn-save" (click)="addFounder()">Add Person</button>
+              <button class="btn-cancel" (click)="showFounderAdd.set(false)">Cancel</button>
+            </div>
+          </div>
+          }
+
+          <div class="items-list">
+            @for (f of founderItems(); track f.id) {
+            <div class="item-row founder-row">
+              @if (editingFounderId() === f.id) {
+              <img class="founder-thumb" [src]="editFounder.img || f.img" />
+              <div class="item-edit-fields">
                 <div class="form-grid-2">
-                  <div class="form-row"><label>Name *</label><input [(ngModel)]="newFounder.name" placeholder="Full name" class="form-input" /></div>
-                  <div class="form-row"><label>Title / Role</label><input [(ngModel)]="newFounder.title" placeholder="e.g. National President" class="form-input" /></div>
-                  <div class="form-row span-two"><label>Photo *</label><input type="file" accept="image/*" class="form-input" (change)="onNewFounderFileSelected($event)" /></div>
+                  <div class="form-row"><label>Name</label><input [(ngModel)]="editFounder.name" class="form-input" />
+                  </div>
+                  <div class="form-row"><label>Title</label><input [(ngModel)]="editFounder.title" class="form-input" />
+                  </div>
+                  <div class="form-row span-two"><label>Replace Photo</label><input type="file" accept="image/*"
+                      class="form-input" (change)="onEditFounderFileSelected($event)" /></div>
                 </div>
-                @if (selectedFileName(newFounderFile)) {
-                  <div class="field-key">Selected: {{ selectedFileName(newFounderFile) }}</div>
+                @if (selectedFileName(editFounderFile)) {
+                <div class="field-key">Selected: {{ selectedFileName(editFounderFile) }}</div>
                 }
-                <div class="form-row"><label>Biography</label><textarea [(ngModel)]="newFounder.bio" placeholder="Brief biography..." class="form-input form-textarea" rows="3"></textarea></div>
+                <div class="form-row"><label>Bio</label><textarea [(ngModel)]="editFounder.bio"
+                    class="form-input form-textarea" rows="3"></textarea></div>
                 <div class="form-actions">
-                  <button class="btn-save" (click)="addFounder()">Add Person</button>
-                  <button class="btn-cancel" (click)="showFounderAdd.set(false)">Cancel</button>
+                  <button class="btn-save sm" (click)="saveFounder(f.id)">Save</button>
+                  <button class="btn-cancel sm" (click)="editingFounderId.set(null)">Cancel</button>
                 </div>
               </div>
-            }
-
-            <div class="items-list">
-              @for (f of founderItems(); track f.id) {
-                <div class="item-row founder-row">
-                  @if (editingFounderId() === f.id) {
-                    <img class="founder-thumb" [src]="editFounder.img || f.img" />
-                    <div class="item-edit-fields">
-                      <div class="form-grid-2">
-                        <div class="form-row"><label>Name</label><input [(ngModel)]="editFounder.name" class="form-input" /></div>
-                        <div class="form-row"><label>Title</label><input [(ngModel)]="editFounder.title" class="form-input" /></div>
-                        <div class="form-row span-two"><label>Replace Photo</label><input type="file" accept="image/*" class="form-input" (change)="onEditFounderFileSelected($event)" /></div>
-                      </div>
-                      @if (selectedFileName(editFounderFile)) {
-                        <div class="field-key">Selected: {{ selectedFileName(editFounderFile) }}</div>
-                      }
-                      <div class="form-row"><label>Bio</label><textarea [(ngModel)]="editFounder.bio" class="form-input form-textarea" rows="3"></textarea></div>
-                      <div class="form-actions">
-                        <button class="btn-save sm" (click)="saveFounder(f.id)">Save</button>
-                        <button class="btn-cancel sm" (click)="editingFounderId.set(null)">Cancel</button>
-                      </div>
-                    </div>
-                  } @else {
-                    <img class="founder-thumb" [src]="f.img" />
-                    <div class="item-info">
-                      <div class="item-title">{{ f.name }}</div>
-                      <div class="item-sub">{{ f.title }}</div>
-                      @if (f.bio) { <div class="item-bio">{{ truncate(f.bio) }}</div> }
-                    </div>
-                    <div class="item-actions">
-                      <button class="btn-edit" (click)="startEditFounder(f)">Edit</button>
-                      <button class="btn-delete" (click)="deleteFounder(f.id)">Delete</button>
-                    </div>
-                  }
-                </div>
+              } @else {
+              <img class="founder-thumb" [src]="f.img" />
+              <div class="item-info">
+                <div class="item-title">{{ f.name }}</div>
+                <div class="item-sub">{{ f.title }}</div>
+                @if (f.bio) { <div class="item-bio">{{ truncate(f.bio) }}</div> }
+              </div>
+              <div class="item-actions">
+                <button class="btn-edit" (click)="startEditFounder(f)">Edit</button>
+                <button class="btn-delete" (click)="deleteFounder(f.id)">Delete</button>
+              </div>
               }
             </div>
-          </section>
+            }
+          </div>
+        </section>
         }
 
         @if (activeTab() === 'hostels') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Community Hostels</h3>
-                <p>Hostels added here appear in the dedicated public hostel section on the website.</p>
-              </div>
-              <button class="btn-add" (click)="showHostelAdd.set(!showHostelAdd())">+ Add Hostel</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Community Hostels</h3>
+              <p>Hostels added here appear in the dedicated public hostel section on the website.</p>
             </div>
+            <button class="btn-add" (click)="showHostelAdd.set(!showHostelAdd())">+ Add Hostel</button>
+          </div>
 
-            @if (showHostelAdd()) {
-              <div class="form-section-block">
+          @if (showHostelAdd()) {
+          <div class="form-section-block">
+            <div class="form-grid-2">
+              <div class="form-row"><label>Hostel Name *</label><input [(ngModel)]="newHostel.name"
+                  placeholder="Sri Basaveshwara Hostel" class="form-input" /></div>
+              <div class="form-row"><label>Location</label><input [(ngModel)]="newHostel.location"
+                  placeholder="City, State" class="form-input" /></div>
+              <div class="form-row"><label>Capacity</label><input [(ngModel)]="newHostel.capacity"
+                  placeholder="e.g. 120 students" class="form-input" /></div>
+              <div class="form-row"><label>Contact</label><input [(ngModel)]="newHostel.contact"
+                  placeholder="+91 XXXXX XXXXX" class="form-input" /></div>
+              <div class="form-row span-two"><label>Photo *</label><input type="file" accept="image/*"
+                  class="form-input" (change)="onNewHostelFileSelected($event)" /></div>
+            </div>
+            @if (selectedFileName(newHostelFile)) {
+            <div class="field-key">Selected: {{ selectedFileName(newHostelFile) }}</div>
+            }
+            <div class="form-row"><label>Description</label><textarea [(ngModel)]="newHostel.description"
+                placeholder="Brief description..." class="form-input form-textarea" rows="3"></textarea></div>
+            <div class="form-actions">
+              <button class="btn-save" (click)="addHostel()">Add Hostel</button>
+              <button class="btn-cancel" (click)="showHostelAdd.set(false)">Cancel</button>
+            </div>
+          </div>
+          }
+
+          @if (hostelVisibleItems().length === 0) {
+          <div class="empty-state">
+            <span>🏨</span>
+            <p>No hostels added yet.</p>
+          </div>
+          }
+
+          <div class="items-list">
+            @for (h of hostelVisibleItems(); track h.id) {
+            <div class="item-row hostel-row">
+              @if (editingHostelId() === h.id) {
+              @if (editHostel.img) { <img class="founder-thumb" [src]="editHostel.img" /> }
+              <div class="item-edit-fields">
                 <div class="form-grid-2">
-                  <div class="form-row"><label>Hostel Name *</label><input [(ngModel)]="newHostel.name" placeholder="Sri Basaveshwara Hostel" class="form-input" /></div>
-                  <div class="form-row"><label>Location</label><input [(ngModel)]="newHostel.location" placeholder="City, State" class="form-input" /></div>
-                  <div class="form-row"><label>Capacity</label><input [(ngModel)]="newHostel.capacity" placeholder="e.g. 120 students" class="form-input" /></div>
-                  <div class="form-row"><label>Contact</label><input [(ngModel)]="newHostel.contact" placeholder="+91 XXXXX XXXXX" class="form-input" /></div>
-                  <div class="form-row span-two"><label>Photo *</label><input type="file" accept="image/*" class="form-input" (change)="onNewHostelFileSelected($event)" /></div>
+                  <div class="form-row"><label>Name</label><input [(ngModel)]="editHostel.name" class="form-input" />
+                  </div>
+                  <div class="form-row"><label>Location</label><input [(ngModel)]="editHostel.location"
+                      class="form-input" /></div>
+                  <div class="form-row"><label>Capacity</label><input [(ngModel)]="editHostel.capacity"
+                      class="form-input" /></div>
+                  <div class="form-row"><label>Contact</label><input [(ngModel)]="editHostel.contact"
+                      class="form-input" /></div>
+                  <div class="form-row span-two"><label>Replace Photo</label><input type="file" accept="image/*"
+                      class="form-input" (change)="onEditHostelFileSelected($event)" /></div>
                 </div>
-                @if (selectedFileName(newHostelFile)) {
-                  <div class="field-key">Selected: {{ selectedFileName(newHostelFile) }}</div>
+                @if (selectedFileName(editHostelFile)) {
+                <div class="field-key">Selected: {{ selectedFileName(editHostelFile) }}</div>
                 }
-                <div class="form-row"><label>Description</label><textarea [(ngModel)]="newHostel.description" placeholder="Brief description..." class="form-input form-textarea" rows="3"></textarea></div>
+                <div class="form-row"><label>Description</label><textarea [(ngModel)]="editHostel.description"
+                    class="form-input form-textarea" rows="3"></textarea></div>
                 <div class="form-actions">
-                  <button class="btn-save" (click)="addHostel()">Add Hostel</button>
-                  <button class="btn-cancel" (click)="showHostelAdd.set(false)">Cancel</button>
+                  <button class="btn-save sm" (click)="saveHostel(h.id)">Save</button>
+                  <button class="btn-cancel sm" (click)="editingHostelId.set(null)">Cancel</button>
                 </div>
               </div>
-            }
-
-            @if (hostelVisibleItems().length === 0) {
-              <div class="empty-state">
-                <span>🏨</span>
-                <p>No hostels added yet.</p>
-              </div>
-            }
-
-            <div class="items-list">
-              @for (h of hostelVisibleItems(); track h.id) {
-                <div class="item-row hostel-row">
-                  @if (editingHostelId() === h.id) {
-                    @if (editHostel.img) { <img class="founder-thumb" [src]="editHostel.img" /> }
-                    <div class="item-edit-fields">
-                      <div class="form-grid-2">
-                        <div class="form-row"><label>Name</label><input [(ngModel)]="editHostel.name" class="form-input" /></div>
-                        <div class="form-row"><label>Location</label><input [(ngModel)]="editHostel.location" class="form-input" /></div>
-                        <div class="form-row"><label>Capacity</label><input [(ngModel)]="editHostel.capacity" class="form-input" /></div>
-                        <div class="form-row"><label>Contact</label><input [(ngModel)]="editHostel.contact" class="form-input" /></div>
-                        <div class="form-row span-two"><label>Replace Photo</label><input type="file" accept="image/*" class="form-input" (change)="onEditHostelFileSelected($event)" /></div>
-                      </div>
-                      @if (selectedFileName(editHostelFile)) {
-                        <div class="field-key">Selected: {{ selectedFileName(editHostelFile) }}</div>
-                      }
-                      <div class="form-row"><label>Description</label><textarea [(ngModel)]="editHostel.description" class="form-input form-textarea" rows="3"></textarea></div>
-                      <div class="form-actions">
-                        <button class="btn-save sm" (click)="saveHostel(h.id)">Save</button>
-                        <button class="btn-cancel sm" (click)="editingHostelId.set(null)">Cancel</button>
-                      </div>
-                    </div>
-                  } @else {
-                    @if (h.img) { <img class="founder-thumb" [src]="h.img" /> }
-                    <div class="item-info">
-                      <div class="item-title">{{ h.name }}</div>
-                      <div class="item-sub">
-                        @if (h.location) { 📍 {{ h.location }} }
-                        @if (h.capacity) { | 👥 {{ h.capacity }} }
-                      </div>
-                      @if (h.contact) { <div class="item-sub">📞 {{ h.contact }}</div> }
-                      @if (h.description) { <div class="item-bio">{{ truncate(h.description) }}</div> }
-                    </div>
-                    <div class="item-actions">
-                      <button class="btn-edit" (click)="startEditHostel(h)">Edit</button>
-                      <button class="btn-delete" (click)="deleteHostel(h.id)">Delete</button>
-                    </div>
-                  }
+              } @else {
+              @if (h.img) { <img class="founder-thumb" [src]="h.img" /> }
+              <div class="item-info">
+                <div class="item-title">{{ h.name }}</div>
+                <div class="item-sub">
+                  @if (h.location) { 📍 {{ h.location }} }
+                  @if (h.capacity) { | 👥 {{ h.capacity }} }
                 </div>
+                @if (h.contact) { <div class="item-sub">📞 {{ h.contact }}</div> }
+                @if (h.description) { <div class="item-bio">{{ truncate(h.description) }}</div> }
+              </div>
+              <div class="item-actions">
+                <button class="btn-edit" (click)="startEditHostel(h)">Edit</button>
+                <button class="btn-delete" (click)="deleteHostel(h.id)">Delete</button>
+              </div>
               }
             </div>
+            }
+          </div>
 
-          </section>
+        </section>
         }
 
         @if (activeTab() === 'footer') {
-          <section class="form-card section-card">
-            <div class="card-head">
-              <div>
-                <h3>Footer Details</h3>
-                <p>Update the footer organisation block, links, and contact information.</p>
-              </div>
-              <button class="btn-save" (click)="saveFooterContent()">Save Footer</button>
+        <section class="form-card section-card">
+          <div class="card-head">
+            <div>
+              <h3>Footer Details</h3>
+              <p>Update the footer organisation block, links, and contact information.</p>
             </div>
-            <div class="form-grid-2">
-              <div class="form-row"><label>Logo Symbol</label><input [(ngModel)]="footerContent.logoSymbol" class="form-input" /></div>
-              <div class="form-row"><label>Organisation Name Kannada</label><input [(ngModel)]="footerContent.orgNameKn" class="form-input" /></div>
-              <div class="form-row span-two"><label>Organisation Name English</label><input [(ngModel)]="footerContent.orgNameEn" class="form-input" /></div>
-              <div class="form-row"><label>Facebook URL</label><input [(ngModel)]="footerContent.facebookUrl" class="form-input" /></div>
-              <div class="form-row"><label>Twitter URL</label><input [(ngModel)]="footerContent.twitterUrl" class="form-input" /></div>
-              <div class="form-row"><label>YouTube URL</label><input [(ngModel)]="footerContent.youtubeUrl" class="form-input" /></div>
-              <div class="form-row"><label>Instagram URL</label><input [(ngModel)]="footerContent.instagramUrl" class="form-input" /></div>
-              <div class="form-row span-two"><label>Address</label><textarea [(ngModel)]="footerContent.address" class="form-input form-textarea" rows="4"></textarea></div>
-              <div class="form-row"><label>Phone</label><input [(ngModel)]="footerContent.phone" class="form-input" /></div>
-              <div class="form-row"><label>Email</label><input [(ngModel)]="footerContent.email" class="form-input" /></div>
+            <button class="btn-save" (click)="saveFooterContent()">Save Footer</button>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-row"><label>Logo Symbol</label><input [(ngModel)]="footerContent.logoSymbol"
+                class="form-input" /></div>
+            <div class="form-row"><label>Organisation Name Kannada</label><input [(ngModel)]="footerContent.orgNameKn"
+                class="form-input" /></div>
+            <div class="form-row span-two"><label>Organisation Name English</label><input
+                [(ngModel)]="footerContent.orgNameEn" class="form-input" /></div>
+            <div class="form-row"><label>Facebook URL</label><input [(ngModel)]="footerContent.facebookUrl"
+                class="form-input" /></div>
+            <div class="form-row"><label>Twitter URL</label><input [(ngModel)]="footerContent.twitterUrl"
+                class="form-input" /></div>
+            <div class="form-row"><label>YouTube URL</label><input [(ngModel)]="footerContent.youtubeUrl"
+                class="form-input" /></div>
+            <div class="form-row"><label>Instagram URL</label><input [(ngModel)]="footerContent.instagramUrl"
+                class="form-input" /></div>
+            <div class="form-row span-two"><label>Address</label><textarea [(ngModel)]="footerContent.address"
+                class="form-input form-textarea" rows="4"></textarea></div>
+            <div class="form-row"><label>Phone</label><input [(ngModel)]="footerContent.phone" class="form-input" />
             </div>
-          </section>
+            <div class="form-row"><label>Email</label><input [(ngModel)]="footerContent.email" class="form-input" />
+            </div>
+          </div>
+        </section>
         }
       </div>
     </div>

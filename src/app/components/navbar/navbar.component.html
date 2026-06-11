@@ -14,6 +14,10 @@
         </li>
       }
 
+      <li class="nav-item">
+        <a href="/#contact" (click)="closeMenus()">{{ navLabel('nav.contact') }}</a>
+      </li>
+
       <li
         class="nav-item nav-item--dropdown"
         [class.open]="aboutMenuOpen()"

@@ -24,14 +24,15 @@ export class NavbarComponent {
   protected auth  = inject(AuthService);
   menuOpen = signal(false);
   aboutMenuOpen = signal(false);
+  directoryMenuOpen = signal(false);
 
   private readonly baseNavLinks: NavLink[] = [
     { href: '/#home',      labelKey: 'nav.home'      },
     { href: '/#community', labelKey: 'nav.community' },
+    { href: '/#org-chart', labelKey: 'nav.orgChart'  },
     { href: '/#events',    labelKey: 'nav.events'    },
     { href: '/#gallery',   labelKey: 'nav.gallery'   },
-    { href: '/#directory', labelKey: 'nav.directory' },
-    { href: '/#contact',   labelKey: 'nav.contact'   },
+    { href: '/#hostels',   labelKey: 'footer.link.hostels' },
   ];
 
   protected readonly navLinks = computed(() => [...this.baseNavLinks]);
@@ -40,13 +41,13 @@ export class NavbarComponent {
     const byeLawUrl = this.data.navbarContent().byeLawUrl;
     return [
       { href: '/#about', labelKey: 'nav.aboutOverview' },
+      { href: '/#crematories', labelKey: 'footer.link.crematories' },
       {
         href: byeLawUrl || '',
         labelKey: 'nav.byeLaw',
         external: !!byeLawUrl,
         disabled: !byeLawUrl
-      },
-      { href: '/#org-chart', labelKey: 'nav.orgChart' }
+      }
     ];
   });
 
@@ -60,15 +61,42 @@ export class NavbarComponent {
 
   protected setAboutMenuOpen(isOpen: boolean) {
     this.aboutMenuOpen.set(isOpen);
+
+    if (isOpen) {
+      this.directoryMenuOpen.set(false);
+    }
   }
 
   protected toggleAboutMenu() {
-    this.aboutMenuOpen.update((isOpen) => !isOpen);
+    const nextState = !this.aboutMenuOpen();
+    this.aboutMenuOpen.set(nextState);
+
+    if (nextState) {
+      this.directoryMenuOpen.set(false);
+    }
+  }
+
+  protected setDirectoryMenuOpen(isOpen: boolean) {
+    this.directoryMenuOpen.set(isOpen);
+
+    if (isOpen) {
+      this.aboutMenuOpen.set(false);
+    }
+  }
+
+  protected toggleDirectoryMenu() {
+    const nextState = !this.directoryMenuOpen();
+    this.directoryMenuOpen.set(nextState);
+
+    if (nextState) {
+      this.aboutMenuOpen.set(false);
+    }
   }
 
   protected closeMenus() {
     this.menuOpen.set(false);
     this.aboutMenuOpen.set(false);
+    this.directoryMenuOpen.set(false);
   }
 
   toggleMenu(): void {
@@ -77,6 +105,7 @@ export class NavbarComponent {
 
     if (!nextState) {
       this.aboutMenuOpen.set(false);
+      this.directoryMenuOpen.set(false);
     }
   }
 }

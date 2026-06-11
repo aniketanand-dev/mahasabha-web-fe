@@ -7,13 +7,13 @@ import { AdminDataService } from '../../services/admin-data.service';
 import { buildOrgTree, findOrgNode, flattenOrgDescendants, flattenOrgTree, OrgTreeNode } from '../../utils/org-structure';
 
 @Component({
-  selector: 'app-working-committee',
+  selector: 'app-office-bearers',
   standalone: true,
   imports: [CommonModule, RouterLink, NavbarComponent, FooterComponent],
-  templateUrl: './working-committee.component.html',
-  styleUrl: './working-committee.component.scss'
+  templateUrl: './office-bearers.component.html',
+  styleUrl: '../working-committee/working-committee.component.scss'
 })
-export class WorkingCommitteeComponent {
+export class OfficeBearersComponent {
   private readonly data = inject(AdminDataService);
 
   private readonly normalized = (value: string) =>
@@ -22,14 +22,12 @@ export class WorkingCommitteeComponent {
       .replace(/[^a-z0-9]+/g, ' ')
       .trim();
 
-  private readonly hasWorkingTag = (node: OrgTreeNode) => {
+  private readonly hasOfficeBearerTag = (node: OrgTreeNode) => {
     const text = this.normalized(`${node.title} ${node.subtitle} ${node.sidebarLabel}`);
     return [
-      ['general', 'working', 'committee'],
-      ['working', 'committee'],
-      ['central', 'committee'],
-      ['working'],
-      ['working committee'],
+      ['office-bearer'],
+      ['office', 'bearer'],
+      ['office', 'bearers'],
     ].some((group) => group.every((token) => text.includes(this.normalized(token))));
   };
 
@@ -44,38 +42,38 @@ export class WorkingCommitteeComponent {
     return tree;
   });
 
-  protected readonly workingNode = computed(() =>
+  protected readonly officeBearerNode = computed(() =>
     findOrgNode(this.displayRoots(), [
-      ['general', 'working', 'committee'],
-      ['working-committee'],
-      ['working'],
-      ['central', 'committee'],
-    ]) ?? this.displayRoots()[1] ?? null
+      ['office-bearer'],
+      ['office', 'bearer'],
+      ['office', 'bearers'],
+    ]) ?? null
   );
 
   protected readonly nominatedNode = computed(() =>
     findOrgNode(this.tree(), [
+      ['nominated-body'],
       ['nominated', 'body'],
       ['nominated'],
     ])
   );
 
   protected readonly members = computed(() => {
-    const workingNode = this.workingNode();
+    const officeBearerNode = this.officeBearerNode();
 
-    if (workingNode) {
-      const descendants = flattenOrgDescendants(workingNode);
+    if (officeBearerNode) {
+      const descendants = flattenOrgDescendants(officeBearerNode);
 
       if (descendants.length > 0) {
         return descendants;
       }
 
-      if (workingNode.children.length > 0) {
-        return workingNode.children;
+      if (officeBearerNode.children.length > 0) {
+        return officeBearerNode.children;
       }
     }
 
-    const taggedMembers = flattenOrgTree(this.displayRoots()).filter((node) => this.hasWorkingTag(node));
+    const taggedMembers = flattenOrgTree(this.displayRoots()).filter((node) => this.hasOfficeBearerTag(node));
 
     if (taggedMembers.length > 0) {
       return taggedMembers;
@@ -84,16 +82,16 @@ export class WorkingCommitteeComponent {
     return [] as OrgTreeNode[];
   });
 
-  protected readonly workingTitle = computed(() => 'GENERAL WORKING COMMITTEE');
+  protected readonly pageTitle = computed(() => 'OFFICE BEARERS');
 
   protected memberName(member: OrgTreeNode): string {
-    return member.subtitle || member.title || 'Committee Member';
+    return member.subtitle || member.title || 'Office Bearer';
   }
 
   protected memberTitle(member: OrgTreeNode): string | null {
     const title = String(member.title || '').trim();
 
-    if (!title || title.toLowerCase() === 'member' || title === this.workingTitle()) {
+    if (!title || title.toLowerCase() === 'member' || title === this.pageTitle()) {
       return null;
     }
 
@@ -114,7 +112,7 @@ export class WorkingCommitteeComponent {
       return member.path.slice(0, -1).join(' / ');
     }
 
-    return 'Committee member';
+    return 'Office bearer';
   }
 
   protected memberContact(member: OrgTreeNode): string {

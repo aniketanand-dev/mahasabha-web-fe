@@ -4,11 +4,11 @@
     <p class="section-subtitle">{{ lang.t('orgChart.subtitle') }}</p>
     <div class="ornament">✦ ✦ ✦</div>
 
-    @if (structure().presidentNode || structure().workingNode || structure().representativeNode || structure().stateNode) {
+    @if (structure().presidentNode || structure().officeBearerNode || structure().workingNode || structure().stateNode) {
       <div class="org-stage">
         <div class="org-stage__head">
           <p class="org-stage__eyebrow">Organisation Flow</p>
-          <p class="org-stage__hint">The homepage shows only the main structure. Open the working committee to view full members.</p>
+          <p class="org-stage__hint">Open each section to view members and the complete hierarchy.</p>
         </div>
 
         <div class="org-flow">
@@ -35,8 +35,8 @@
           <div class="org-flow__connector" aria-hidden="true"></div>
 
           <div class="org-flow__middle">
-            <a routerLink="/organisation/working-committee" class="org-node-card org-node-card--link">
-              <h3 class="org-node-card__title">{{ cardTitle(structure().workingNode, 'WORKING / CENTRAL COMMITTEE') }}</h3>
+            <a routerLink="/organisation/office-bearers" class="org-node-card org-node-card--link">
+              <h3 class="org-node-card__title">OFFICE BEARERS</h3>
             </a>
 
             <aside class="org-side-nodes">
@@ -44,7 +44,7 @@
                 <span class="org-side-node__line" aria-hidden="true"></span>
                 <a routerLink="/organisation/nominated-body" class="org-side-node__card org-side-node__card--link">
                   <span class="org-side-node__label">Linked Body</span>
-                  <strong>{{ cardTitle(structure().nominatedNode, 'Nominated Bodies') }}</strong>
+                  <strong>{{ cardTitle(structure().nominatedNode, 'NOMINATED BODY') }}</strong>
                 </a>
               </div>
             </aside>
@@ -52,35 +52,39 @@
 
           <div class="org-flow__connector" aria-hidden="true"></div>
 
-          <a routerLink="/organisation/representative-general-body" class="org-node-card org-node-card--link">
-            <h3 class="org-node-card__title">{{ cardTitle(structure().representativeNode, 'REPRESENTATIVE GENERAL BODY') }}</h3>
+          <a routerLink="/organisation/working-committee" class="org-node-card org-node-card--link">
+            <h3 class="org-node-card__title">GENERAL WORKING COMMITTEE</h3>
           </a>
 
-          @if (structure().stateNode) {
-            <div class="org-flow__connector" aria-hidden="true"></div>
+          <div class="org-flow__connector" aria-hidden="true"></div>
 
-            <div class="org-state-preview">
-              <a routerLink="/organisation/state-committee" class="org-node-card org-node-card--link">
-                <h3 class="org-node-card__title">{{ cardTitle(structure().stateNode, 'STATE COMMITTEE') }}</h3>
-              </a>
+          <a routerLink="/organisation/representative-general-body" class="org-node-card org-node-card--link">
+            <h3 class="org-node-card__title">REPRESENTATIVE GENERAL BODY</h3>
+          </a>
 
-              @if (structure().statePreviewNodes.length) {
-                <div class="org-state-preview__connector" aria-hidden="true"></div>
+          <div class="org-flow__connector" aria-hidden="true"></div>
 
-                <div class="org-state-preview__branches">
-                  @for (state of structure().statePreviewNodes; track state.id) {
-                    <a
-                      routerLink="/organisation/state-committee"
-                      [queryParams]="{ selected: state.id }"
-                      class="org-state-chip"
-                    >
-                      {{ state.title }}
-                    </a>
-                  }
-                </div>
-              }
-            </div>
-          }
+          <div class="org-state-preview">
+            <a routerLink="/organisation/state-committee" class="org-node-card org-node-card--link">
+              <h3 class="org-node-card__title">STATE COMMITTEE</h3>
+            </a>
+
+            @if (structure().statePreviewNodes.length) {
+              <div class="org-state-preview__connector" aria-hidden="true"></div>
+
+              <div class="org-state-preview__branches">
+                @for (state of structure().statePreviewNodes; track state.id) {
+                  <a
+                    routerLink="/organisation/state-committee"
+                    [queryParams]="{ selected: state.id }"
+                    class="org-state-chip"
+                  >
+                    {{ state.title }}
+                  </a>
+                }
+              </div>
+            }
+          </div>
         </div>
       </div>
     } @else {

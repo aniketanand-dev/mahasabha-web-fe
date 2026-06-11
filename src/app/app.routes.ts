@@ -7,6 +7,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent)
   },
   {
+    path: 'organisation/office-bearers',
+    loadComponent: () => import('./pages/office-bearers/office-bearers.component').then(m => m.OfficeBearersComponent)
+  },
+  {
     path: 'organisation/working-committee',
     loadComponent: () => import('./pages/working-committee/working-committee.component').then(m => m.WorkingCommitteeComponent)
   },

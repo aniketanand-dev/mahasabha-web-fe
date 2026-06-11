@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminDataService } from '../../services/admin-data.service';
@@ -11,7 +11,7 @@ import { LanguageService } from '../../services/language.service';
   templateUrl: './directory.component.html',
   styleUrls: ['./directory.component.scss']
 })
-export class DirectoryComponent {
+export class DirectoryComponent implements OnInit {
   protected data = inject(AdminDataService);
   protected lang = inject(LanguageService);
   activeDir = signal<'hostels' | 'crematories'>('hostels');
@@ -31,6 +31,15 @@ export class DirectoryComponent {
     );
   });
 
+  ngOnInit() {
+    this.syncActiveDirWithHash();
+  }
+
+  @HostListener('window:hashchange')
+  onHashChange() {
+    this.syncActiveDirWithHash();
+  }
+
   switchDir(dir: 'hostels' | 'crematories') {
     this.activeDir.set(dir);
     this.searchQuery.set('');
@@ -39,4 +48,21 @@ export class DirectoryComponent {
 
   onSearch(val: string) { this.searchQuery.set(val); }
   onFilterState(val: string) { this.filterState.set(val); }
+
+  private syncActiveDirWithHash() {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const hash = window.location.hash.toLowerCase();
+
+    if (hash === '#crematories') {
+      this.switchDir('crematories');
+      return;
+    }
+
+    if (hash === '#directory') {
+      this.switchDir('hostels');
+    }
+  }
 }

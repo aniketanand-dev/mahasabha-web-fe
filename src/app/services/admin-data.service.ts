@@ -181,6 +181,8 @@ export interface AdminDirectoryEntry {
   type: AdminDirectoryType;
 }
 
+export type AdminOrgNodeLevel = 'state' | 'district' | 'city' | 'corporation' | 'assembly' | 'taluk';
+
 export interface AdminOrgNode {
   id: string;
   parentId: string | null;
@@ -189,7 +191,7 @@ export interface AdminOrgNode {
   contact?: string;
   order: number;
   description: string;
-  level: 'state' | 'district' | 'taluk';
+  level: AdminOrgNodeLevel;
   location: {
     state: string;
     district: string;
@@ -212,7 +214,7 @@ interface OrganizationStructureApiNode {
     url?: string;
     alt?: string;
   };
-  level: 'state' | 'district' | 'taluk';
+  level: AdminOrgNodeLevel;
   location?: {
     state?: string;
     district?: string;
@@ -242,7 +244,7 @@ interface OrganizationStructureCreateOrUpdatePayload {
     url: string;
     alt: string;
   };
-  level: 'state' | 'district' | 'taluk';
+  level: AdminOrgNodeLevel;
   location: {
     state: string;
     district: string;
@@ -340,6 +342,8 @@ interface ScholarshipAcademicYearCreateApiResponse {
   message: string;
   data: { item: ScholarshipAcademicYearOption };
 }
+
+const ADMIN_ORG_NODE_LEVELS: AdminOrgNodeLevel[] = ['state', 'district', 'city', 'corporation', 'assembly', 'taluk'];
 
 interface ScholarshipStatusUpdateApiResponse {
   success: boolean;
@@ -896,7 +900,7 @@ export class AdminDataService {
   private normalizeOrgNodes(items: AdminOrgNode[]) {
     return items
       .map(item => {
-        const level: 'state' | 'district' | 'taluk' = item.level === 'district' || item.level === 'taluk'
+        const level: AdminOrgNodeLevel = ADMIN_ORG_NODE_LEVELS.includes(item.level)
           ? item.level
           : 'state';
 
@@ -1363,6 +1367,7 @@ export class AdminDataService {
       parentId: patch.parentId !== undefined ? patch.parentId : existing.parentId,
       title: patch.title !== undefined ? patch.title : existing.title,
       subtitle: patch.subtitle !== undefined ? patch.subtitle : existing.subtitle,
+      contact: patch.contact !== undefined ? patch.contact : existing.contact,
       order: patch.order !== undefined ? patch.order : existing.order,
       description: patch.description !== undefined ? patch.description : existing.description,
       level: patch.level !== undefined ? patch.level : existing.level,

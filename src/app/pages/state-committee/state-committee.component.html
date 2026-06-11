@@ -13,7 +13,7 @@
       <p class="eyebrow">Organisation Explorer</p>
       <h1>State Committee</h1>
       <p class="intro">
-        Select any state, district, taluk, CMC/TMC/GP, or assembly from the list to inspect its structure and open member pages.
+        Select any state, district, city / GBA, taluk, corporation, assembly, or CMC/GP branch from the list to inspect its structure and open member pages.
       </p>
     </div>
 
@@ -74,6 +74,13 @@
                 </div>
               }
             </div>
+
+            @if (showsNominatedAction(selected)) {
+              <div class="detail-actions">
+                <a class="detail-action detail-action--secondary" routerLink="/organisation/nominated-body"
+                  [queryParams]="{ scopeId: selected.id }">Open Nominated Body</a>
+              </div>
+            }
           </article>
 
           @if (memberCards().length) {

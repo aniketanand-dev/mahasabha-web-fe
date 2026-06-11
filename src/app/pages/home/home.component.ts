@@ -15,8 +15,8 @@ import { BhavanComponent } from '../../components/bhavan/bhavan.component';
 import { PastPresidentsComponent } from '../../components/past-presidents/past-presidents.component';
 import { EventsComponent } from '../../components/events/events.component';
 import { GalleryComponent } from '../../components/gallery/gallery.component';
-import { DirectoryComponent } from '../../components/directory/directory.component';
 import { HostelSectionComponent } from '../../components/hostel-section/hostel-section.component';
+import { CrematorySectionComponent } from '../../components/crematory-section/crematory-section.component';
 import { FooterComponent } from '../../components/footer/footer.component';
 import { AdminDataService } from '../../services/admin-data.service';
 import { LanguageService } from '../../services/language.service';
@@ -33,7 +33,7 @@ import { VisitorAnalyticsService } from '../../services/visitor-analytics.servic
     FoundersComponent, MissionVisionComponent, PresidentNoteComponent,
     OrgChartComponent, CmGalleryComponent, BhavanComponent,
     PastPresidentsComponent, EventsComponent, GalleryComponent,
-    DirectoryComponent, HostelSectionComponent, FooterComponent
+    HostelSectionComponent, CrematorySectionComponent, FooterComponent
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'

@@ -33,14 +33,22 @@ export class OrgChartComponent {
       ['president-office'],
       ['president', 'office'],
       ['president', 'body'],
-      ['office', 'bearers'],
       ['president'],
     ]) ?? roots[0] ?? null;
+    const officeBearerNode = findOrgNode(roots, [
+      ['office-bearer'],
+      ['office', 'bearer'],
+      ['office', 'bearers'],
+    ]);
     const workingNode = findOrgNode(roots, [
       ['working'],
       ['central', 'committee'],
+      ['general', 'working', 'committee'],
     ]) ?? roots[1] ?? null;
     const stateNode = findOrgNode(roots, [
+      ['state', 'committee'],
+      ['state'],
+    ]) ?? findOrgNode(this.tree(), [
       ['state', 'committee'],
       ['state'],
     ]);
@@ -48,7 +56,11 @@ export class OrgChartComponent {
       ['representative', 'general', 'body'],
       ['general', 'body'],
       ['representative'],
-    ]) ?? roots[2] ?? null;
+    ]) ?? findOrgNode(this.tree(), [
+      ['representative', 'general', 'body'],
+      ['general', 'body'],
+      ['representative'],
+    ]) ?? null;
     const nominatedNode = findOrgNode(this.tree(), [
       ['nominated', 'body'],
       ['nominated'],
@@ -63,6 +75,7 @@ export class OrgChartComponent {
 
     return {
       presidentNode,
+      officeBearerNode,
       workingNode,
       stateNode,
       statePreviewNodes: stateNode?.children.slice(0, 4) ?? [],

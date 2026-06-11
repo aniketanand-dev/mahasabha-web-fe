@@ -30,8 +30,9 @@ export class StateCommitteeComponent {
   private readonly isStateCommitteeSection = (node: OrgTreeNode) =>
     this.normalized(node.sidebarLabel) === this.normalized('state-committee');
 
-  private readonly sectionRoot = (node: OrgTreeNode, flatNodes: OrgTreeNode[]) => {
+  private readonly stateSectionRoot = (node: OrgTreeNode, flatNodes: OrgTreeNode[]) => {
     let current = node;
+    let matched: OrgTreeNode | null = this.isStateCommitteeSection(node) ? node : null;
 
     while (current.parentId) {
       const parent = flatNodes.find((candidate) => candidate.id === current.parentId);
@@ -40,10 +41,14 @@ export class StateCommitteeComponent {
         break;
       }
 
+      if (this.isStateCommitteeSection(parent)) {
+        matched = parent;
+      }
+
       current = parent;
     }
 
-    return current;
+    return matched;
   };
 
   private readonly hasStateLevelAncestor = (node: OrgTreeNode, stopAtId: string, flatNodes: OrgTreeNode[]) => {
@@ -74,13 +79,15 @@ export class StateCommitteeComponent {
         return false;
       }
 
-      const root = this.sectionRoot(node, flatNodes);
+      const root = this.stateSectionRoot(node, flatNodes);
 
-      if (!this.isStateCommitteeSection(root)) {
+      if (!root) {
         return false;
       }
 
-      const isAnchorNode = node.id === root.id && node.children.length > 0;
+      const isAnchorNode = node.id === root.id
+        && this.normalized(node.title) === this.normalized('state committee')
+        && node.children.length > 0;
       if (isAnchorNode) {
         return false;
       }
@@ -212,8 +219,61 @@ export class StateCommitteeComponent {
     return this.expandedIds().has(node.id);
   }
 
+  private nodeParent(node: OrgTreeNode): OrgTreeNode | null {
+    if (!node.parentId) {
+      return null;
+    }
+
+    return this.scopedNodes().find((candidate) => candidate.id === node.parentId) ?? null;
+  }
+
+  private isStateCommitteeContainerNode(node: OrgTreeNode): boolean {
+    return this.normalized(node.sidebarLabel) === this.normalized('state-committee')
+      && this.normalized(node.title) === this.normalized('state committee')
+      && node.level === 'state'
+      && !node.location.district
+      && !node.location.taluk;
+  }
+
+  private isStateCommitteeMemberNode(node: OrgTreeNode): boolean {
+    if (this.normalized(node.sidebarLabel) !== this.normalized('state-committee') || this.isStateCommitteeContainerNode(node)) {
+      return false;
+    }
+
+    const parent = this.nodeParent(node);
+
+    if (!parent || this.isStateCommitteeContainerNode(parent)) {
+      return false;
+    }
+
+    if (parent.level !== node.level || parent.location.state !== node.location.state) {
+      return false;
+    }
+
+    if (node.level === 'state') {
+      return !node.location.district && !node.location.taluk;
+    }
+
+    if (node.level === 'district' || node.level === 'city' || node.level === 'corporation' || node.level === 'assembly') {
+      return parent.location.district === node.location.district && !node.location.taluk;
+    }
+
+    return parent.location.district === node.location.district
+      && parent.location.taluk === node.location.taluk;
+  }
+
+  private isStructuralStateCommitteeNode(node: OrgTreeNode): boolean {
+    return this.normalized(node.sidebarLabel) === this.normalized('state-committee')
+      && !this.isStateCommitteeContainerNode(node)
+      && !this.isStateCommitteeMemberNode(node);
+  }
+
   private isLeafMemberNode(node: OrgTreeNode): boolean {
     if (node.children.length > 0) {
+      return false;
+    }
+
+    if (this.isStructuralStateCommitteeNode(node) || this.normalized(node.sidebarLabel) === this.normalized('taluk-committee')) {
       return false;
     }
 
@@ -225,15 +285,41 @@ export class StateCommitteeComponent {
     const sidebarLabel = this.normalized(node.sidebarLabel);
 
     if (sidebarLabel === this.normalized('taluk-committee')) {
-      if (title.includes('cmc') || title.includes('tmc') || title.includes('gp')) {
-        return 'CMC/TMC/GP';
+      if (title.includes('cmc') || title.includes('tmc') || title.includes('gp') || title.includes('assembly')) {
+        return 'CMC/GP / Assembly';
       }
 
-      return 'Taluk Committee';
+      return 'Local Unit';
     }
 
     if (sidebarLabel === this.normalized('taluk-committee-member')) {
-      return 'CMC/TMC/GP Member';
+      return 'Local Unit Member';
+    }
+
+    if (this.isStructuralStateCommitteeNode(node)) {
+      if (node.level === 'state') {
+        return 'State';
+      }
+
+      if (node.level === 'district') {
+        return 'District';
+      }
+
+      if (node.level === 'city') {
+        return 'City / GBA';
+      }
+
+      if (node.level === 'corporation') {
+        return 'Corporation';
+      }
+
+      if (node.level === 'assembly') {
+        return 'Assembly';
+      }
+
+      if (node.level === 'taluk') {
+        return 'Taluk';
+      }
     }
 
     if (this.isLeafMemberNode(node)) {
@@ -248,15 +334,19 @@ export class StateCommitteeComponent {
       return 'District';
     }
 
+    if (node.level === 'city') {
+      return 'City / GBA';
+    }
+
+    if (node.level === 'corporation') {
+      return 'Corporation';
+    }
+
+    if (node.level === 'assembly') {
+      return 'Assembly';
+    }
+
     if (node.level === 'taluk') {
-      return 'Taluk';
-    }
-
-    if (title.includes('district')) {
-      return 'District Cluster';
-    }
-
-    if (title.includes('taluk')) {
       return 'Taluk';
     }
 
@@ -298,23 +388,31 @@ export class StateCommitteeComponent {
     }
 
     if (kind === 'State') {
-      return `Inspect districts, taluks, assembly units, and related nominated bodies configured under ${node.title}.`;
+      return `Inspect district branches, city / GBA branches, taluks, corporations, assemblies, and related members configured under ${node.title}.`;
     }
 
-    if (kind === 'District Cluster') {
-      return 'This district cluster groups the district-level branches available under the selected state.';
+    if (kind === 'District') {
+      return 'This district branch groups the district-level hierarchy available under the selected state.';
+    }
+
+    if (kind === 'City / GBA') {
+      return 'Use this city / GBA node to review corporation branches, assemblies, and members added under it.';
     }
 
     if (kind === 'Taluk') {
       return 'Use this taluk node to review the assembly units and open its dedicated member view.';
     }
 
-    if (kind === 'CMC/TMC/GP' || kind === 'Taluk Committee') {
-      return 'Use this taluk committee node to review its members and open their dedicated member view.';
+    if (kind === 'Corporation') {
+      return 'Use this corporation node to review the assembly branches and members configured under it.';
     }
 
-    if (kind === 'CMC/TMC/GP Member') {
-      return 'This CMC/TMC/GP member entry belongs to the selected taluk committee branch.';
+    if (kind === 'CMC/GP / Assembly' || kind === 'Local Unit') {
+      return 'Use this local-unit branch to review its members and open their dedicated member view.';
+    }
+
+    if (kind === 'Local Unit Member') {
+      return 'This local-unit member entry belongs to the selected taluk committee branch.';
     }
 
     if (kind === 'Assembly') {
@@ -330,7 +428,13 @@ export class StateCommitteeComponent {
 
   protected showsNominatedAction(node: OrgTreeNode): boolean {
     const kind = this.nodeKind(node);
-    return kind === 'State' || kind === 'District Cluster' || kind === 'Unit' || kind === 'CMC/TMC/GP';
+    return kind === 'State'
+      || kind === 'District'
+      || kind === 'City / GBA'
+      || kind === 'Corporation'
+      || kind === 'Taluk'
+      || kind === 'Local Unit'
+      || kind === 'Unit';
   }
 
   protected nodeDetailLink(node: OrgTreeNode): string[] {

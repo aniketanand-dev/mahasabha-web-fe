@@ -5,8 +5,8 @@
     <div class="nb-head">
       <a routerLink="/" class="back-link">Back to Home</a>
       <p class="eyebrow">Organisation Structure</p>
-      <h1>NOMINATED BODY</h1>
-      <p class="intro">Members and representatives currently configured under the Nominated Body.</p>
+      <h1>{{ pageTitle() }}</h1>
+      <p class="intro">{{ introText() }}</p>
     </div>
 
     @if (members().length) {
@@ -55,4 +55,3 @@
 </section>
 
 <app-footer></app-footer>
-
