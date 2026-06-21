@@ -96,6 +96,11 @@ export interface AdminScholarshipSettings {
 
 const SCHOLARSHIP_DEADLINE_DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 const SCHOLARSHIP_DISPLAY_YEAR_PATTERN = /^\d{4}-\d{2}$/;
+const normalizeOrgStructureText = (value: string) =>
+  String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
 
 const getDefaultScholarshipDisplayYear = (referenceDate = new Date()) => {
   const startYear = referenceDate.getMonth() < 5
@@ -450,6 +455,54 @@ const DEFAULT_ICON_IMAGE = '/uploads/placeholders/default-icon.svg';
 const DEFAULT_SQUARE_IMAGE = '/uploads/placeholders/default-square.svg';
 const DEFAULT_LANDSCAPE_IMAGE = '/uploads/placeholders/default-landscape.svg';
 const DEFAULT_PORTRAIT_IMAGE = '/uploads/placeholders/default-portrait.svg';
+const STATE_COMMITTEE_LABEL = normalizeOrgStructureText('state-committee');
+const STATE_COMMITTEE_TITLE = normalizeOrgStructureText('State Committee');
+
+const normalizeLegacyStateCommitteeBranchLabels = (input: {
+  title: string;
+  subtitle: string;
+  level: AdminOrgNodeLevel;
+  location: {
+    state: string;
+    district: string;
+    taluk: string;
+  };
+  sidebarLabel: string;
+}) => {
+  const title = String(input.title || '').trim();
+  const subtitle = String(input.subtitle || '').trim();
+  const normalizedState = normalizeOrgStructureText(input.location.state);
+
+  if (
+    normalizeOrgStructureText(input.sidebarLabel) !== STATE_COMMITTEE_LABEL
+    || input.level !== 'state'
+    || !!normalizeOrgStructureText(input.location.district)
+    || !!normalizeOrgStructureText(input.location.taluk)
+    || !normalizedState
+  ) {
+    return { title, subtitle };
+  }
+
+  const normalizedTitle = normalizeOrgStructureText(title);
+  const normalizedSubtitle = normalizeOrgStructureText(subtitle);
+  const titleLooksLikeState = normalizedTitle === normalizedState;
+  const subtitleLooksLikeState = normalizedSubtitle === normalizedState;
+  const titleLooksLikeContainer = normalizedTitle === STATE_COMMITTEE_TITLE;
+  const subtitleLooksLikeContainer = normalizedSubtitle === STATE_COMMITTEE_TITLE;
+  const missingOneSide = !normalizedTitle || !normalizedSubtitle;
+
+  if (
+    (titleLooksLikeState || subtitleLooksLikeState)
+    && (titleLooksLikeContainer || subtitleLooksLikeContainer || missingOneSide)
+  ) {
+    return {
+      title: input.location.state,
+      subtitle: input.location.state,
+    };
+  }
+
+  return { title, subtitle };
+};
 
 const DEFAULT_GALLERY_CAPTIONS = [
   'Annual Event',
@@ -945,22 +998,31 @@ export class AdminDataService {
 
   private mapOrganizationApiNodeToAdminNode(node: OrganizationStructureApiNode): AdminOrgNode {
     const resolvedId = String(node.id || node._id || '').trim();
+    const location = {
+      state: String(node.location?.state || '').trim(),
+      district: String(node.location?.district || '').trim(),
+      taluk: String(node.location?.taluk || '').trim(),
+    };
+    const sidebarLabel = String(node.sidebarLabel || '').trim();
+    const labels = normalizeLegacyStateCommitteeBranchLabels({
+      title: String(node.designation || '').trim(),
+      subtitle: String(node.name || '').trim(),
+      level: node.level,
+      location,
+      sidebarLabel,
+    });
 
     return {
       id: resolvedId,
       parentId: node.parentNodeId ? String(node.parentNodeId) : null,
-      title: String(node.designation || '').trim(),
-      subtitle: String(node.name || '').trim(),
+      title: labels.title,
+      subtitle: labels.subtitle,
       contact: String(node.contact || '').trim(),
       order: Number.isFinite(node.displayOrder) ? Number(node.displayOrder) : 0,
       description: String(node.description || '').trim(),
       level: node.level,
-      location: {
-        state: String(node.location?.state || '').trim(),
-        district: String(node.location?.district || '').trim(),
-        taluk: String(node.location?.taluk || '').trim(),
-      },
-      sidebarLabel: String(node.sidebarLabel || '').trim(),
+      location,
+      sidebarLabel,
       imageUrl: this.toManagedAssetUrl(String(node.image?.url || '')),
       imageAlt: String(node.image?.alt || '').trim(),
       isActive: node.isActive !== false,

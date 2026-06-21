@@ -5,7 +5,16 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 import { AdminDataService } from '../../services/admin-data.service';
 import { LanguageService } from '../../services/language.service';
-import { buildOrgTree, buildOrgTreeIndex, findOrgNode, getOrgNavigableChildren, OrgTreeNode } from '../../utils/org-structure';
+import {
+  buildOrgTree,
+  buildOrgTreeIndex,
+  findOrgNode,
+  flattenOrgTree,
+  getOrgNavigableChildren,
+  isStateCommitteeContainerNode,
+  isStateCommitteeSectionLabel,
+  OrgTreeNode,
+} from '../../utils/org-structure';
 
 @Component({
   selector: 'app-org-chart',
@@ -23,10 +32,16 @@ export class OrgChartComponent {
   private readonly treeIndex = computed(() => buildOrgTreeIndex(this.tree()));
   private readonly selectedStateQueryId = toSignal(
     this.route.queryParamMap.pipe(map((params) => {
-      const value = String(params.get('selectedState') || '').trim();
+      const value = String(params.get('selectedState') || params.get('selected') || '').trim();
       return value || null;
     })),
-    { initialValue: String(this.route.snapshot.queryParamMap.get('selectedState') || '').trim() || null }
+    {
+      initialValue: String(
+        this.route.snapshot.queryParamMap.get('selectedState')
+        || this.route.snapshot.queryParamMap.get('selected')
+        || ''
+      ).trim() || null
+    }
   );
   private readonly displayRoots = computed(() => {
     const tree = this.tree();
@@ -37,6 +52,19 @@ export class OrgChartComponent {
 
     return tree;
   });
+
+  private findStateCommitteeNode(roots: OrgTreeNode[]): OrgTreeNode | null {
+    const nodes = flattenOrgTree(roots);
+
+    return nodes.find((node) =>
+      isStateCommitteeContainerNode(node)
+      || (
+        isStateCommitteeSectionLabel(node.sidebarLabel)
+        && !node.parentId
+        && node.children.length > 0
+      )
+    ) ?? null;
+  }
 
   protected readonly structure = computed(() => {
     const roots = this.displayRoots();
@@ -57,13 +85,7 @@ export class OrgChartComponent {
       ['working'],
       ['central', 'committee'],
     ]) ?? null;
-    const stateNode = findOrgNode(roots, [
-      ['state', 'committee'],
-      ['state'],
-    ]) ?? findOrgNode(this.tree(), [
-      ['state', 'committee'],
-      ['state'],
-    ]);
+    const stateNode = this.findStateCommitteeNode(roots) ?? this.findStateCommitteeNode(this.tree());
     const representativeNode = findOrgNode(roots, [
       ['representative', 'general', 'body'],
       ['general', 'body'],
@@ -107,20 +129,24 @@ export class OrgChartComponent {
     return node.id === this.selectedStateQueryId();
   }
 
+  protected stateLabel(node: OrgTreeNode): string {
+    return String(node.location.state || node.subtitle || node.title || '').trim() || 'State';
+  }
+
   private statePreviewNodes(stateNode: OrgTreeNode): OrgTreeNode[] {
     const nodes = getOrgNavigableChildren(stateNode, this.treeIndex().flatNodes);
     const selectedStateId = this.selectedStateQueryId();
 
     if (!selectedStateId) {
-      return nodes.slice(0, 4);
+      return nodes;
     }
 
     const selectedNode = nodes.find((node) => node.id === selectedStateId);
 
     if (!selectedNode) {
-      return nodes.slice(0, 4);
+      return nodes;
     }
 
-    return [selectedNode, ...nodes.filter((node) => node.id !== selectedStateId)].slice(0, 4);
+    return [selectedNode, ...nodes.filter((node) => node.id !== selectedStateId)];
   }
 }

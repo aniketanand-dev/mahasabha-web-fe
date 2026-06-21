@@ -193,7 +193,7 @@ export class StateCommitteeComponent {
 
         return {
           id,
-          label: node.title,
+          label: this.nodeLabel(node),
           current: index === pathIds.length - 1,
           node,
         };
@@ -638,6 +638,14 @@ export class StateCommitteeComponent {
     return node.children.length ? 'Unit' : 'Member';
   }
 
+  protected nodeLabel(node: OrgTreeNode): string {
+    if (node.level === 'state') {
+      return String(node.location.state || node.subtitle || node.title || '').trim() || 'State';
+    }
+
+    return String(node.title || node.subtitle || '').trim() || 'Unnamed Node';
+  }
+
   protected nodeSummary(node: OrgTreeNode): string {
     if (node.subtitle) {
       return node.subtitle;
@@ -674,7 +682,7 @@ export class StateCommitteeComponent {
     }
 
     if (kind === 'State') {
-      return `Inspect district branches, city / GBA branches, taluks, corporations, assemblies, and related members configured under ${node.title}.`;
+      return `Inspect district branches, city / GBA branches, taluks, corporations, assemblies, and related members configured under ${this.nodeLabel(node)}.`;
     }
 
     if (kind === 'District') {

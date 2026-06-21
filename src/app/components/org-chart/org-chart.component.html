@@ -85,7 +85,7 @@
                     [class.org-state-chip--active]="isSelectedState(state)"
                     [attr.aria-current]="isSelectedState(state) ? 'true' : null"
                   >
-                    {{ state.title }}
+                    {{ stateLabel(state) }}
                   </a>
                 }
               </div>
