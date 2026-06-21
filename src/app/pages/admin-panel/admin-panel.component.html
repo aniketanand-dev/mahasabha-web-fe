@@ -79,7 +79,7 @@
   </aside>
 
   <main class="admin-main">
-    <div class="tab-panel" [class.wide-layout]="activeTab() === 'scholarships'">
+    <div class="tab-panel" [class.wide-layout]="activeTab() === 'scholarships' || activeTab() === 'org'">
       <div class="tab-header sticky-header">
         <div>
           @if (activeTab() === 'header') { <h2>🧭 Header</h2> }
@@ -386,310 +386,845 @@
         }
 
         @if (activeTab() === 'org') {
-        <section class="form-card section-card">
+        <section class="form-card section-card org-admin-shell">
           <div class="card-head">
             <div>
               <h3>Organisation Structure</h3>
-              <p>Build the hierarchy shown on the website. Add top-level committees or nested child units to match your
-                PDF chart.</p>
+              <p>Manage each organisation section on its own admin page. Member add and edit actions now stay in a popup so you do not lose your current context.</p>
             </div>
+            @if (orgView().kind !== 'overview') {
+              <button class="btn-cancel" (click)="openOrgOverview()">Back to Sections</button>
+            }
           </div>
 
-          <div class="form-actions compact-actions">
-            <button class="btn-add" (click)="startQuickAddOrgNode('president')">+ President</button>
-            <button class="btn-add" (click)="startQuickAddOrgNode('office-bearer')">+ Office Bearer</button>
-            <button class="btn-add" (click)="startQuickAddOrgNode('working')">+ General Working Member</button>
-            <button class="btn-add" (click)="startQuickAddOrgNode('nominated')">+ Nominated Member</button>
-            <button class="btn-add" (click)="startQuickAddOrgNode('representative')">+ Representative Member</button>
-            <button class="btn-add" (click)="startQuickAddOrgNode('state')">+ State Committee State</button>
-          </div>
-          <div class="org-guide-grid">
-            <article class="org-guide-card">
-              <h4>Section Members</h4>
-              <p>President, Office Bearers, General Working Committee, Representative, and Nominated are member
-                sections. Use quick add for members.</p>
-            </article>
-            <article class="org-guide-card">
-              <h4>State > District / City</h4>
-              <p>Use <strong>+ State Committee State</strong> first, then add district or city / GBA child nodes under that state.</p>
-            </article>
-            <article class="org-guide-card">
-              <h4>District / City Branches</h4>
-              <p>District nodes can add taluk children. City / GBA nodes can add corporation children, and corporations can add assembly children.</p>
-            </article>
-            <article class="org-guide-card">
-              <h4>Taluk > CMC/GP / Assembly</h4>
-              <p>From a taluk row, click <strong>+ CMC/GP / Assembly</strong> and enter the exact branch name.</p>
-            </article>
-            <article class="org-guide-card">
-              <h4>Members</h4>
-              <p>Use member actions on any branch row to add people under that specific level.</p>
-            </article>
+          <div class="org-breadcrumbs">
+            @for (crumb of orgBreadcrumbs(); track $index) {
+              <button
+                type="button"
+                class="org-breadcrumb"
+                [class.org-breadcrumb--active]="crumb.current"
+                [disabled]="crumb.current"
+                (click)="followOrgBreadcrumb(crumb)"
+              >
+                {{ crumb.label }}
+              </button>
+            }
           </div>
 
-          @if (showOrgNodeAdd()) {
-          <div #orgNodeAddForm class="form-section-block">
-            <div class="card-head">
-              <div>
-                <h4>{{ orgAddHeading(newOrgNode) }}</h4>
-                <p class="org-add-subtitle">{{ orgSaveTargetHint(newOrgNode) }}</p>
-              </div>
+          @if (orgView().kind === 'overview') {
+            <div class="org-guide-grid">
+              <article class="org-guide-card">
+                <h4>Separate Admin Pages</h4>
+                <p>Each organisation section now opens as its own admin page instead of keeping all levels on one screen.</p>
+              </article>
+              <article class="org-guide-card">
+                <h4>Level-Wise Hierarchy</h4>
+                <p>State committee branches open level by level, and same-level members move to their own member page.</p>
+              </article>
+              <article class="org-guide-card">
+                <h4>Popup Forms</h4>
+                <p>Add and edit forms open in a popup so the admin can save without losing the section or branch page.</p>
+              </article>
             </div>
-            <div class="org-form-summary">
-              <span class="org-summary-chip"><strong>Mode:</strong> {{ orgFormModeLabel(newOrgNode) }}</span>
-              <span class="org-summary-chip"><strong>Type:</strong> {{ orgFormTypeBadge(newOrgNode) }}</span>
-              <span class="org-summary-chip"><strong>Parent:</strong> {{ orgSelectedParentLabel(newOrgNode) }}</span>
-              <span class="org-summary-chip"><strong>Level:</strong> {{ newOrgNode.level }}</span>
+
+            <div class="org-section-grid">
+              @for (section of orgSectionCards; track section.key) {
+                <article class="org-section-card">
+                  <div class="org-section-card__head">
+                    <span class="org-section-card__count">{{ orgSectionCountLabel(section.key) }}</span>
+                    <h4>{{ section.title }}</h4>
+                  </div>
+                  <p>{{ section.description }}</p>
+                  <div class="org-section-card__actions">
+                    <button class="btn-add" (click)="openOrgSection(section.key)">Open Page</button>
+                  </div>
+                </article>
+              }
             </div>
-            <div class="form-grid-2">
-              @if (requiresOrgHierarchyControls(newOrgNode) || isHierarchyMemberForm(newOrgNode)) {
-              <div class="form-row">
-                <label>Parent Item</label>
-                <select [(ngModel)]="newOrgNode.parentId" (ngModelChange)="onNewOrgParentChanged($event)"
-                  class="form-input">
-                  <option [ngValue]="null">Top level</option>
-                  @for (option of orgParentOptionsForForm(newOrgNode); track option.id) {
-                  <option [ngValue]="option.id">{{ orgNodePath(option) }}</option>
-                  }
-                </select>
-              </div>
-              @if (requiresOrgDisplayOrder(newOrgNode)) {
-              <div class="form-row">
-                <label>Display Order</label>
-                <input [(ngModel)]="newOrgNode.order" type="number" min="0" class="form-input" />
-              </div>
-              }
-              }
-              @if (requiresOrgTitleInput(newOrgNode)) {
-              <div class="form-row">
-                <label>{{ orgTitleFieldLabel(newOrgNode) }}</label>
-                <input [(ngModel)]="newOrgNode.title" class="form-input"
-                  [placeholder]="orgTitlePlaceholder(newOrgNode)" />
-              </div>
-              }
-              @if (!isStructuralHierarchyEntry(newOrgNode)) {
-              <div class="form-row">
-                <label>Member Name *</label>
-                <input [(ngModel)]="newOrgNode.subtitle" class="form-input" placeholder="Full member name" />
-              </div>
-              }
-              @if (requiresOrgLocation(newOrgNode)) {
-              <div class="form-row">
-                <label>Hierarchy Level *</label>
-                <select [(ngModel)]="newOrgNode.level" class="form-input">
-                  <option value="state">state</option>
-                  <option value="district">district</option>
-                  <option value="city">city / GBA</option>
-                  <option value="corporation">corporation</option>
-                  <option value="assembly">assembly</option>
-                  <option value="taluk">taluk</option>
-                </select>
-              </div>
-              <div class="form-row">
-                <label>State *</label>
-                <input [(ngModel)]="newOrgNode.state" class="form-input" placeholder="Karnataka"
-                  [readOnly]="isOrgStateLocked(newOrgNode)" />
-              </div>
-              @if (isStructuralHierarchyEntry(newOrgNode)) {
-              <div class="form-row span-two">
-                <label>{{ structuralHierarchyLabel(newOrgNode) }} Entry</label>
-                <div class="field-key">{{ orgStructuralEntryHelpText(newOrgNode) }}</div>
-              </div>
-              }
-              @if (showOrgDistrictField(newOrgNode)) {
-              <div class="form-row">
-                <label>District @if (newOrgNode.level !== 'state') { * }</label>
-                <input [(ngModel)]="newOrgNode.district" class="form-input" placeholder="Bengaluru Urban"
-                  [readOnly]="isOrgDistrictLocked(newOrgNode)" />
-              </div>
-              }
-              @if (showOrgTalukField(newOrgNode)) {
-              <div class="form-row">
-                <label>Taluk *</label>
-                <input [(ngModel)]="newOrgNode.taluk" class="form-input" placeholder="Bengaluru North"
-                  [readOnly]="isOrgTalukLocked(newOrgNode)" />
-              </div>
-              }
-              } @else {
-              <div class="form-row span-two">
-                <label>Member Section</label>
-                <div class="field-key">For President, Office Bearers, General Working Committee, Representative,
-                  Nominated, and local-unit members, member name, image, description, and contact are supported.</div>
-              </div>
-              }
-              <!-- <div class="form-row span-two">
-                <label>Contact (Phone / Email / Any)</label>
-                <input [(ngModel)]="newOrgNode.contact" class="form-input"
-                  placeholder="+91..., name@domain.com, or any contact text" />
-              </div> -->
-              @if (!isStructuralHierarchyEntry(newOrgNode)) {
+          }
 
-              <div class="form-row span-two">
-                <label>Contact (Phone / Email / Any)</label>
-                <input [(ngModel)]="newOrgNode.contact" class="form-input" placeholder="+91..., name@domain.com" />
-              </div>
-
-              @if (requiresOrgImageFields(newOrgNode)) {
-
-              <div class="form-row">
-                <label>Image</label>
-
-                <input type="file" accept="image/*" class="form-input" (change)="onNewOrgNodeImageSelected($event)" />
-
-                @if (selectedFileName(newOrgNodeImageFile)) {
-                <div class="field-key">
-                  Selected: {{ selectedFileName(newOrgNodeImageFile) }}
+          @if (orgView().kind === 'section') {
+            @if (currentOrgSection(); as section) {
+              <div class="org-page-head">
+                <div>
+                  <p class="org-page-eyebrow">Section Page</p>
+                  <h4>{{ orgSectionTitle(section) }}</h4>
+                  <p class="org-page-copy">{{ orgSectionDescription(section) }}</p>
                 </div>
+
+                <div class="org-page-actions">
+                  @if (section === 'working' && orgSectionAnchor('nominated')) {
+                    <button class="btn-cancel" (click)="openOrgSection('nominated')">Open Nominated Body</button>
+                  }
+                  @if (section === 'state' && orgStateSectionAnchor()) {
+                    <button class="btn-cancel" (click)="openStateCommitteeMembersPage()">View Committee Members</button>
+                  }
+                  @if (section === 'state') {
+                    <button class="btn-cancel" (click)="startAddStateCommitteeSectionMember()">+ State Committee Member</button>
+                  }
+                  <button class="btn-add" (click)="startQuickAddOrgNode(section)">{{ orgSectionAddButtonLabel(section) }}</button>
+                </div>
+              </div>
+
+              @if (section === 'state') {
+                @if (orgStateRootNodes().length) {
+                  <div class="org-branch-grid">
+                    @for (node of orgStateRootNodes(); track node.id) {
+                      <article class="org-branch-card">
+                        <span class="org-branch-card__badge">{{ orgNodeLevelBadge(node) }}</span>
+                        <h4>{{ node.title }}</h4>
+                        <p>{{ orgNodeSummary(node) }}</p>
+                        @if (orgNodeLocation(node)) {
+                          <div class="item-sub">{{ orgNodeLocation(node) }}</div>
+                        }
+                        <div class="org-branch-card__stats">{{ orgNodeStats(node) }}</div>
+                        @if (orgHasDirectMembers(node)) {
+                          <div class="field-key">State Members</div>
+                          @for (member of orgDirectMemberPreview(node); track member.id) {
+                            <div class="item-sub">
+                              {{ orgMemberName(member) }}
+                              @if (orgMemberTitle(member); as title) {
+                                · {{ title }}
+                              }
+                              @if (member.contact) {
+                                · {{ member.contact }}
+                              }
+                            </div>
+                          }
+                          @if (orgRemainingDirectMemberCount(node) > 0) {
+                            <div class="item-sub">+{{ orgRemainingDirectMemberCount(node) }} more state members</div>
+                          }
+                        }
+                        <div class="org-branch-card__actions">
+                          <button class="btn-add" (click)="openOrgNodePage(node)">Open Level</button>
+                          <button class="btn-cancel" (click)="openOrgMembersPage(node)">View Members</button>
+                          @if (canAddOrgMember(node)) {
+                            <button class="btn-cancel" (click)="startAddOrgMember(node)">{{ orgMemberActionLabel(node) }}</button>
+                          }
+                          <button class="btn-edit" (click)="startEditOrgNode(node)">Edit</button>
+                          <button class="btn-delete" (click)="deleteOrgNode(node.id)">Delete</button>
+                        </div>
+                      </article>
+                    }
+                  </div>
+                } @else {
+                  <div class="empty-state org-empty-state">
+                    <span>🗺</span>
+                    <p>No states have been added yet. Use <strong>+ State Committee State</strong> to add one, or open <strong>View Committee Members</strong> to manage state members.</p>
+                  </div>
+                }
+              } @else {
+                @if (orgCurrentMemberCount() || orgMemberSearchActive()) {
+                  <div class="scholarship-table-toolbar">
+                    <label class="scholarship-filter-field scholarship-search-field">
+                      <span>{{ orgSearchFieldLabel() }}</span>
+                      <input
+                        class="form-input"
+                        type="text"
+                        [ngModel]="orgMemberSearchDraft()"
+                        (ngModelChange)="updateOrgMemberSearch($event)"
+                        placeholder="Search name, title, state, district, or taluk"
+                      />
+                    </label>
+
+                    <div class="scholarship-table-toolbar-actions">
+                      <span class="org-summary-chip">{{ orgMemberResultsSummary() }}</span>
+                      @if (orgMemberSearchActive()) {
+                        <button type="button" class="btn-cancel sm" (click)="clearOrgMemberSearch()">Clear Search</button>
+                      }
+                    </div>
+                  </div>
+                }
+
+                @if (orgVisibleMembers(); as members) {
+                  @if (members.length) {
+                  <div class="items-list">
+                    @for (member of members; track member.id) {
+                      <div class="item-row org-member-row">
+                        @if (member.imageUrl) {
+                          <img class="founder-thumb" [src]="member.imageUrl" [alt]="member.imageAlt || orgMemberName(member)" />
+                        } @else {
+                          <div class="org-thumb-placeholder">{{ orgMemberName(member).charAt(0) || 'M' }}</div>
+                        }
+
+                        <div class="item-info">
+                          <div class="org-item-meta">
+                            <span class="org-member-chip">{{ orgNodeBadgeLabel(member) }}</span>
+                            <span class="org-depth-chip">{{ member.level }}</span>
+                            <span class="org-order-chip">Order {{ member.order }}</span>
+                            @if (!member.isActive) {
+                              <span class="org-order-chip">Hidden</span>
+                            }
+                          </div>
+                          <div class="item-title">{{ orgMemberName(member) }}</div>
+                          @if (orgMemberTitle(member); as title) {
+                            <div class="item-sub">{{ title }}</div>
+                          }
+                          <div class="item-bio">{{ orgMemberSummary(member) }}</div>
+                          @if (orgNodeLocation(member)) {
+                            <div class="item-sub">{{ orgNodeLocation(member) }}</div>
+                          }
+                        </div>
+
+                        <div class="item-actions">
+                          <button class="btn-edit" (click)="startEditOrgNode(member)">Edit</button>
+                          <button class="btn-delete" (click)="deleteOrgNode(member.id)">Delete</button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                  @if (orgMemberTotalPages() > 1) {
+                    <div class="org-page-actions">
+                      <button type="button" class="btn-cancel sm" [disabled]="orgMemberPage() === 1" (click)="goToOrgMemberPage(orgMemberPage() - 1)">Previous</button>
+                      <span class="org-summary-chip">Page {{ orgMemberPageLabel() }}</span>
+                      <button type="button" class="btn-cancel sm" [disabled]="orgMemberPage() === orgMemberTotalPages()" (click)="goToOrgMemberPage(orgMemberPage() + 1)">Next</button>
+                    </div>
+                  }
+                } @else {
+                  <div class="empty-state org-empty-state">
+                    <span>👤</span>
+                    <p>{{ orgMemberEmptyText() }}</p>
+                  </div>
+                }
+                }
+              }
+            }
+          }
+
+          @if (orgView().kind === 'node') {
+            @if (currentOrgNode(); as node) {
+              <div class="org-page-head">
+                <div>
+                  <p class="org-page-eyebrow">Level Page</p>
+                  <h4>{{ node.title }}</h4>
+                  <p class="org-page-copy">{{ orgNodeSummary(node) }}</p>
+                  @if (orgNodeLocation(node)) {
+                    <div class="item-sub">{{ orgNodeLocation(node) }}</div>
+                  }
+                  <div class="org-form-summary">
+                    <span class="org-summary-chip"><strong>Level:</strong> {{ orgNodeLevelBadge(node) }}</span>
+                    <span class="org-summary-chip"><strong>Members:</strong> {{ orgDirectMembers(node).length }}</span>
+                    <span class="org-summary-chip"><strong>Children:</strong> {{ orgNavigableChildNodes(node).length }}</span>
+                  </div>
+                </div>
+
+                <div class="org-page-actions">
+                  @if (canAddOrgMember(node)) {
+                    <button class="btn-add" (click)="startAddOrgMember(node)">{{ orgMemberActionLabel(node) }}</button>
+                  }
+                  @if (canAddStateNominatedMember(node)) {
+                    <button class="btn-add" (click)="startAddStateNominatedMember(node)">+ Nominated Member</button>
+                  }
+                  @if (showsSplitStateBranchActions(node)) {
+                    <button class="btn-cancel" (click)="startAddOrgNodeAtLevel(node, 'district')">+ District</button>
+                    <button class="btn-cancel" (click)="startAddOrgNodeAtLevel(node, 'city')">+ City / GBA</button>
+                  } @else if (canAddOrgChild(node)) {
+                    <button class="btn-cancel" (click)="startAddOrgNode(node)">{{ orgChildActionLabel(node) }}</button>
+                  }
+                </div>
+              </div>
+
+              <div class="org-linked-section">
+                <div class="subsection-head">
+                  <div>
+                    <h4>{{ orgBranchMembersHeading(node) }}</h4>
+                    <p class="org-page-copy">{{ orgBranchMembersCopy(node) }}</p>
+                  </div>
+                </div>
+
+                @if (orgCurrentMemberCount() || orgMemberSearchActive()) {
+                  <div class="scholarship-table-toolbar">
+                    <label class="scholarship-filter-field scholarship-search-field">
+                      <span>{{ orgSearchFieldLabel() }}</span>
+                      <input
+                        class="form-input"
+                        type="text"
+                        [ngModel]="orgMemberSearchDraft()"
+                        (ngModelChange)="updateOrgMemberSearch($event)"
+                        placeholder="Search name, title, state, district, or taluk"
+                      />
+                    </label>
+
+                    <div class="scholarship-table-toolbar-actions">
+                      <span class="org-summary-chip">{{ orgMemberResultsSummary() }}</span>
+                      @if (orgMemberSearchActive()) {
+                        <button type="button" class="btn-cancel sm" (click)="clearOrgMemberSearch()">Clear Search</button>
+                      }
+                    </div>
+                  </div>
+                }
+
+                @if (orgVisibleMembers(); as members) {
+                  @if (members.length) {
+                    <div class="items-list">
+                      @for (member of members; track member.id) {
+                        <div class="item-row org-member-row">
+                          @if (member.imageUrl) {
+                            <img class="founder-thumb" [src]="member.imageUrl" [alt]="member.imageAlt || orgMemberName(member)" />
+                          } @else {
+                            <div class="org-thumb-placeholder">{{ orgMemberName(member).charAt(0) || 'M' }}</div>
+                          }
+
+                          <div class="item-info">
+                            <div class="org-item-meta">
+                              <span class="org-member-chip">{{ orgNodeBadgeLabel(member) }}</span>
+                              <span class="org-depth-chip">{{ member.level }}</span>
+                              <span class="org-order-chip">Order {{ member.order }}</span>
+                              @if (!member.isActive) {
+                                <span class="org-order-chip">Hidden</span>
+                              }
+                            </div>
+                            <div class="item-title">{{ orgMemberName(member) }}</div>
+                            @if (orgMemberTitle(member); as title) {
+                              <div class="item-sub">{{ title }}</div>
+                            }
+                            <div class="item-bio">{{ orgMemberSummary(member) }}</div>
+                            @if (orgNodeLocation(member)) {
+                              <div class="item-sub">{{ orgNodeLocation(member) }}</div>
+                            }
+                          </div>
+
+                          <div class="item-actions">
+                            <button class="btn-edit" (click)="startEditOrgNode(member)">Edit</button>
+                            <button class="btn-delete" (click)="deleteOrgNode(member.id)">Delete</button>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                    @if (orgMemberTotalPages() > 1) {
+                      <div class="org-page-actions">
+                        <button type="button" class="btn-cancel sm" [disabled]="orgMemberPage() === 1" (click)="goToOrgMemberPage(orgMemberPage() - 1)">Previous</button>
+                        <span class="org-summary-chip">Page {{ orgMemberPageLabel() }}</span>
+                        <button type="button" class="btn-cancel sm" [disabled]="orgMemberPage() === orgMemberTotalPages()" (click)="goToOrgMemberPage(orgMemberPage() + 1)">Next</button>
+                      </div>
+                    }
+                  } @else {
+                    <div class="empty-state org-empty-state">
+                      <span>👥</span>
+                      <p>{{ orgMemberEmptyText() }}</p>
+                    </div>
+                  }
                 }
               </div>
 
-              <div class="form-row">
-                <label>Image Alt Text</label>
+              @if (showsOrgBranchChildren(node)) {
+                <div class="org-linked-section">
+                  <div class="subsection-head">
+                    <div>
+                      <h4>{{ orgBranchChildrenHeading(node) }}</h4>
+                      <p class="org-page-copy">{{ orgBranchChildrenCopy(node) }}</p>
+                    </div>
+                  </div>
 
-                <input [(ngModel)]="newOrgNode.imageAlt" class="form-input" placeholder="Member photo alt text" />
-              </div>
-
+                @if (orgNavigableChildNodes(node).length) {
+                  <div class="org-branch-grid">
+                    @for (child of orgNavigableChildNodes(node); track child.id) {
+                      <article class="org-branch-card">
+                        <span class="org-branch-card__badge">{{ orgNodeLevelBadge(child) }}</span>
+                        <h4>{{ child.title }}</h4>
+                        <p>{{ orgNodeSummary(child) }}</p>
+                        @if (orgNodeLocation(child)) {
+                          <div class="item-sub">{{ orgNodeLocation(child) }}</div>
+                        }
+                        <div class="org-branch-card__stats">{{ orgNodeStats(child) }}</div>
+                        <div class="org-branch-card__actions">
+                          <button class="btn-add" (click)="openOrgNodePage(child)">Open Level</button>
+                          <button class="btn-edit" (click)="startEditOrgNode(child)">Edit</button>
+                          <button class="btn-delete" (click)="deleteOrgNode(child.id)">Delete</button>
+                        </div>
+                      </article>
+                    }
+                  </div>
+                } @else if (orgLinkedChildSections(node).length === 0) {
+                  <div class="empty-state org-empty-state">
+                    <span>🧭</span>
+                    <p>{{ orgBranchChildrenEmptyText(node) }}</p>
+                  </div>
+                }
+                </div>
               }
 
-              <!-- <div class="form-row span-two">
-                <label>Description</label>
-
-                <textarea [(ngModel)]="newOrgNode.description" class="form-input form-textarea" rows="3"
-                  placeholder="Member description"></textarea>
-              </div> -->
-
+              @if (orgLinkedChildSections(node).length) {
+                <div class="org-linked-section">
+                  <div class="subsection-head">
+                    <h4>Linked Section Entries</h4>
+                  </div>
+                  <div class="items-list">
+                    @for (entry of orgLinkedChildSections(node); track entry.id) {
+                      <div class="item-row org-member-row">
+                        @if (entry.imageUrl) {
+                          <img class="founder-thumb" [src]="entry.imageUrl" [alt]="entry.imageAlt || orgMemberName(entry)" />
+                        } @else {
+                          <div class="org-thumb-placeholder">{{ orgMemberName(entry).charAt(0) || 'M' }}</div>
+                        }
+                        <div class="item-info">
+                          <div class="org-item-meta">
+                            <span class="org-member-chip">{{ orgSectionLabel(entry) }}</span>
+                            <span class="org-depth-chip">{{ entry.level }}</span>
+                          </div>
+                          <div class="item-title">{{ orgMemberName(entry) }}</div>
+                          @if (orgMemberTitle(entry); as title) {
+                            <div class="item-sub">{{ title }}</div>
+                          }
+                          <div class="item-bio">{{ orgMemberSummary(entry) }}</div>
+                        </div>
+                        <div class="item-actions">
+                          <button class="btn-edit" (click)="startEditOrgNode(entry)">Edit</button>
+                          <button class="btn-delete" (click)="deleteOrgNode(entry.id)">Delete</button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
               }
-              <div class="form-row span-two">
-                <label class="checkbox-label">
-                  <input type="checkbox" [(ngModel)]="newOrgNode.isActive" />
-                  <span>Show in public organization pages</span>
-                </label>
+            } @else {
+              <div class="empty-state org-empty-state">
+                <span>🏛</span>
+                <p>The selected organisation level could not be found.</p>
               </div>
-            </div>
-            @if (mediaError()) {
-            <div class="gallery-status gallery-error">{{ mediaError() }}</div>
             }
-            <div class="form-actions">
-              <button class="btn-save" (click)="addOrgNode()">{{ orgSaveButtonLabel(newOrgNode) }}</button>
-              <button class="btn-cancel" (click)="cancelAddOrgNode()">Cancel</button>
+          }
+
+          @if (orgView().kind === 'members') {
+            @if (currentOrgNode(); as node) {
+              <div class="org-page-head">
+                <div>
+                  <p class="org-page-eyebrow">Members Page</p>
+                  <h4>{{ node.title }} Members</h4>
+                  <p class="org-page-copy">Members at the same hierarchy level are managed separately here so the branch page stays focused on structure.</p>
+                </div>
+
+                <div class="org-page-actions">
+                  @if (canAddOrgMember(node)) {
+                    <button class="btn-add" (click)="startAddOrgMember(node)">{{ orgMemberActionLabel(node) }}</button>
+                  }
+                </div>
+              </div>
+
+              @if (orgCurrentMemberCount() || orgMemberSearchActive()) {
+                <div class="scholarship-table-toolbar">
+                  <label class="scholarship-filter-field scholarship-search-field">
+                    <span>{{ orgSearchFieldLabel() }}</span>
+                    <input
+                      class="form-input"
+                      type="text"
+                      [ngModel]="orgMemberSearchDraft()"
+                      (ngModelChange)="updateOrgMemberSearch($event)"
+                      placeholder="Search name, title, state, district, or taluk"
+                    />
+                  </label>
+
+                  <div class="scholarship-table-toolbar-actions">
+                    <span class="org-summary-chip">{{ orgMemberResultsSummary() }}</span>
+                    @if (orgMemberSearchActive()) {
+                      <button type="button" class="btn-cancel sm" (click)="clearOrgMemberSearch()">Clear Search</button>
+                    }
+                  </div>
+                </div>
+              }
+
+              @if (orgVisibleMembers(); as members) {
+                @if (members.length) {
+                <div class="items-list">
+                  @for (member of members; track member.id) {
+                    <div class="item-row org-member-row">
+                      @if (member.imageUrl) {
+                        <img class="founder-thumb" [src]="member.imageUrl" [alt]="member.imageAlt || orgMemberName(member)" />
+                      } @else {
+                        <div class="org-thumb-placeholder">{{ orgMemberName(member).charAt(0) || 'M' }}</div>
+                      }
+
+                      <div class="item-info">
+                        <div class="org-item-meta">
+                          <span class="org-member-chip">{{ orgNodeBadgeLabel(member) }}</span>
+                          <span class="org-depth-chip">{{ member.level }}</span>
+                          <span class="org-order-chip">Order {{ member.order }}</span>
+                          @if (!member.isActive) {
+                            <span class="org-order-chip">Hidden</span>
+                          }
+                        </div>
+                        <div class="item-title">{{ orgMemberName(member) }}</div>
+                        @if (orgMemberTitle(member); as title) {
+                          <div class="item-sub">{{ title }}</div>
+                        }
+                        <div class="item-bio">{{ orgMemberSummary(member) }}</div>
+                        @if (orgNodeLocation(member)) {
+                          <div class="item-sub">{{ orgNodeLocation(member) }}</div>
+                        }
+                      </div>
+
+                      <div class="item-actions">
+                        <button class="btn-edit" (click)="startEditOrgNode(member)">Edit</button>
+                        <button class="btn-delete" (click)="deleteOrgNode(member.id)">Delete</button>
+                      </div>
+                    </div>
+                  }
+                </div>
+                @if (orgMemberTotalPages() > 1) {
+                  <div class="org-page-actions">
+                    <button type="button" class="btn-cancel sm" [disabled]="orgMemberPage() === 1" (click)="goToOrgMemberPage(orgMemberPage() - 1)">Previous</button>
+                    <span class="org-summary-chip">Page {{ orgMemberPageLabel() }}</span>
+                    <button type="button" class="btn-cancel sm" [disabled]="orgMemberPage() === orgMemberTotalPages()" (click)="goToOrgMemberPage(orgMemberPage() + 1)">Next</button>
+                  </div>
+                }
+              } @else {
+                <div class="empty-state org-empty-state">
+                  <span>👥</span>
+                  <p>{{ orgMemberEmptyText() }}</p>
+                </div>
+              }
+              }
+            }
+          }
+        </section>
+
+        @if (showOrgNodeAdd()) {
+          <div class="scholarship-settings-modal-backdrop" (click)="closeOrgModal()">
+            <div class="scholarship-settings-modal org-modal" (click)="$event.stopPropagation()">
+              <div class="scholarship-settings-modal-head">
+                <div>
+                  <p class="org-page-eyebrow">Add Organisation Item</p>
+                  <h4>{{ orgAddHeading(newOrgNode) }}</h4>
+                  <p class="org-add-subtitle">{{ orgSaveTargetHint(newOrgNode) }}</p>
+                </div>
+                <button type="button" class="scholarship-settings-close" (click)="closeOrgModal()">×</button>
+              </div>
+
+              <div #orgNodeAddForm class="org-modal-body">
+                <div class="org-form-summary">
+                  <span class="org-summary-chip"><strong>Mode:</strong> {{ orgFormModeLabel(newOrgNode) }}</span>
+                  <span class="org-summary-chip"><strong>Type:</strong> {{ orgFormTypeBadge(newOrgNode) }}</span>
+                  <span class="org-summary-chip"><strong>Parent:</strong> {{ orgSelectedParentLabel(newOrgNode) }}</span>
+                  <span class="org-summary-chip"><strong>Level:</strong> {{ newOrgNode.level }}</span>
+                </div>
+
+                <div class="form-grid-2">
+                  @if (requiresOrgHierarchyControls(newOrgNode) || isHierarchyMemberForm(newOrgNode)) {
+                    <div class="form-row">
+                      <label>Parent Item</label>
+                      <select [(ngModel)]="newOrgNode.parentId" (ngModelChange)="onNewOrgParentChanged($event)" class="form-input">
+                        <option [ngValue]="null">Top level</option>
+                        @for (option of orgParentOptionsForForm(newOrgNode); track option.id) {
+                          <option [ngValue]="option.id">{{ orgNodePath(option) }}</option>
+                        }
+                      </select>
+                    </div>
+
+                    @if (requiresOrgDisplayOrder(newOrgNode)) {
+                      <div class="form-row">
+                        <label>{{ usesOrgMemberFormArray(newOrgNode) ? 'Starting Display Order' : 'Display Order' }}</label>
+                        <input [(ngModel)]="newOrgNode.order" type="number" min="0" class="form-input" />
+                      </div>
+                    }
+                  }
+
+                  @if (usesOrgMemberFormArray(newOrgNode)) {
+                    <div class="form-row span-two">
+                      <div class="org-member-form-array form-section-block" [formGroup]="orgMemberBatchForm">
+                        <div class="card-head">
+                          <div>
+                            <h4>Members</h4>
+                            <div class="field-key">Use + Add Member to add multiple members on the same page.</div>
+                          </div>
+                          <div class="item-actions">
+                            <button type="button" class="btn-add" (click)="addOrgMemberEntry()">+ Add Member</button>
+                          </div>
+                        </div>
+
+                        <div class="org-member-form-array__list" formArrayName="members">
+                          @for (memberGroup of orgMemberEntryControls; track $index) {
+                            <div class="org-member-form-array__item form-section-block" [formGroupName]="$index">
+                              <div class="card-head">
+                                <div class="item-info">
+                                  <div class="item-title">Member {{ $index + 1 }}</div>
+                                </div>
+                                @if (orgMemberEntryControls.length > 1) {
+                                  <div class="item-actions">
+                                    <button type="button" class="btn-delete" (click)="removeOrgMemberEntry($index)">Delete</button>
+                                  </div>
+                                }
+                              </div>
+
+                              <div class="form-grid-2">
+                                <div class="form-row">
+                                  <label>First Name *</label>
+                                  <input formControlName="firstName" class="form-input" placeholder="Enter first name" />
+                                  @if (isOrgMemberFieldInvalid(memberGroup, 'firstName')) {
+                                    <div class="field-key field-key--error">First name is required.</div>
+                                  }
+                                </div>
+
+                                <div class="form-row">
+                                  <label>Designation *</label>
+                                  <input formControlName="designation" class="form-input" placeholder="e.g. President / Secretary / Treasurer" />
+                                  @if (isOrgMemberFieldInvalid(memberGroup, 'designation')) {
+                                    <div class="field-key field-key--error">Designation is required.</div>
+                                  }
+                                </div>
+
+                                <div class="form-row">
+                                  <label>Contact Number</label>
+                                  <input formControlName="contact" class="form-input" placeholder="+91..., phone number" />
+                                </div>
+
+                                <div class="form-row">
+                                  <label>Image</label>
+                                  <input type="file" accept="image/*" class="form-input" (change)="onOrgMemberEntryImageSelected($event, $index)" />
+                                  @if (orgMemberEntrySelectedFileName($index)) {
+                                    <div class="field-key">Selected: {{ orgMemberEntrySelectedFileName($index) }}</div>
+                                  }
+                                </div>
+
+                                <div class="form-row span-two">
+                                  <label>Image Alt Text</label>
+                                  <input formControlName="imageAlt" class="form-input" placeholder="Member photo alt text" />
+                                </div>
+
+                                <div class="form-row span-two">
+                                  <label>Description</label>
+                                  <textarea formControlName="description" class="form-input form-textarea" rows="3" placeholder="Short description shown on public pages"></textarea>
+                                </div>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  } @else {
+                    @if (shouldShowOrgTitleInput(newOrgNode)) {
+                      <div class="form-row">
+                        <label>{{ orgTitleFieldLabel(newOrgNode) }}</label>
+                        <input [(ngModel)]="newOrgNode.title" class="form-input" [placeholder]="orgTitlePlaceholder(newOrgNode)" />
+                      </div>
+                    }
+
+                    @if (!isStructuralHierarchyEntry(newOrgNode)) {
+                      <div class="form-row">
+                        <label>{{ orgPersonNameLabel(newOrgNode) }}</label>
+                        <input [(ngModel)]="newOrgNode.subtitle" class="form-input" [placeholder]="orgPersonNamePlaceholder(newOrgNode)" />
+                      </div>
+                    }
+                  }
+
+                  @if (requiresOrgLocation(newOrgNode)) {
+                    <div class="form-row">
+                      <label>Hierarchy Level *</label>
+                      <select [(ngModel)]="newOrgNode.level" class="form-input">
+                        <option value="state">state</option>
+                        <option value="district">district</option>
+                        <option value="city">city / GBA</option>
+                        <option value="corporation">corporation</option>
+                        <option value="assembly">assembly</option>
+                        <option value="taluk">taluk</option>
+                      </select>
+                    </div>
+
+                    <div class="form-row">
+                      <label>State *</label>
+                      <input [(ngModel)]="newOrgNode.state" class="form-input" placeholder="Karnataka" [readOnly]="isOrgStateLocked(newOrgNode)" />
+                    </div>
+
+                    @if (isStructuralHierarchyEntry(newOrgNode)) {
+                      <div class="form-row span-two">
+                        <label>{{ structuralHierarchyLabel(newOrgNode) }} Entry</label>
+                        <div class="field-key">{{ orgStructuralEntryHelpText(newOrgNode) }}</div>
+                      </div>
+                    }
+
+                    @if (showOrgDistrictField(newOrgNode)) {
+                      <div class="form-row">
+                        <label>District @if (newOrgNode.level !== 'state') { * }</label>
+                        <input [(ngModel)]="newOrgNode.district" class="form-input" placeholder="Bengaluru Urban" [readOnly]="isOrgDistrictLocked(newOrgNode)" />
+                      </div>
+                    }
+
+                    @if (showOrgTalukField(newOrgNode)) {
+                      <div class="form-row">
+                        <label>Taluk *</label>
+                        <input [(ngModel)]="newOrgNode.taluk" class="form-input" placeholder="Bengaluru North" [readOnly]="isOrgTalukLocked(newOrgNode)" />
+                      </div>
+                    }
+                  } @else {
+                    <div class="form-row span-two">
+                      <label>{{ orgSectionInfoLabel(newOrgNode) }}</label>
+                      <div class="field-key">{{ orgSectionInfoCopy(newOrgNode) }}</div>
+                    </div>
+                  }
+
+                  @if (!isStructuralHierarchyEntry(newOrgNode) && !usesOrgMemberFormArray(newOrgNode)) {
+                    <div class="form-row span-two">
+                      <label>Contact (Phone / Email / Any)</label>
+                      <input [(ngModel)]="newOrgNode.contact" class="form-input" placeholder="+91..., name@domain.com" />
+                    </div>
+
+                    @if (requiresOrgImageFields(newOrgNode)) {
+                      <div class="form-row">
+                        <label>{{ orgImageLabel(newOrgNode) }}</label>
+                        <input type="file" accept="image/*" class="form-input" (change)="onNewOrgNodeImageSelected($event)" />
+                        @if (selectedFileName(newOrgNodeImageFile)) {
+                          <div class="field-key">Selected: {{ selectedFileName(newOrgNodeImageFile) }}</div>
+                        }
+                      </div>
+
+                      <div class="form-row">
+                        <label>{{ orgImageAltLabel(newOrgNode) }}</label>
+                        <input [(ngModel)]="newOrgNode.imageAlt" class="form-input" [placeholder]="orgImageAltPlaceholder(newOrgNode)" />
+                      </div>
+                    }
+
+                    <div class="form-row span-two">
+                      <label>{{ orgDescriptionLabel(newOrgNode) }}</label>
+                      <textarea [(ngModel)]="newOrgNode.description" class="form-input form-textarea" rows="3" [placeholder]="orgDescriptionPlaceholder(newOrgNode)"></textarea>
+                    </div>
+                  }
+
+                  <div class="form-row span-two">
+                    <label class="checkbox-label">
+                      <input type="checkbox" [(ngModel)]="newOrgNode.isActive" />
+                      <span>Show in public organization pages</span>
+                    </label>
+                  </div>
+                </div>
+
+                @if (mediaError()) {
+                  <div class="gallery-status gallery-error">{{ mediaError() }}</div>
+                }
+
+                <div class="form-actions">
+                  <button class="btn-save" (click)="addOrgNode()">{{ orgSaveButtonLabel(newOrgNode) }}</button>
+                  <button class="btn-cancel" (click)="cancelAddOrgNode()">Cancel</button>
+                </div>
+              </div>
             </div>
           </div>
-          }
+        }
 
-          @if (orgNodeItems().length === 0) {
-          <div class="empty-state">
-            <span>🏛</span>
-            <p>No organisation items added yet.</p>
-          </div>
-          }
+        @if (editingOrgNodeId(); as editingId) {
+          <div class="scholarship-settings-modal-backdrop" (click)="closeOrgModal()">
+            <div class="scholarship-settings-modal org-modal" (click)="$event.stopPropagation()">
+              <div class="scholarship-settings-modal-head">
+                <div>
+                  <p class="org-page-eyebrow">Edit Organisation Item</p>
+                  <h4>{{ orgEditHeading() }}</h4>
+                  <p class="org-add-subtitle">{{ orgEditSubtitle() }}</p>
+                </div>
+                <button type="button" class="scholarship-settings-close" (click)="closeOrgModal()">×</button>
+              </div>
 
-          <div class="items-list">
-            @for (entry of orgNodesForDisplay(); track entry.node.id) {
-            <div class="item-row org-row-admin" [class.org-row-admin--section]="isOrgSectionHeader(entry.node)"
-              [class.org-row-admin--member]="isOrgSectionMember(entry.node)">
-              @if (editingOrgNodeId() === entry.node.id) {
-              <div class="item-edit-fields">
+              <div class="org-modal-body">
                 <div class="org-form-summary">
                   <span class="org-summary-chip"><strong>Mode:</strong> {{ orgFormModeLabel(editOrgNode) }}</span>
                   <span class="org-summary-chip"><strong>Type:</strong> {{ orgFormTypeBadge(editOrgNode) }}</span>
-                  <span class="org-summary-chip"><strong>Parent:</strong> {{ orgSelectedParentLabel(editOrgNode)
-                    }}</span>
+                  <span class="org-summary-chip"><strong>Parent:</strong> {{ orgSelectedParentLabel(editOrgNode) }}</span>
                   <span class="org-summary-chip"><strong>Level:</strong> {{ editOrgNode.level }}</span>
                 </div>
+
                 <div class="form-grid-2">
                   @if (requiresOrgHierarchyControls(editOrgNode) || isHierarchyMemberForm(editOrgNode)) {
-                  <div class="form-row">
-                    <label>Parent Item</label>
-                    <select [(ngModel)]="editOrgNode.parentId" (ngModelChange)="onEditOrgParentChanged($event)"
-                      class="form-input">
-                      <option [ngValue]="null">Top level</option>
-                      @for (option of orgParentOptionsForForm(editOrgNode, entry.node.id); track option.id) {
-                      <option [ngValue]="option.id">{{ orgNodePath(option) }}</option>
-                      }
-                    </select>
-                  </div>
-                  @if (requiresOrgDisplayOrder(editOrgNode)) {
-                  <div class="form-row">
-                    <label>Display Order</label>
-                    <input [(ngModel)]="editOrgNode.order" type="number" min="0" class="form-input" />
-                  </div>
-                  }
-                  }
-                  @if (requiresOrgTitleInput(editOrgNode, entry.node.id)) {
-                  <div class="form-row">
-                    <label>{{ orgTitleFieldLabel(editOrgNode) }}</label>
-                    <input [(ngModel)]="editOrgNode.title" class="form-input"
-                      [placeholder]="orgTitlePlaceholder(editOrgNode)" />
-                  </div>
-                  }
-                  @if (requiresOrgLocation(editOrgNode)) {
-                  <div class="form-row">
-                    <label>Hierarchy Level</label>
-                    <select [(ngModel)]="editOrgNode.level" class="form-input">
-                      <option value="state">state</option>
-                      <option value="district">district</option>
-                      <option value="city">city / GBA</option>
-                      <option value="corporation">corporation</option>
-                      <option value="assembly">assembly</option>
-                      <option value="taluk">taluk</option>
-                    </select>
-                  </div>
-                  <div class="form-row">
-                    <label>State</label>
-                    <input [(ngModel)]="editOrgNode.state" class="form-input"
-                      [readOnly]="isOrgStateLocked(editOrgNode)" />
-                  </div>
-                  @if (isStructuralHierarchyEntry(editOrgNode)) {
-                  <div class="form-row span-two">
-                    <label>{{ structuralHierarchyLabel(editOrgNode) }} Entry</label>
-                    <div class="field-key">{{ orgStructuralEntryHelpText(editOrgNode) }}</div>
-                  </div>
-                  }
-                  @if (showOrgDistrictField(editOrgNode)) {
-                  <div class="form-row">
-                    <label>District @if (editOrgNode.level !== 'state') { * }</label>
-                    <input [(ngModel)]="editOrgNode.district" class="form-input"
-                      [readOnly]="isOrgDistrictLocked(editOrgNode)" />
-                  </div>
-                  }
-                  @if (showOrgTalukField(editOrgNode)) {
-                  <div class="form-row">
-                    <label>Taluk *</label>
-                    <input [(ngModel)]="editOrgNode.taluk" class="form-input"
-                      [readOnly]="isOrgTalukLocked(editOrgNode)" />
-                  </div>
-                  }
-                  } @else {
-                  <div class="form-row span-two">
-                    <label>Member Section</label>
-                    <div class="field-key">Location is not required for this member section. Use member name, image,
-                      description, and contact.</div>
-                  </div>
-                  }
-                  <!-- <div class="form-row span-two">
-                    <label>Contact (Phone / Email / Any)</label>
-                    <input [(ngModel)]="editOrgNode.contact" class="form-input"
-                      placeholder="+91..., name@domain.com, or any contact text" />
-                  </div> -->
-                  @if (requiresOrgImageFields(editOrgNode)) {
-                  <div class="form-row">
-                    <label>Image</label>
-                    <input type="file" accept="image/*" class="form-input"
-                      (change)="onEditOrgNodeImageSelected($event)" />
-                    @if (selectedFileName(editOrgNodeImageFile)) {
-                    <div class="field-key">Selected: {{ selectedFileName(editOrgNodeImageFile) }}</div>
+                    <div class="form-row">
+                      <label>Parent Item</label>
+                      <select [(ngModel)]="editOrgNode.parentId" (ngModelChange)="onEditOrgParentChanged($event)" class="form-input">
+                        <option [ngValue]="null">Top level</option>
+                        @for (option of orgParentOptionsForForm(editOrgNode, editingId); track option.id) {
+                          <option [ngValue]="option.id">{{ orgNodePath(option) }}</option>
+                        }
+                      </select>
+                    </div>
+
+                    @if (requiresOrgDisplayOrder(editOrgNode)) {
+                      <div class="form-row">
+                        <label>Display Order</label>
+                        <input [(ngModel)]="editOrgNode.order" type="number" min="0" class="form-input" />
+                      </div>
                     }
-                  </div>
-                  <div class="form-row">
-                    <label>Image Alt Text</label>
-                    <input [(ngModel)]="editOrgNode.imageAlt" class="form-input" />
-                  </div>
                   }
+
+                  @if (shouldShowOrgTitleInput(editOrgNode, editingId)) {
+                    <div class="form-row">
+                      <label>{{ orgTitleFieldLabel(editOrgNode) }}</label>
+                      <input [(ngModel)]="editOrgNode.title" class="form-input" [placeholder]="orgTitlePlaceholder(editOrgNode)" />
+                    </div>
+                  }
+
+                  @if (!isStructuralHierarchyEntry(editOrgNode)) {
+                    <div class="form-row">
+                      <label>{{ orgPersonNameLabel(editOrgNode) }}</label>
+                      <input [(ngModel)]="editOrgNode.subtitle" class="form-input" [placeholder]="orgPersonNamePlaceholder(editOrgNode)" />
+                    </div>
+                  }
+
+                  @if (requiresOrgLocation(editOrgNode)) {
+                    <div class="form-row">
+                      <label>Hierarchy Level</label>
+                      <select [(ngModel)]="editOrgNode.level" class="form-input">
+                        <option value="state">state</option>
+                        <option value="district">district</option>
+                        <option value="city">city / GBA</option>
+                        <option value="corporation">corporation</option>
+                        <option value="assembly">assembly</option>
+                        <option value="taluk">taluk</option>
+                      </select>
+                    </div>
+
+                    <div class="form-row">
+                      <label>State</label>
+                      <input [(ngModel)]="editOrgNode.state" class="form-input" [readOnly]="isOrgStateLocked(editOrgNode)" />
+                    </div>
+
+                    @if (isStructuralHierarchyEntry(editOrgNode)) {
+                      <div class="form-row span-two">
+                        <label>{{ structuralHierarchyLabel(editOrgNode) }} Entry</label>
+                        <div class="field-key">{{ orgStructuralEntryHelpText(editOrgNode) }}</div>
+                      </div>
+                    }
+
+                    @if (showOrgDistrictField(editOrgNode)) {
+                      <div class="form-row">
+                        <label>District @if (editOrgNode.level !== 'state') { * }</label>
+                        <input [(ngModel)]="editOrgNode.district" class="form-input" [readOnly]="isOrgDistrictLocked(editOrgNode)" />
+                      </div>
+                    }
+
+                    @if (showOrgTalukField(editOrgNode)) {
+                      <div class="form-row">
+                        <label>Taluk *</label>
+                        <input [(ngModel)]="editOrgNode.taluk" class="form-input" [readOnly]="isOrgTalukLocked(editOrgNode)" />
+                      </div>
+                    }
+                  } @else {
+                    <div class="form-row span-two">
+                      <label>{{ orgSectionInfoLabel(editOrgNode) }}</label>
+                      <div class="field-key">{{ orgSectionInfoCopy(editOrgNode) }}</div>
+                    </div>
+                  }
+
+                  @if (!isStructuralHierarchyEntry(editOrgNode)) {
+                    <div class="form-row span-two">
+                      <label>Contact (Phone / Email / Any)</label>
+                      <input [(ngModel)]="editOrgNode.contact" class="form-input" placeholder="+91..., name@domain.com, or any contact text" />
+                    </div>
+                  }
+
+                  @if (requiresOrgImageFields(editOrgNode)) {
+                    <div class="form-row">
+                      <label>{{ orgImageLabel(editOrgNode) }}</label>
+                      <input type="file" accept="image/*" class="form-input" (change)="onEditOrgNodeImageSelected($event)" />
+                      @if (selectedFileName(editOrgNodeImageFile)) {
+                        <div class="field-key">Selected: {{ selectedFileName(editOrgNodeImageFile) }}</div>
+                      }
+                    </div>
+
+                    <div class="form-row">
+                      <label>{{ orgImageAltLabel(editOrgNode) }}</label>
+                      <input [(ngModel)]="editOrgNode.imageAlt" class="form-input" [placeholder]="orgImageAltPlaceholder(editOrgNode)" />
+                    </div>
+                  }
+
                   <div class="form-row span-two">
-                    <label>Description</label>
-                    <textarea [(ngModel)]="editOrgNode.description" class="form-input form-textarea"
-                      rows="3"></textarea>
+                    <label>{{ orgDescriptionLabel(editOrgNode) }}</label>
+                    <textarea [(ngModel)]="editOrgNode.description" class="form-input form-textarea" rows="3" [placeholder]="orgDescriptionPlaceholder(editOrgNode)"></textarea>
                   </div>
+
                   <div class="form-row span-two">
                     <label class="checkbox-label">
                       <input type="checkbox" [(ngModel)]="editOrgNode.isActive" />
@@ -697,71 +1232,19 @@
                     </label>
                   </div>
                 </div>
+
                 @if (mediaError()) {
-                <div class="gallery-status gallery-error">{{ mediaError() }}</div>
+                  <div class="gallery-status gallery-error">{{ mediaError() }}</div>
                 }
+
                 <div class="form-actions">
-                  <button class="btn-save sm" (click)="saveOrgNode(entry.node.id)">{{ orgSaveButtonLabel(editOrgNode)
-                    }}</button>
+                  <button class="btn-save sm" (click)="saveOrgNode(editingId)">{{ orgSaveButtonLabel(editOrgNode) }}</button>
                   <button class="btn-cancel sm" (click)="cancelEditOrgNode()">Cancel</button>
                 </div>
               </div>
-              } @else {
-              <div class="item-info org-item-info" [class.org-item-info--section]="isOrgSectionHeader(entry.node)"
-                [class.org-item-info--member]="isOrgSectionMember(entry.node)"
-                [style.padding-left.px]="entry.depth * 22">
-                <div class="org-item-meta">
-                  @if (isOrgSectionHeader(entry.node) || isTalukCommitteeContainerNode(entry.node)) {
-                  <span class="org-section-chip">{{ orgNodeBadgeLabel(entry.node) }}</span>
-                  } @else {
-                  <span class="org-member-chip">{{ orgNodeBadgeLabel(entry.node) }}</span>
-                  }
-                  <span class="org-depth-chip">{{ entry.node.level }}</span>
-                  <span class="org-order-chip">Order {{ entry.node.order }}</span>
-                  @if (!entry.node.isActive) {
-                  <span class="org-order-chip">Hidden</span>
-                  }
-                </div>
-                <div class="item-title">{{ entry.node.title }}</div>
-                @if (entry.node.subtitle || entry.node.description) {
-                <div class="item-bio">{{ entry.node.subtitle }}</div>
-                @if (entry.node.description) {
-                <div class="item-sub">{{ entry.node.description }}</div>
-                }
-                }
-                @if (isOrgSectionMember(entry.node)) {
-                <div class="item-sub">Under {{ orgSectionLabel(entry.node) }}</div>
-                }
-                <div class="item-sub">{{ orgNodePath(entry.node) }}</div>
-                <div class="item-sub">
-                  {{ entry.node.location.state }}
-                  @if (entry.node.location.district) { / {{ entry.node.location.district }} }
-                  @if (entry.node.location.taluk) { / {{ entry.node.location.taluk }} }
-                </div>
-              </div>
-              <div class="item-actions">
-                @if (canAddOrgMember(entry.node)) {
-                <button class="btn-add" (click)="startAddOrgMember(entry.node)">{{ orgMemberActionLabel(entry.node)
-                  }}</button>
-                }
-                @if (canAddStateNominatedMember(entry.node)) {
-                <button class="btn-add" (click)="startAddStateNominatedMember(entry.node)">+ Nominated Member</button>
-                }
-                @if (showsSplitStateBranchActions(entry.node)) {
-                <button class="btn-add" (click)="startAddOrgNodeAtLevel(entry.node, 'district')">+ District</button>
-                <button class="btn-add" (click)="startAddOrgNodeAtLevel(entry.node, 'city')">+ City / GBA</button>
-                } @else if (canAddOrgChild(entry.node)) {
-                <button class="btn-add" (click)="startAddOrgNode(entry.node)">{{ orgChildActionLabel(entry.node)
-                  }}</button>
-                }
-                <button class="btn-edit" (click)="startEditOrgNode(entry.node)">Edit</button>
-                <button class="btn-delete" (click)="deleteOrgNode(entry.node.id)">Delete</button>
-              </div>
-              }
             </div>
-            }
           </div>
-        </section>
+        }
         }
 
         @if (activeTab() === 'leaders') {

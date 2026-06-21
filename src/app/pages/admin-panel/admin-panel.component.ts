@@ -1,7 +1,7 @@
 import { Component, ElementRef, HostListener, ViewChild, computed, effect, signal, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { FormsModule } from '@angular/forms';
+import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import {
@@ -121,7 +121,33 @@ type OrgNodeForm = {
   isActive: boolean;
 };
 
+type OrgMemberEntryForm = {
+  firstName: string;
+  designation: string;
+  contact: string;
+  description: string;
+  imageAlt: string;
+};
+
 type OrgQuickSection = 'president' | 'office-bearer' | 'working' | 'representative' | 'nominated' | 'state';
+
+type OrgAdminView =
+  | { kind: 'overview' }
+  | { kind: 'section'; section: OrgQuickSection }
+  | { kind: 'node'; section: OrgQuickSection; nodeId: string }
+  | { kind: 'members'; section: OrgQuickSection; nodeId: string };
+
+type OrgSectionCard = {
+  key: OrgQuickSection;
+  title: string;
+  description: string;
+};
+
+type OrgBreadcrumb = {
+  label: string;
+  view: OrgAdminView;
+  current: boolean;
+};
 
 type HostelForm = {
   name: string;
@@ -190,11 +216,45 @@ type ScholarshipStatus = 'pending' | 'accepted' | 'rejected';
 type ScholarshipListTab = 'all' | ScholarshipStatus;
 
 const TALUK_COMMITTEE_SECTION_LABEL = 'taluk-committee';
+const STATE_COMMITTEE_MEMBER_LABEL = 'state-committee-member';
 const TALUK_COMMITTEE_MEMBER_LABEL = 'taluk-committee-member';
-const TALUK_COMMITTEE_TITLE = 'CMC/GP / Assembly';
+const TALUK_COMMITTEE_TITLE = 'CMC/TMC/GP';
 const CITY_GBA_LEVEL_TITLE = 'City / GBA';
+const ORG_SECTION_CARDS: OrgSectionCard[] = [
+  {
+    key: 'president',
+    title: 'President Office',
+    description: 'Manage the president section on its own page and keep member actions in a popup.',
+  },
+  {
+    key: 'office-bearer',
+    title: 'Office Bearers',
+    description: 'Open the office-bearer page, review members, and add or edit them from a modal.',
+  },
+  {
+    key: 'working',
+    title: 'General Working Committee',
+    description: 'Keep the working committee on a dedicated admin page and use it as the main flow for its linked nominated body section.',
+  },
+  {
+    key: 'nominated',
+    title: 'Nominated Body',
+    description: 'Manage nominated body members as the linked body that sits with the General Working Committee flow.',
+  },
+  {
+    key: 'representative',
+    title: 'Representative General Body',
+    description: 'Review representative members on their own page and use the popup form for changes.',
+  },
+  {
+    key: 'state',
+    title: 'State Committee',
+    description: 'Handle the organisation hierarchy level by level, with separate member pages for the same level.',
+  },
+] as const;
 
 const ADMIN_ACTIVE_TAB_STORAGE_KEY = 'admin_active_tab';
+const ADMIN_ORG_VIEW_STORAGE_KEY = 'admin_org_view';
 const ADMIN_VALID_TABS: readonly Tab[] = [
   'header',
   'magazine',
@@ -214,6 +274,14 @@ const ADMIN_VALID_TABS: readonly Tab[] = [
   'ticker',
   'hostels',
   'footer',
+];
+const ORG_QUICK_SECTIONS: readonly OrgQuickSection[] = [
+  'president',
+  'office-bearer',
+  'working',
+  'representative',
+  'nominated',
+  'state',
 ];
 
 const createAcademicYearLabel = (startYear: number): string => `AY-${startYear}-${startYear + 1}`;
@@ -248,7 +316,7 @@ const DEFAULT_VISITOR_STATS: AdminVisitorStats = {
 @Component({
   selector: 'app-admin-panel',
   standalone: true,
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [FormsModule, ReactiveFormsModule, RouterLink, DatePipe],
   templateUrl: './admin-panel.component.html',
   styleUrl: './admin-panel.component.scss'
 })
@@ -268,6 +336,7 @@ export class AdminPanelComponent {
   auth   = inject(AuthService);
   data   = inject(AdminDataService);
   router = inject(Router);
+  private readonly formBuilder = inject(FormBuilder);
   readonly cmLeaderItems = this.data.cmLeaders;
   readonly pastPresidentItems = this.data.pastPresidents;
   readonly eventItems = this.data.events;
@@ -277,6 +346,7 @@ export class AdminPanelComponent {
   readonly tickerItems = this.data.tickers;
   readonly founderItems = this.data.founders;
   readonly hostelItems = this.data.hostels;
+  readonly orgMemberPageSize = 24;
   readonly hostelPageSize = 6;
   readonly hostelPage = signal(1);
   readonly hostelTotalPages = computed(() => {
@@ -493,6 +563,127 @@ export class AdminPanelComponent {
 
   showOrgNodeAdd = signal(false);
   editingOrgNodeId = signal<string | null>(null);
+  orgView = signal<OrgAdminView>({ kind: 'overview' });
+  readonly orgSectionCards = ORG_SECTION_CARDS;
+  readonly orgMemberSearchDraft = signal('');
+  readonly orgMemberSearchTerm = signal('');
+  readonly orgMemberPage = signal(1);
+  readonly orgNodesById = computed(() => {
+    const nodes = new Map<string, AdminOrgNode>();
+
+    for (const node of this.orgNodeItems()) {
+      nodes.set(node.id, node);
+    }
+
+    return nodes;
+  });
+  readonly orgChildrenByParentId = computed(() => {
+    const childrenByParent = new Map<string | null, AdminOrgNode[]>();
+
+    for (const node of this.orgNodeItems()) {
+      const siblings = childrenByParent.get(node.parentId);
+
+      if (siblings) {
+        siblings.push(node);
+      } else {
+        childrenByParent.set(node.parentId, [node]);
+      }
+    }
+
+    for (const [parentId, children] of childrenByParent.entries()) {
+      childrenByParent.set(parentId, this.orgSortedNodes(children));
+    }
+
+    return childrenByParent;
+  });
+  readonly orgCurrentMembers = computed(() => {
+    const view = this.orgView();
+
+    if (view.kind === 'section' && view.section !== 'state') {
+      return this.orgSimpleSectionMembers(view.section);
+    }
+
+    if (view.kind === 'node' || view.kind === 'members') {
+      const node = this.orgNodeById(view.nodeId);
+      return node ? this.orgDirectMembers(node) : [];
+    }
+
+    return [] as AdminOrgNode[];
+  });
+  readonly orgCurrentMemberCount = computed(() => this.orgCurrentMembers().length);
+  readonly orgMemberSearchActive = computed(() => this.orgMemberSearchTokens(this.orgMemberSearchTerm()).length > 0);
+  readonly orgFilteredMembers = computed(() => {
+    const items = this.orgCurrentMembers();
+    const tokens = this.orgMemberSearchTokens(this.orgMemberSearchTerm());
+
+    if (tokens.length === 0) {
+      return items;
+    }
+
+    return items.filter((node) => {
+      const text = this.normalizeOrgSearchText([
+        node.title,
+        node.subtitle,
+        node.description,
+        node.contact,
+        node.location.state,
+        node.location.district,
+        node.location.taluk,
+        node.sidebarLabel,
+      ].join(' '));
+
+      return tokens.every((token) => text.includes(token));
+    });
+  });
+  readonly orgMemberTotalPages = computed(() => {
+    const total = this.orgFilteredMembers().length;
+    return total === 0 ? 0 : Math.ceil(total / this.orgMemberPageSize);
+  });
+  readonly orgVisibleMembers = computed(() => {
+    const items = this.orgFilteredMembers();
+    const totalPages = this.orgMemberTotalPages();
+
+    if (items.length === 0 || totalPages === 0) {
+      return [] as AdminOrgNode[];
+    }
+
+    const currentPage = Math.min(Math.max(this.orgMemberPage(), 1), totalPages);
+    const startIndex = (currentPage - 1) * this.orgMemberPageSize;
+    return items.slice(startIndex, startIndex + this.orgMemberPageSize);
+  });
+  readonly orgMemberPageLabel = computed(() => {
+    const totalPages = this.orgMemberTotalPages();
+
+    if (totalPages === 0) {
+      return '0 / 0';
+    }
+
+    const currentPage = Math.min(Math.max(this.orgMemberPage(), 1), totalPages);
+    return `${currentPage} / ${totalPages}`;
+  });
+  readonly orgMemberResultsSummary = computed(() => {
+    const totalVisible = this.orgFilteredMembers().length;
+    const units = this.orgCurrentListUnits();
+
+    if (totalVisible === 0) {
+      return this.orgMemberSearchActive()
+        ? `No ${units.plural} match this search.`
+        : `No ${units.plural} found.`;
+    }
+
+    const currentPage = Math.min(Math.max(this.orgMemberPage(), 1), this.orgMemberTotalPages());
+    const startIndex = (currentPage - 1) * this.orgMemberPageSize + 1;
+    const endIndex = Math.min(startIndex + this.orgMemberPageSize - 1, totalVisible);
+    const label = `Showing ${startIndex}-${endIndex} of ${totalVisible}`;
+
+    return this.orgMemberSearchActive()
+      ? `${label} matching ${units.plural}`
+      : `${label} ${units.plural}`;
+  });
+  readonly orgMemberBatchForm = this.formBuilder.group({
+    members: this.formBuilder.array([this.createOrgMemberEntryGroup()]),
+  });
+  private orgMemberEntryFiles: Array<File | null> = [null];
   newOrgNode: OrgNodeForm = this.emptyOrgNodeForm();
   editOrgNode: OrgNodeForm = this.emptyOrgNodeForm();
   newOrgNodeImageFile: File | null = null;
@@ -650,6 +841,12 @@ export class AdminPanelComponent {
     this.hostelPage.set(nextPage);
   }
 
+  private resetOrgMemberBrowser() {
+    this.orgMemberSearchDraft.set('');
+    this.orgMemberSearchTerm.set('');
+    this.orgMemberPage.set(1);
+  }
+
   // ── Hostels state ────────────────────────────────────
   showHostelAdd   = signal(false);
   editingHostelId = signal<number | null>(null);
@@ -727,6 +924,56 @@ export class AdminPanelComponent {
     }
   }
 
+  private readPersistedOrgView(): OrgAdminView | null {
+    try {
+      const rawValue = localStorage.getItem(ADMIN_ORG_VIEW_STORAGE_KEY);
+
+      if (!rawValue) {
+        return null;
+      }
+
+      const parsed = JSON.parse(rawValue) as Partial<OrgAdminView> & { kind?: string; section?: string; nodeId?: string };
+
+      if (parsed.kind === 'overview') {
+        return { kind: 'overview' };
+      }
+
+      if (
+        parsed.kind === 'section'
+        && parsed.section
+        && ORG_QUICK_SECTIONS.includes(parsed.section as OrgQuickSection)
+      ) {
+        return { kind: 'section', section: parsed.section as OrgQuickSection };
+      }
+
+      if (
+        (parsed.kind === 'node' || parsed.kind === 'members')
+        && parsed.section
+        && ORG_QUICK_SECTIONS.includes(parsed.section as OrgQuickSection)
+        && typeof parsed.nodeId === 'string'
+        && parsed.nodeId.trim()
+      ) {
+        return {
+          kind: parsed.kind,
+          section: parsed.section as OrgQuickSection,
+          nodeId: parsed.nodeId.trim(),
+        };
+      }
+    } catch {
+      // Ignore localStorage read failures.
+    }
+
+    return null;
+  }
+
+  private persistOrgView(view: OrgAdminView) {
+    try {
+      localStorage.setItem(ADMIN_ORG_VIEW_STORAGE_KEY, JSON.stringify(view));
+    } catch {
+      // Ignore localStorage write failures.
+    }
+  }
+
   constructor() {
     this.seedTextDrafts();
     this.navbarContent = this.clone(this.data.navbarContent());
@@ -749,6 +996,22 @@ export class AdminPanelComponent {
       this.dailyVachanaContent = this.clone(this.data.dailyVachanaContent());
     });
 
+    effect(() => {
+      const totalPages = this.orgMemberTotalPages();
+      const currentPage = this.orgMemberPage();
+
+      if (totalPages === 0) {
+        if (currentPage !== 1) {
+          this.orgMemberPage.set(1);
+        }
+        return;
+      }
+
+      if (currentPage > totalPages) {
+        this.orgMemberPage.set(totalPages);
+      }
+    });
+
     const persistedTab = this.readPersistedTab();
     if (persistedTab) {
       this.activeTab.set(persistedTab);
@@ -757,6 +1020,15 @@ export class AdminPanelComponent {
         void this.loadScholarshipApplications(1);
       }
     }
+
+    const persistedOrgView = this.readPersistedOrgView();
+    if (persistedOrgView) {
+      this.orgView.set(persistedOrgView);
+    }
+
+    effect(() => {
+      this.persistOrgView(this.orgView());
+    });
 
     void this.loadVisitorStats();
   }
@@ -777,6 +1049,13 @@ export class AdminPanelComponent {
     this.adminActionsMenuOpen.set(false);
     this.scholarshipSettingsMenuOpen.set(false);
     this.scholarshipSettingsDialogOpen.set(false);
+    this.cancelAddOrgNode();
+    this.cancelEditOrgNode();
+
+    if (tab === 'org') {
+      this.resetOrgMemberBrowser();
+      this.orgView.set({ kind: 'overview' });
+    }
 
     if (tab === 'scholarships') {
       await this.loadScholarshipAcademicYears();
@@ -1639,12 +1918,46 @@ export class AdminPanelComponent {
       .trim();
   }
 
+  private orgMemberSearchTokens(value: string): string[] {
+    const normalized = this.normalizeOrgSearchText(value);
+    return normalized ? normalized.split(/\s+/).filter(Boolean) : [];
+  }
+
+  private orgCurrentListUnits(): { singular: string; plural: string } {
+    const view = this.orgView();
+
+    if (view.kind === 'section' && view.section === 'president') {
+      return {
+        singular: 'president',
+        plural: 'presidents',
+      };
+    }
+
+    return {
+      singular: 'member',
+      plural: 'members',
+    };
+  }
+
+  protected isPresidentProfileForm(form: OrgNodeForm): boolean {
+    const sectionConfig = this.simpleOrgSectionConfig(form.sidebarLabel);
+
+    return !!sectionConfig
+      && sectionConfig.memberTitle === 'President'
+      && !this.isHierarchyMemberForm(form)
+      && !this.isStructuralHierarchyEntry(form);
+  }
+
   private isRepresentativeSectionLabel(label: string | null | undefined): boolean {
     return this.normalizeOrgSearchText(String(label || '')) === this.normalizeOrgSearchText('representative-general-body');
   }
 
   private isStateCommitteeSectionLabel(label: string | null | undefined): boolean {
     return this.normalizeOrgSearchText(String(label || '')) === this.normalizeOrgSearchText('state-committee');
+  }
+
+  private isStateCommitteeMemberLabel(label: string | null | undefined): boolean {
+    return this.normalizeOrgSearchText(String(label || '')) === this.normalizeOrgSearchText(STATE_COMMITTEE_MEMBER_LABEL);
   }
 
   private isTalukCommitteeSectionLabel(label: string | null | undefined): boolean {
@@ -1669,6 +1982,16 @@ export class AdminPanelComponent {
 
   private usesCustomStructuralTitle(level: AdminOrgNodeLevel): boolean {
     return level === 'city' || level === 'corporation' || level === 'assembly';
+  }
+
+  private matchesStateCommitteeStateBranchIdentity(node: Pick<AdminOrgNode, 'title' | 'subtitle' | 'location'>): boolean {
+    const normalizedState = this.normalizeOrgSearchText(String(node.location.state || ''));
+    const normalizedTitle = this.normalizeOrgSearchText(String(node.title || ''));
+    const normalizedSubtitle = this.normalizeOrgSearchText(String(node.subtitle || ''));
+
+    return !!normalizedState
+      && normalizedTitle === normalizedState
+      && normalizedSubtitle === normalizedState;
   }
 
   private orgLevelLabel(level: AdminOrgNodeLevel): string {
@@ -1872,8 +2195,8 @@ export class AdminPanelComponent {
       return false;
     }
 
-    if (this.isStateCommitteeSectionLabel(form.sidebarLabel)) {
-      if (this.isStateCommitteeContainer(parent)) {
+    if (this.isStateCommitteeSectionLabel(form.sidebarLabel) || this.isStateCommitteeMemberLabel(form.sidebarLabel)) {
+      if (!this.isStateCommitteeNode(parent) || this.isStateCommitteeMemberNode(parent)) {
         return false;
       }
 
@@ -1882,7 +2205,15 @@ export class AdminPanelComponent {
       }
 
       if (parent.level === 'state') {
-        return !form.district.trim() && !form.taluk.trim();
+        if (form.district.trim() || form.taluk.trim()) {
+          return false;
+        }
+
+        if (this.isStateCommitteeContainer(parent)) {
+          return this.isStateCommitteeMemberLabel(form.sidebarLabel);
+        }
+
+        return true;
       }
 
       return parent.location.district === form.district
@@ -1932,6 +2263,7 @@ export class AdminPanelComponent {
 
   protected orgAddHeading(form: OrgNodeForm): string {
     const parent = this.orgNodeById(form.parentId);
+    const sectionConfig = this.simpleOrgSectionConfig(form.sidebarLabel);
 
     if (this.isStructuralHierarchyEntry(form)) {
       const label = this.structuralHierarchyLabel(form);
@@ -1945,6 +2277,12 @@ export class AdminPanelComponent {
     if (this.isHierarchyMemberForm(form)) {
       const parentLabel = parent ? ` under ${parent.title}` : '';
       return `Add ${this.structuralHierarchyLabel(form)} Member${parentLabel}`;
+    }
+
+    if (sectionConfig) {
+      return parent
+        ? `Add ${sectionConfig.memberTitle} under ${parent.title}`
+        : `Add ${sectionConfig.memberTitle}`;
     }
 
     return parent ? `Add Item under ${parent.title}` : 'Add Organisation Item';
@@ -1973,6 +2311,10 @@ export class AdminPanelComponent {
   }
 
   protected requiresOrgTitleInput(form: OrgNodeForm, nodeId: string | null = null): boolean {
+    if (this.isPresidentProfileForm(form)) {
+      return false;
+    }
+
     if (this.isTalukCommitteeSectionLabel(form.sidebarLabel)) {
       return true;
     }
@@ -1997,6 +2339,14 @@ export class AdminPanelComponent {
     return node?.parentId === null;
   }
 
+  protected shouldShowOrgTitleInput(form: OrgNodeForm, nodeId: string | null = null): boolean {
+    if (this.isPresidentProfileForm(form)) {
+      return false;
+    }
+
+    return this.requiresOrgTitleInput(form, nodeId) || !this.isStructuralHierarchyEntry(form);
+  }
+
   protected orgTitleFieldLabel(form: OrgNodeForm): string {
     if (this.isTalukCommitteeSectionLabel(form.sidebarLabel)) {
       return `${TALUK_COMMITTEE_TITLE} Name *`;
@@ -2004,6 +2354,10 @@ export class AdminPanelComponent {
 
     if (this.usesCustomStructuralTitle(form.level)) {
       return `${this.structuralHierarchyLabel(form)} Name *`;
+    }
+
+    if (!this.isStructuralHierarchyEntry(form)) {
+      return 'Designation *';
     }
 
     return 'Title *';
@@ -2022,10 +2376,12 @@ export class AdminPanelComponent {
       return `Enter ${this.structuralHierarchyLabel(form)} name`;
     }
 
-    return 'Designation (President / Secretary)';
+    return 'e.g. President / Secretary / Treasurer';
   }
 
   protected orgFormTypeBadge(form: OrgNodeForm): string {
+    const sectionConfig = this.simpleOrgSectionConfig(form.sidebarLabel);
+
     if (this.isTalukCommitteeSectionLabel(form.sidebarLabel)) {
       return `${TALUK_COMMITTEE_TITLE} Branch`;
     }
@@ -2042,14 +2398,20 @@ export class AdminPanelComponent {
       return `${this.structuralHierarchyLabel(form)} Node`;
     }
 
-    if (this.isSimpleOrgSection(form)) {
-      return 'Section Member';
+    if (sectionConfig) {
+      return sectionConfig.memberTitle === 'President'
+        ? 'President Profile'
+        : 'Section Member';
     }
 
     return 'Organisation Item';
   }
 
   protected orgFormModeLabel(form: OrgNodeForm): string {
+    if (this.isPresidentProfileForm(form)) {
+      return 'President Profile';
+    }
+
     if (this.isStructuralHierarchyEntry(form)) {
       return 'Structure';
     }
@@ -2070,6 +2432,14 @@ export class AdminPanelComponent {
   }
 
   protected orgSaveButtonLabel(form: OrgNodeForm): string {
+    if (this.isPresidentProfileForm(form)) {
+      return 'Save President';
+    }
+
+    if (form === this.newOrgNode && this.usesOrgMemberFormArray(form) && this.orgMemberEntryControls.length > 1) {
+      return 'Save Members';
+    }
+
     return this.isStructuralHierarchyEntry(form) ? 'Save Structure' : 'Save Member';
   }
 
@@ -2079,6 +2449,8 @@ export class AdminPanelComponent {
   }
 
   protected orgSaveTargetHint(form: OrgNodeForm): string {
+    const sectionConfig = this.simpleOrgSectionConfig(form.sidebarLabel);
+
     if (this.isTalukCommitteeSectionLabel(form.sidebarLabel)) {
       return `Creates a ${TALUK_COMMITTEE_TITLE} branch under the selected taluk. Members can be added inside it.`;
     }
@@ -2095,7 +2467,27 @@ export class AdminPanelComponent {
       return 'Creates a structural node in the hierarchy tree.';
     }
 
+    if (this.usesOrgMemberFormArray(form)) {
+      return 'Add one or more members in this popup. Use + Add Member to create extra rows.';
+    }
+
+    if (sectionConfig?.memberTitle === 'President') {
+      return 'Creates the president profile with name, photo, contact, and the details shown on the public hover card.';
+    }
+
     return 'Creates a member/profile entry under the selected section.';
+  }
+
+  protected orgSectionAddButtonLabel(section: OrgQuickSection): string {
+    if (section === 'state') {
+      return '+ State Committee State';
+    }
+
+    if (section === 'president') {
+      return '+ Add President';
+    }
+
+    return '+ Add Member';
   }
 
   protected orgStructuralEntryHelpText(form: OrgNodeForm): string {
@@ -2138,7 +2530,7 @@ export class AdminPanelComponent {
       return true;
     }
 
-    if (this.isStateCommitteeSectionLabel(form.sidebarLabel)) {
+    if (this.isStateCommitteeSectionLabel(form.sidebarLabel) || this.isStateCommitteeMemberLabel(form.sidebarLabel)) {
       return !this.isStateCommitteeContainer(parent);
     }
 
@@ -2156,7 +2548,7 @@ export class AdminPanelComponent {
       return true;
     }
 
-    if (this.isStateCommitteeSectionLabel(form.sidebarLabel)) {
+    if (this.isStateCommitteeSectionLabel(form.sidebarLabel) || this.isStateCommitteeMemberLabel(form.sidebarLabel)) {
       return !this.isStateCommitteeContainer(parent) && parent.level !== 'state';
     }
 
@@ -2174,7 +2566,7 @@ export class AdminPanelComponent {
       return true;
     }
 
-    if (this.isStateCommitteeSectionLabel(form.sidebarLabel)) {
+    if (this.isStateCommitteeSectionLabel(form.sidebarLabel) || this.isStateCommitteeMemberLabel(form.sidebarLabel)) {
       return parent.level === 'taluk';
     }
 
@@ -2215,7 +2607,6 @@ export class AdminPanelComponent {
     }
 
     return (this.isStateCommitteeNode(node)
-      && !this.isStateCommitteeContainer(node)
       && !this.isStateCommitteeMemberNode(node))
       || this.isTalukCommitteeContainerNode(node);
   }
@@ -2262,6 +2653,10 @@ export class AdminPanelComponent {
       return '+ Member';
     }
 
+    if (this.isStateCommitteeContainer(node)) {
+      return '+ State Committee Member';
+    }
+
     if (this.isTalukCommitteeContainerNode(node)) {
       return `+ ${TALUK_COMMITTEE_TITLE} Member`;
     }
@@ -2290,6 +2685,8 @@ export class AdminPanelComponent {
   }
 
   protected startAddOrgNodeAtLevel(parent: AdminOrgNode, level: AdminOrgNodeLevel) {
+    this.mediaError.set('');
+    this.editingOrgNodeId.set(null);
     this.newOrgNode = this.emptyOrgNodeForm(parent.id);
     this.newOrgNode.level = level;
     this.newOrgNode.sidebarLabel = parent.level === 'taluk'
@@ -2299,12 +2696,15 @@ export class AdminPanelComponent {
     this.newOrgNode.district = parent.level === 'state' ? '' : parent.location.district;
     this.newOrgNode.taluk = parent.level === 'taluk' ? parent.location.taluk : '';
     this.newOrgNode = this.applyParentDefaults(this.newOrgNode);
+    this.resetOrgMemberEntryArray();
     this.newOrgNodeImageFile = null;
     this.showOrgNodeAdd.set(true);
     this.scrollOrgAddFormIntoView();
   }
 
   protected startAddStateNominatedMember(parent: AdminOrgNode) {
+    this.mediaError.set('');
+    this.editingOrgNodeId.set(null);
     this.newOrgNode = this.emptyOrgNodeForm(parent.id);
     this.newOrgNode.sidebarLabel = 'nominated-body';
     this.newOrgNode.level = 'state';
@@ -2312,6 +2712,7 @@ export class AdminPanelComponent {
     this.newOrgNode.district = '';
     this.newOrgNode.taluk = '';
     this.newOrgNode = this.applyParentDefaults(this.newOrgNode);
+    this.resetOrgMemberEntryArray();
     this.newOrgNodeImageFile = null;
     this.showOrgNodeAdd.set(true);
     this.scrollOrgAddFormIntoView();
@@ -2386,11 +2787,9 @@ export class AdminPanelComponent {
 
   private findSimpleSectionAnchor(label: string) {
     const normalizedLabel = this.normalizeOrgSearchText(label);
+    const rootNodes = this.orgChildrenByParentId().get(null) ?? [];
 
-    return this.orgNodeItems().find((node) =>
-      node.parentId === null
-      && this.normalizeOrgSearchText(node.sidebarLabel) === normalizedLabel
-    ) ?? null;
+    return rootNodes.find((node) => this.normalizeOrgSearchText(node.sidebarLabel) === normalizedLabel) ?? null;
   }
 
   private async ensureSimpleSectionAnchor(label: string): Promise<AdminOrgNode | null> {
@@ -2428,18 +2827,17 @@ export class AdminPanelComponent {
   }
 
   private findSectionAnchor(section: OrgQuickSection): AdminOrgNode | null {
-    const candidates = this.orgNodeItems();
+    const rootNodes = this.orgChildrenByParentId().get(null) ?? [];
     const groups = this.sectionKeywords(section);
 
     if (section === 'state') {
-      return candidates.find((node) =>
-        node.parentId === null
-        && this.isStateCommitteeSectionLabel(node.sidebarLabel)
+      return rootNodes.find((node) =>
+        this.isStateCommitteeSectionLabel(node.sidebarLabel)
         && this.normalizeOrgSearchText(node.title) === this.normalizeOrgSearchText('State Committee')
       ) ?? null;
     }
 
-    const exactLabel = candidates.find((node) =>
+    const exactLabel = rootNodes.find((node) =>
       this.normalizeOrgSearchText(node.sidebarLabel) === this.normalizeOrgSearchText(this.sectionDefaultSidebarLabel(section))
     );
 
@@ -2447,7 +2845,7 @@ export class AdminPanelComponent {
       return exactLabel;
     }
 
-    return candidates.find((node) => this.matchesOrgKeywords(node, groups)) ?? null;
+    return rootNodes.find((node) => this.matchesOrgKeywords(node, groups)) ?? null;
   }
 
   private applySectionDefaults(section: OrgQuickSection) {
@@ -3047,6 +3445,12 @@ export class AdminPanelComponent {
           && !this.isTalukCommitteeMemberNode(node);
       }
 
+      if (this.isStateCommitteeMemberLabel(form.sidebarLabel)) {
+        return this.isStateCommitteeNode(node)
+          && node.level === form.level
+          && !this.isStateCommitteeMemberNode(node);
+      }
+
       if (this.isStateCommitteeSectionLabel(form.sidebarLabel)) {
         if (form.level === 'state') {
           return this.isStateCommitteeContainer(node);
@@ -3087,7 +3491,7 @@ export class AdminPanelComponent {
   orgNodeDepth(node: AdminOrgNode) {
     let depth = 0;
     let currentParentId = node.parentId;
-    const nodesById = new Map(this.orgNodeItems().map(item => [item.id, item] as const));
+    const nodesById = this.orgNodesById();
 
     while (currentParentId !== null) {
       const parent = nodesById.get(currentParentId);
@@ -3103,7 +3507,7 @@ export class AdminPanelComponent {
   }
 
   orgNodePath(node: AdminOrgNode) {
-    const nodesById = new Map(this.orgNodeItems().map(item => [item.id, item] as const));
+    const nodesById = this.orgNodesById();
     const segments = [node.title];
     let currentParentId = node.parentId;
 
@@ -3121,7 +3525,7 @@ export class AdminPanelComponent {
   }
 
   private orgSectionRoot(node: AdminOrgNode): AdminOrgNode {
-    const nodesById = new Map(this.orgNodeItems().map(item => [item.id, item] as const));
+    const nodesById = this.orgNodesById();
     let current = node;
 
     while (current.parentId) {
@@ -3140,13 +3544,14 @@ export class AdminPanelComponent {
       return null;
     }
 
-    return this.orgNodeItems().find((item) => item.id === id) ?? null;
+    return this.orgNodesById().get(id) ?? null;
   }
 
   private findStateCommitteeAnchor(): AdminOrgNode | null {
-    return this.orgNodeItems().find((node) =>
-      node.parentId === null
-      && this.isStateCommitteeSectionLabel(node.sidebarLabel)
+    const rootNodes = this.orgChildrenByParentId().get(null) ?? [];
+
+    return rootNodes.find((node) =>
+      this.isStateCommitteeSectionLabel(node.sidebarLabel)
       && this.normalizeOrgSearchText(node.title) === this.normalizeOrgSearchText('State Committee')
     ) ?? null;
   }
@@ -3303,13 +3708,17 @@ export class AdminPanelComponent {
   }
 
   protected isStateCommitteeMemberNode(node: AdminOrgNode): boolean {
-    if (!this.isStateCommitteeNode(node) || this.isStateCommitteeContainer(node)) {
+    if (
+      !this.isStateCommitteeNode(node)
+      || (!this.isStateCommitteeSectionLabel(node.sidebarLabel) && !this.isStateCommitteeMemberLabel(node.sidebarLabel))
+      || this.isStateCommitteeContainer(node)
+    ) {
       return false;
     }
 
     const parent = this.orgNodeById(node.parentId);
 
-    if (!parent || this.isStateCommitteeContainer(parent)) {
+    if (!parent || !this.isStateCommitteeSectionLabel(parent.sidebarLabel)) {
       return false;
     }
 
@@ -3318,7 +3727,16 @@ export class AdminPanelComponent {
     }
 
     if (node.level === 'state') {
-      return !node.location.district && !node.location.taluk;
+      if (node.location.district || node.location.taluk) {
+        return false;
+      }
+
+      if (this.isStateCommitteeContainer(parent)) {
+        return this.isStateCommitteeMemberLabel(node.sidebarLabel)
+          || !this.matchesStateCommitteeStateBranchIdentity(node);
+      }
+
+      return true;
     }
 
     return parent.location.district === node.location.district
@@ -3361,6 +3779,715 @@ export class AdminPanelComponent {
     return 'Member';
   }
 
+  protected orgModalOpen(): boolean {
+    return this.showOrgNodeAdd() || !!this.editingOrgNodeId();
+  }
+
+  protected closeOrgModal() {
+    this.cancelAddOrgNode();
+    this.cancelEditOrgNode();
+  }
+
+  protected updateOrgMemberSearch(value: string) {
+    this.orgMemberSearchDraft.set(value);
+    this.orgMemberSearchTerm.set(value);
+    this.orgMemberPage.set(1);
+  }
+
+  protected clearOrgMemberSearch() {
+    this.orgMemberSearchDraft.set('');
+    this.orgMemberSearchTerm.set('');
+    this.orgMemberPage.set(1);
+  }
+
+  protected goToOrgMemberPage(page: number) {
+    const totalPages = this.orgMemberTotalPages();
+
+    if (totalPages === 0) {
+      this.orgMemberPage.set(1);
+      return;
+    }
+
+    const nextPage = Math.min(Math.max(page, 1), totalPages);
+    this.orgMemberPage.set(nextPage);
+  }
+
+  protected orgMemberEmptyText(): string {
+    const units = this.orgCurrentListUnits();
+
+    if (this.orgMemberSearchActive()) {
+      return `No ${units.plural} match the current search.`;
+    }
+
+    const view = this.orgView();
+
+    if (view.kind === 'section') {
+      return this.orgSectionEmptyText(view.section);
+    }
+
+    if (view.kind === 'node' || view.kind === 'members') {
+      const node = this.orgNodeById(view.nodeId);
+
+      if (node) {
+        return `No ${units.plural} have been added for this ${this.orgNodeLevelBadge(node).toLowerCase()} yet.`;
+      }
+    }
+
+    return `No same-level ${units.plural} have been added here yet.`;
+  }
+
+  protected orgSearchFieldLabel(): string {
+    const units = this.orgCurrentListUnits();
+    return units.singular === 'president' ? 'Search President' : 'Search Members';
+  }
+
+  protected orgPersonNameLabel(form: OrgNodeForm): string {
+    return this.isPresidentProfileForm(form) ? 'President Name *' : 'Member Name *';
+  }
+
+  protected orgPersonNamePlaceholder(form: OrgNodeForm): string {
+    return this.isPresidentProfileForm(form) ? 'Full president name' : 'Full member name';
+  }
+
+  protected orgSectionInfoLabel(form: OrgNodeForm): string {
+    return this.isPresidentProfileForm(form) ? 'President Profile' : 'Member Section';
+  }
+
+  protected orgSectionInfoCopy(form: OrgNodeForm): string {
+    if (this.isPresidentProfileForm(form)) {
+      return 'Use the president name, photo, contact, and the details shown on the public hover card.';
+    }
+
+    return 'For President, Office Bearers, General Working Committee, Representative, Nominated, and local-unit members, member name, image, description, and contact are supported.';
+  }
+
+  protected orgImageLabel(form: OrgNodeForm): string {
+    return this.isPresidentProfileForm(form) ? 'President Photo' : 'Image';
+  }
+
+  protected orgImageAltLabel(form: OrgNodeForm): string {
+    return this.isPresidentProfileForm(form) ? 'President Photo Alt Text' : 'Image Alt Text';
+  }
+
+  protected orgImageAltPlaceholder(form: OrgNodeForm): string {
+    return this.isPresidentProfileForm(form) ? 'President photo alt text' : 'Member photo alt text';
+  }
+
+  protected orgDescriptionLabel(form: OrgNodeForm): string {
+    return this.isPresidentProfileForm(form) ? 'Hover Details / Description' : 'Description';
+  }
+
+  protected orgDescriptionPlaceholder(form: OrgNodeForm): string {
+    if (this.isPresidentProfileForm(form)) {
+      return 'Short details shown on the public president hover card';
+    }
+
+    return 'Short description shown on public pages';
+  }
+
+  protected orgBranchMembersHeading(node: AdminOrgNode): string {
+    if (this.isTalukCommitteeContainerNode(node)) {
+      return `${TALUK_COMMITTEE_TITLE} Members`;
+    }
+
+    if (node.level === 'city') {
+      return `${CITY_GBA_LEVEL_TITLE} Members`;
+    }
+
+    return `${this.orgLevelLabel(node.level)} Members`;
+  }
+
+  protected orgBranchMembersCopy(node: AdminOrgNode): string {
+    if (this.isTalukCommitteeContainerNode(node)) {
+      return `Manage ${TALUK_COMMITTEE_TITLE} members for this branch here.`;
+    }
+
+    if (node.level === 'state') {
+      return `Manage state members here, then open the district or ${CITY_GBA_LEVEL_TITLE} list below.`;
+    }
+
+    if (node.level === 'district') {
+      return 'Manage district members here, then open the taluk list below.';
+    }
+
+    if (node.level === 'taluk') {
+      return `Manage taluk members here, then open the ${TALUK_COMMITTEE_TITLE} list below.`;
+    }
+
+    if (node.level === 'city') {
+      return `Manage ${CITY_GBA_LEVEL_TITLE} members here, then open the corporation list below.`;
+    }
+
+    if (node.level === 'corporation') {
+      return 'Manage corporation members here, then open the assembly list below.';
+    }
+
+    return 'Manage members for this branch here.';
+  }
+
+  protected orgBranchChildrenHeading(node: AdminOrgNode): string {
+    if (node.level === 'state') {
+      return `District and ${CITY_GBA_LEVEL_TITLE} List`;
+    }
+
+    if (node.level === 'district') {
+      return 'Taluk List';
+    }
+
+    if (node.level === 'taluk') {
+      return `${TALUK_COMMITTEE_TITLE} List`;
+    }
+
+    if (node.level === 'city') {
+      return 'Corporation List';
+    }
+
+    if (node.level === 'corporation') {
+      return 'Assembly List';
+    }
+
+    return 'Child Levels';
+  }
+
+  protected orgBranchChildrenCopy(node: AdminOrgNode): string {
+    if (node.level === 'state') {
+      return `Open a district or ${CITY_GBA_LEVEL_TITLE} branch to manage its members and the next level under it.`;
+    }
+
+    if (node.level === 'district') {
+      return 'Open a taluk to manage that taluk members and its CMC/TMC/GP list.';
+    }
+
+    if (node.level === 'taluk') {
+      return `Open a ${TALUK_COMMITTEE_TITLE} branch to manage its members.`;
+    }
+
+    if (node.level === 'city') {
+      return 'Open a corporation branch to manage its members and assembly list.';
+    }
+
+    if (node.level === 'corporation') {
+      return 'Open an assembly branch to manage its members.';
+    }
+
+    return 'Open a child branch to continue down the hierarchy.';
+  }
+
+  protected showsOrgBranchChildren(node: AdminOrgNode): boolean {
+    return !this.isTalukCommitteeContainerNode(node);
+  }
+
+  protected orgBranchChildrenEmptyText(node: AdminOrgNode): string {
+    if (node.level === 'state') {
+      return `No districts or ${CITY_GBA_LEVEL_TITLE.toLowerCase()} branches have been added under this state yet.`;
+    }
+
+    if (node.level === 'district') {
+      return 'No taluk branches have been added under this district yet.';
+    }
+
+    if (node.level === 'taluk') {
+      return `No ${TALUK_COMMITTEE_TITLE.toLowerCase()} branches have been added under this taluk yet.`;
+    }
+
+    if (node.level === 'city') {
+      return 'No corporation branches have been added under this city / GBA yet.';
+    }
+
+    if (node.level === 'corporation') {
+      return 'No assembly branches have been added under this corporation yet.';
+    }
+
+    return 'No lower-level branches are available under this node yet.';
+  }
+
+  protected usesOrgMemberFormArray(form: OrgNodeForm): boolean {
+    return !this.isStructuralHierarchyEntry(form) && !this.isPresidentProfileForm(form);
+  }
+
+  protected get orgMemberEntries(): FormArray {
+    return this.orgMemberBatchForm.get('members') as FormArray;
+  }
+
+  protected get orgMemberEntryControls(): FormGroup[] {
+    return this.orgMemberEntries.controls as FormGroup[];
+  }
+
+  protected addOrgMemberEntry(): void {
+    this.orgMemberEntries.push(this.createOrgMemberEntryGroup());
+    this.orgMemberEntryFiles.push(null);
+  }
+
+  protected removeOrgMemberEntry(index: number): void {
+    if (this.orgMemberEntries.length === 1) {
+      return;
+    }
+
+    this.orgMemberEntries.removeAt(index);
+    this.orgMemberEntryFiles.splice(index, 1);
+  }
+
+  protected isOrgMemberFieldInvalid(group: FormGroup, controlName: 'firstName' | 'designation' | 'contact' | 'description' | 'imageAlt'): boolean {
+    const control = group.get(controlName);
+    return !!control && control.invalid && (control.touched || control.dirty);
+  }
+
+  protected onOrgMemberEntryImageSelected(event: Event, index: number): void {
+    this.orgMemberEntryFiles[index] = this.fileFromEvent(event);
+  }
+
+  protected orgMemberEntrySelectedFileName(index: number): string {
+    return this.selectedFileName(this.orgMemberEntryFiles[index]);
+  }
+
+  protected openOrgOverview() {
+    this.closeOrgModal();
+    this.resetOrgMemberBrowser();
+    this.orgView.set({ kind: 'overview' });
+  }
+
+  protected openOrgSection(section: OrgQuickSection) {
+    this.closeOrgModal();
+    this.resetOrgMemberBrowser();
+    this.orgView.set({ kind: 'section', section });
+  }
+
+  protected openOrgNodePage(node: AdminOrgNode) {
+    this.closeOrgModal();
+    this.resetOrgMemberBrowser();
+    this.orgView.set({
+      kind: 'node',
+      section: this.orgSectionKeyForNode(node),
+      nodeId: node.id,
+    });
+  }
+
+  protected openOrgMembersPage(node: AdminOrgNode) {
+    this.closeOrgModal();
+    this.resetOrgMemberBrowser();
+    this.orgView.set({
+      kind: 'members',
+      section: this.orgSectionKeyForNode(node),
+      nodeId: node.id,
+    });
+  }
+
+  protected openStateCommitteeMembersPage() {
+    const anchor = this.findStateCommitteeAnchor();
+
+    if (anchor) {
+      this.openOrgMembersPage(anchor);
+    }
+  }
+
+  protected async startAddStateCommitteeSectionMember() {
+    this.mediaError.set('');
+
+    try {
+      const anchor = await this.ensureStateCommitteeAnchor();
+
+      if (anchor) {
+        this.startAddOrgMember(anchor);
+      }
+    } catch {
+      this.mediaError.set('State committee member form could not be opened. Try again.');
+    }
+  }
+
+  protected orgBreadcrumbs(): OrgBreadcrumb[] {
+    const view = this.orgView();
+    const crumbs: OrgBreadcrumb[] = [
+      {
+        label: 'Organisation Sections',
+        view: { kind: 'overview' },
+        current: view.kind === 'overview',
+      },
+    ];
+
+    if (view.kind === 'overview') {
+      return crumbs;
+    }
+
+    crumbs.push({
+      label: this.orgSectionTitle(view.section),
+      view: { kind: 'section', section: view.section },
+      current: view.kind === 'section',
+    });
+
+    if (view.kind === 'node' || view.kind === 'members') {
+      const node = this.orgNodeById(view.nodeId);
+
+      if (node) {
+        crumbs.push({
+          label: node.title,
+          view: { kind: 'node', section: view.section, nodeId: node.id },
+          current: view.kind === 'node',
+        });
+      }
+    }
+
+    if (view.kind === 'members') {
+      crumbs.push({
+        label: 'Members',
+        view,
+        current: true,
+      });
+    }
+
+    return crumbs;
+  }
+
+  protected followOrgBreadcrumb(crumb: OrgBreadcrumb) {
+    this.closeOrgModal();
+    this.resetOrgMemberBrowser();
+    this.orgView.set({ ...crumb.view });
+  }
+
+  protected currentOrgSection(): OrgQuickSection | null {
+    const view = this.orgView();
+    return view.kind === 'overview' ? null : view.section;
+  }
+
+  protected currentOrgNode(): AdminOrgNode | null {
+    const view = this.orgView();
+
+    if (view.kind !== 'node' && view.kind !== 'members') {
+      return null;
+    }
+
+    return this.orgNodeById(view.nodeId);
+  }
+
+  protected orgSectionTitle(section: OrgQuickSection): string {
+    return this.orgSectionCards.find((item) => item.key === section)?.title || 'Organisation Section';
+  }
+
+  protected orgSectionDescription(section: OrgQuickSection): string {
+    return this.orgSectionCards.find((item) => item.key === section)?.description || '';
+  }
+
+  protected orgSectionAnchor(section: OrgQuickSection): AdminOrgNode | null {
+    return this.findSectionAnchor(section);
+  }
+
+  protected orgSectionCount(section: OrgQuickSection): number {
+    if (section === 'state') {
+      return this.orgStateRootNodes().length;
+    }
+
+    return this.orgSimpleSectionMembers(section).length;
+  }
+
+  protected orgSectionCountLabel(section: OrgQuickSection): string {
+    const count = this.orgSectionCount(section);
+    if (section === 'president') {
+      return `${count} ${count === 1 ? 'president' : 'presidents'}`;
+    }
+
+    return section === 'state'
+      ? `${count} ${count === 1 ? 'state' : 'states'}`
+      : `${count} ${count === 1 ? 'member' : 'members'}`;
+  }
+
+  protected orgSectionEmptyText(section: OrgQuickSection): string {
+    if (section === 'state') {
+      return 'No state committee hierarchy has been added yet.';
+    }
+
+    if (section === 'president') {
+      return 'No president profile has been added yet.';
+    }
+
+    return `No ${this.orgSectionTitle(section).toLowerCase()} members have been added yet.`;
+  }
+
+  protected orgSectionMembers(section: OrgQuickSection): AdminOrgNode[] {
+    if (section === 'state') {
+      return [];
+    }
+
+    return this.orgSimpleSectionMembers(section);
+  }
+
+  protected orgStateRootNodes(): AdminOrgNode[] {
+    const anchor = this.findStateCommitteeAnchor();
+
+    if (!anchor) {
+      return [];
+    }
+
+    return this.orgNavigableChildNodes(anchor);
+  }
+
+  protected orgStateSectionAnchor(): AdminOrgNode | null {
+    return this.findStateCommitteeAnchor();
+  }
+
+  protected orgDirectMembers(node: AdminOrgNode): AdminOrgNode[] {
+    return this.orgDirectChildNodes(node).filter((child) => this.isDirectOrgMemberNode(node, child));
+  }
+
+  protected orgDirectMemberPreview(node: AdminOrgNode, limit = 3): AdminOrgNode[] {
+    return this.orgDirectMembers(node).slice(0, limit);
+  }
+
+  protected orgRemainingDirectMemberCount(node: AdminOrgNode, limit = 3): number {
+    return Math.max(this.orgDirectMembers(node).length - limit, 0);
+  }
+
+  protected orgNavigableChildNodes(node: AdminOrgNode): AdminOrgNode[] {
+    return this.orgDirectChildNodes(node).filter((child) =>
+      !this.isDirectOrgMemberNode(node, child)
+      && !this.isLinkedOrgSectionChild(node, child)
+    );
+  }
+
+  protected orgLinkedChildSections(node: AdminOrgNode): AdminOrgNode[] {
+    return this.orgDirectChildNodes(node).filter((child) => this.isLinkedOrgSectionChild(node, child));
+  }
+
+  protected orgHasDirectMembers(node: AdminOrgNode): boolean {
+    return this.orgDirectMembers(node).length > 0;
+  }
+
+  protected orgNodeSummary(node: AdminOrgNode): string {
+    if (node.description) {
+      return node.description;
+    }
+
+    if (node.subtitle && node.subtitle !== node.title) {
+      return node.subtitle;
+    }
+
+    const childCount = this.orgNavigableChildNodes(node).length;
+    const memberCount = this.orgDirectMembers(node).length;
+    const linkedCount = this.orgLinkedChildSections(node).length;
+
+    if (childCount > 0 && memberCount > 0) {
+      return `${childCount} child levels and ${memberCount} same-level members are available from this page.`;
+    }
+
+    if (childCount > 0) {
+      return 'Open this branch to continue level by level.';
+    }
+
+    if (memberCount > 0) {
+      return 'Same-level members are available on a separate members page.';
+    }
+
+    if (linkedCount > 0) {
+      return 'Linked organisation members are available under this branch.';
+    }
+
+    return 'No child levels or members are configured under this branch yet.';
+  }
+
+  protected orgNodeStats(node: AdminOrgNode): string {
+    const childCount = this.orgNavigableChildNodes(node).length;
+    const memberCount = this.orgDirectMembers(node).length;
+
+    if (childCount > 0 && memberCount > 0) {
+      return `${childCount} child levels · ${memberCount} members`;
+    }
+
+    if (childCount > 0) {
+      return `${childCount} child level${childCount === 1 ? '' : 's'}`;
+    }
+
+    if (memberCount > 0) {
+      return `${memberCount} member${memberCount === 1 ? '' : 's'}`;
+    }
+
+    return `${this.orgLinkedChildSections(node).length} linked section${this.orgLinkedChildSections(node).length === 1 ? '' : 's'}`;
+  }
+
+  protected orgMemberName(node: AdminOrgNode): string {
+    return node.subtitle || node.title || 'Member';
+  }
+
+  protected orgMemberTitle(node: AdminOrgNode): string | null {
+    const title = String(node.title || '').trim();
+
+    if (!title || title.toLowerCase() === 'member' || title === node.subtitle) {
+      return null;
+    }
+
+    return title;
+  }
+
+  protected orgMemberSummary(node: AdminOrgNode): string {
+    if (node.description) {
+      return node.description;
+    }
+
+    const designation = this.orgMemberTitle(node);
+
+    if (designation) {
+      return designation;
+    }
+
+    const parent = this.orgNodeById(node.parentId);
+
+    if (parent) {
+      return `Member under ${parent.title}`;
+    }
+
+    return 'Organisation member';
+  }
+
+  protected orgNodeLocation(node: AdminOrgNode): string {
+    return [
+      node.location.state,
+      node.location.district,
+      node.location.taluk,
+    ].filter((value) => String(value || '').trim()).join(' / ');
+  }
+
+  protected orgNodeLevelBadge(node: AdminOrgNode): string {
+    if (this.isTalukCommitteeContainerNode(node)) {
+      return TALUK_COMMITTEE_TITLE;
+    }
+
+    if (node.level === 'city') {
+      return CITY_GBA_LEVEL_TITLE;
+    }
+
+    return this.orgLevelLabel(node.level);
+  }
+
+  protected orgEditHeading(): string {
+    const node = this.orgNodeById(this.editingOrgNodeId());
+
+    if (!node) {
+      return 'Edit Organisation Item';
+    }
+
+    if (this.isStructuralHierarchyEntry(this.editOrgNode)) {
+      return `Edit ${this.structuralHierarchyLabel(this.editOrgNode)}`;
+    }
+
+    if (this.isHierarchyMemberForm(this.editOrgNode)) {
+      return `Edit ${this.structuralHierarchyLabel(this.editOrgNode)} Member`;
+    }
+
+    return `Edit ${node.subtitle || node.title}`;
+  }
+
+  protected orgEditSubtitle(): string {
+    const node = this.orgNodeById(this.editingOrgNodeId());
+
+    if (!node) {
+      return 'Update the selected organisation item.';
+    }
+
+    return `Editing ${this.orgNodePath(node)}. Parent and hierarchy rules will stay validated in this popup.`;
+  }
+
+  private orgSectionKeyForNode(node: AdminOrgNode): OrgQuickSection {
+    const root = this.orgSectionRoot(node);
+    const label = this.normalizeOrgSearchText(root.sidebarLabel);
+
+    if (label === this.normalizeOrgSearchText('president-office')) {
+      return 'president';
+    }
+
+    if (label === this.normalizeOrgSearchText('office-bearer')) {
+      return 'office-bearer';
+    }
+
+    if (label === this.normalizeOrgSearchText('working-committee')) {
+      return 'working';
+    }
+
+    if (label === this.normalizeOrgSearchText('representative-general-body')) {
+      return 'representative';
+    }
+
+    if (label === this.normalizeOrgSearchText('nominated-body')) {
+      return 'nominated';
+    }
+
+    return 'state';
+  }
+
+  private orgSortedNodes(nodes: AdminOrgNode[]): AdminOrgNode[] {
+    return [...nodes].sort((a, b) =>
+      a.order - b.order
+      || a.title.localeCompare(b.title)
+      || a.subtitle.localeCompare(b.subtitle)
+    );
+  }
+
+  private orgDirectChildNodes(parent: AdminOrgNode | null | undefined): AdminOrgNode[] {
+    if (!parent) {
+      return [];
+    }
+
+    return this.orgChildrenByParentId().get(parent.id) ?? [];
+  }
+
+  private orgSubtreeNodes(root: AdminOrgNode | null | undefined): AdminOrgNode[] {
+    if (!root) {
+      return [];
+    }
+
+    const ordered: AdminOrgNode[] = [];
+    const visit = (parent: AdminOrgNode) => {
+      for (const child of this.orgDirectChildNodes(parent)) {
+        ordered.push(child);
+        visit(child);
+      }
+    };
+
+    visit(root);
+    return ordered;
+  }
+
+  private orgSimpleSectionMembers(section: OrgQuickSection): AdminOrgNode[] {
+    const anchor = this.orgSectionAnchor(section);
+
+    if (!anchor) {
+      return [];
+    }
+
+    return this.orgSubtreeNodes(anchor);
+  }
+
+  private orgSharesLocation(left: AdminOrgNode, right: AdminOrgNode): boolean {
+    return left.location.state === right.location.state
+      && left.location.district === right.location.district
+      && left.location.taluk === right.location.taluk;
+  }
+
+  private isLinkedOrgSectionChild(parent: AdminOrgNode, child: AdminOrgNode): boolean {
+    return !this.isSimpleOrgSectionLabel(parent.sidebarLabel)
+      && this.isSimpleOrgSectionLabel(child.sidebarLabel);
+  }
+
+  private isDirectOrgMemberNode(parent: AdminOrgNode, child: AdminOrgNode): boolean {
+    if (this.isSimpleOrgSectionLabel(parent.sidebarLabel)) {
+      return true;
+    }
+
+    if (this.isLinkedOrgSectionChild(parent, child)) {
+      return false;
+    }
+
+    if (this.isTalukCommitteeContainerNode(child) || this.isStateCommitteeContainer(child)) {
+      return false;
+    }
+
+    if (this.isTalukCommitteeMemberNode(child) || this.isStateCommitteeMemberNode(child)) {
+      return true;
+    }
+
+    if (this.isStateCommitteeContainer(parent)) {
+      return false;
+    }
+
+    return parent.level === child.level && this.orgSharesLocation(parent, child);
+  }
+
   orgNodesForDisplay() {
     const nodes = [...this.orgNodeItems()].sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
     const childrenByParent = new Map<string | null, AdminOrgNode[]>();
@@ -3384,6 +4511,8 @@ export class AdminPanelComponent {
   }
 
   startAddOrgNode(parent?: AdminOrgNode) {
+    this.mediaError.set('');
+    this.editingOrgNodeId.set(null);
     this.newOrgNode = this.emptyOrgNodeForm(parent?.id ?? null);
     this.newOrgNode.level = this.inferChildLevel(parent);
 
@@ -3397,6 +4526,7 @@ export class AdminPanelComponent {
     }
 
     this.newOrgNode = this.applyParentDefaults(this.newOrgNode);
+    this.resetOrgMemberEntryArray();
 
     this.newOrgNodeImageFile = null;
     this.showOrgNodeAdd.set(true);
@@ -3404,24 +4534,30 @@ export class AdminPanelComponent {
   }
 
   startAddOrgMember(parent: AdminOrgNode) {
+    this.mediaError.set('');
+    this.editingOrgNodeId.set(null);
     this.newOrgNode = this.emptyOrgNodeForm(parent.id);
     this.newOrgNode.sidebarLabel = this.isTalukCommitteeContainerNode(parent)
       ? TALUK_COMMITTEE_MEMBER_LABEL
-      : parent.sidebarLabel;
+      : this.isStateCommitteeNode(parent)
+        ? STATE_COMMITTEE_MEMBER_LABEL
+        : parent.sidebarLabel;
     this.newOrgNode.level = parent.level;
     this.newOrgNode.state = parent.location.state;
     this.newOrgNode.district = parent.location.district;
     this.newOrgNode.taluk = parent.location.taluk;
-    // this.newOrgNode = this.applyParentDefaults(this.newOrgNode);
+    this.resetOrgMemberEntryArray();
     this.newOrgNodeImageFile = null;
     this.showOrgNodeAdd.set(true);
     this.scrollOrgAddFormIntoView();
   }
 
   startQuickAddOrgNode(section: OrgQuickSection) {
+    this.mediaError.set('');
     const anchor = this.findSectionAnchor(section);
     this.startAddOrgNode(anchor ?? undefined);
     this.applySectionDefaults(section);
+    this.resetOrgMemberEntryArray();
   }
 
   setNewOrgSidebarLabel(value: string) {
@@ -3435,10 +4571,14 @@ export class AdminPanelComponent {
   cancelAddOrgNode() {
     this.newOrgNode = this.emptyOrgNodeForm();
     this.newOrgNodeImageFile = null;
+    this.resetOrgMemberEntryArray();
+    this.mediaError.set('');
     this.showOrgNodeAdd.set(false);
   }
 
   startEditOrgNode(node: AdminOrgNode) {
+    this.mediaError.set('');
+    this.showOrgNodeAdd.set(false);
     this.editOrgNode = {
       parentId: node.parentId,
       title: node.title,
@@ -3450,7 +4590,9 @@ export class AdminPanelComponent {
       state: node.location.state,
       district: node.location.district,
       taluk: node.location.taluk,
-      sidebarLabel: node.sidebarLabel,
+      sidebarLabel: this.isStateCommitteeMemberNode(node)
+        ? STATE_COMMITTEE_MEMBER_LABEL
+        : node.sidebarLabel,
       imageUrl: node.imageUrl,
       imageAlt: node.imageAlt,
       isActive: node.isActive,
@@ -3463,6 +4605,7 @@ export class AdminPanelComponent {
   cancelEditOrgNode() {
     this.editOrgNode = this.emptyOrgNodeForm();
     this.editOrgNodeImageFile = null;
+    this.mediaError.set('');
     this.editingOrgNodeId.set(null);
   }
 
@@ -3475,8 +4618,14 @@ export class AdminPanelComponent {
   }
 
   async addOrgNode() {
+    if (this.usesOrgMemberFormArray(this.newOrgNode)) {
+      this.orgMemberBatchForm.markAllAsTouched();
+    }
+
     const normalizedForm = this.normalizeOrgFormForSave(this.newOrgNode);
-    const validationError = this.orgFormValidationError(normalizedForm);
+    const validationError = this.usesOrgMemberFormArray(normalizedForm)
+      ? this.orgMemberFormArrayValidationError(normalizedForm)
+      : this.orgFormValidationError(normalizedForm);
     if (validationError) {
       this.mediaError.set(validationError);
       return;
@@ -3485,8 +4634,17 @@ export class AdminPanelComponent {
     await this.runMediaAction(async () => {
       let imageUrl = this.newOrgNode.imageUrl;
       let parentId = normalizedForm.parentId;
+      const memberEntries = this.usesOrgMemberFormArray(normalizedForm)
+        ? this.orgMemberEntryValues()
+        : [{
+            firstName: normalizedForm.subtitle,
+            designation: normalizedForm.title,
+            contact: String(normalizedForm.contact || '').trim(),
+            description: normalizedForm.description,
+            imageAlt: normalizedForm.imageAlt,
+          }];
 
-      if (this.newOrgNodeImageFile) {
+      if (!this.usesOrgMemberFormArray(normalizedForm) && this.newOrgNodeImageFile) {
         imageUrl = await this.data.uploadOrgMemberImage(this.newOrgNodeImageFile);
       }
 
@@ -3498,24 +4656,46 @@ export class AdminPanelComponent {
         parentId = anchor?.id ?? parentId;
       }
 
-      await this.data.addOrgNode({
-        parentId,
-        title: normalizedForm.title,
-        subtitle: normalizedForm.subtitle,
-        contact: String(normalizedForm.contact || '').trim(),
-        order: normalizedForm.order,
-        description: normalizedForm.description,
-        level: normalizedForm.level,
-        location: {
-          state: normalizedForm.state,
-          district: normalizedForm.district,
-          taluk: normalizedForm.taluk,
-        },
-        sidebarLabel: normalizedForm.sidebarLabel,
-        imageUrl,
-        imageAlt: normalizedForm.imageAlt,
-        isActive: normalizedForm.isActive,
-      });
+      for (const [index, entry] of memberEntries.entries()) {
+        const memberForm = this.usesOrgMemberFormArray(normalizedForm)
+          ? this.normalizeOrgFormForSave({
+              ...normalizedForm,
+              parentId,
+              title: entry.designation,
+              subtitle: entry.firstName,
+              order: normalizedForm.order > 0 ? normalizedForm.order + index : normalizedForm.order,
+            })
+          : normalizedForm;
+        const memberImageUrl = this.usesOrgMemberFormArray(normalizedForm)
+          ? (this.orgMemberEntryFiles[index] ? await this.data.uploadOrgMemberImage(this.orgMemberEntryFiles[index] as File) : '')
+          : imageUrl;
+
+        await this.data.addOrgNode({
+          parentId,
+          title: memberForm.title,
+          subtitle: memberForm.subtitle,
+          contact: this.usesOrgMemberFormArray(normalizedForm)
+            ? entry.contact
+            : String(memberForm.contact || '').trim(),
+          order: memberForm.order,
+          description: this.usesOrgMemberFormArray(normalizedForm)
+            ? entry.description
+            : memberForm.description,
+          level: memberForm.level,
+          location: {
+            state: memberForm.state,
+            district: memberForm.district,
+            taluk: memberForm.taluk,
+          },
+          sidebarLabel: memberForm.sidebarLabel,
+          imageUrl: memberImageUrl,
+          imageAlt: this.usesOrgMemberFormArray(normalizedForm)
+            ? entry.imageAlt
+            : memberForm.imageAlt,
+          isActive: memberForm.isActive,
+        });
+      }
+
       this.cancelAddOrgNode();
     }, 'Organization member create failed. Check required hierarchy fields and try again.');
   }
@@ -3570,9 +4750,104 @@ export class AdminPanelComponent {
   async deleteOrgNode(id: string) {
     if (!confirm('Delete this organisation item? Delete child items first if present.')) return;
 
+    const deletedNode = this.orgNodeById(id);
+
     await this.runMediaAction(async () => {
       await this.data.deleteOrgNode(id);
+
+      const view = this.orgView();
+
+      if (deletedNode && (view.kind === 'node' || view.kind === 'members') && view.nodeId === id) {
+        const parent = this.orgNodeById(deletedNode.parentId);
+
+        if (parent) {
+          this.openOrgNodePage(parent);
+        } else {
+          this.openOrgSection(this.orgSectionKeyForNode(deletedNode));
+        }
+      }
     }, 'Organization member delete failed. Delete child members first and retry.');
+  }
+
+  private createOrgMemberEntryGroup(value?: Partial<OrgMemberEntryForm>): FormGroup {
+    return this.formBuilder.group({
+      firstName: [String(value?.firstName || '').trim(), Validators.required],
+      designation: [String(value?.designation || '').trim(), Validators.required],
+      contact: [String(value?.contact || '').trim()],
+      description: [String(value?.description || '').trim()],
+      imageAlt: [String(value?.imageAlt || '').trim()],
+    });
+  }
+
+  private orgMemberEntryValues(): OrgMemberEntryForm[] {
+    return this.orgMemberEntryControls.map((group) => ({
+      firstName: String(group.get('firstName')?.value || '').trim(),
+      designation: String(group.get('designation')?.value || '').trim(),
+      contact: String(group.get('contact')?.value || '').trim(),
+      description: String(group.get('description')?.value || '').trim(),
+      imageAlt: String(group.get('imageAlt')?.value || '').trim(),
+    }));
+  }
+
+  private orgMemberEntryFromForm(form: OrgNodeForm): OrgMemberEntryForm {
+    return {
+      firstName: String(form.subtitle || '').trim(),
+      designation: String(form.title || '').trim(),
+      contact: String(form.contact || '').trim(),
+      description: String(form.description || '').trim(),
+      imageAlt: String(form.imageAlt || '').trim(),
+    };
+  }
+
+  private resetOrgMemberEntryArray(entries: OrgMemberEntryForm[] = [this.orgMemberEntryFromForm(this.newOrgNode)]): void {
+    const nextEntries = entries.length ? entries : [this.orgMemberEntryFromForm(this.newOrgNode)];
+
+    while (this.orgMemberEntries.length) {
+      this.orgMemberEntries.removeAt(0);
+    }
+
+    for (const entry of nextEntries) {
+      this.orgMemberEntries.push(this.createOrgMemberEntryGroup(entry));
+    }
+
+    this.orgMemberEntryFiles = new Array(nextEntries.length).fill(null);
+
+    this.orgMemberBatchForm.markAsPristine();
+    this.orgMemberBatchForm.markAsUntouched();
+  }
+
+  private orgMemberFormArrayValidationError(form: OrgNodeForm): string | null {
+    const entries = this.orgMemberEntryValues();
+
+    if (!entries.length) {
+      return 'Add at least one member.';
+    }
+
+    for (const [index, entry] of entries.entries()) {
+      if (!entry.firstName) {
+        return `Member ${index + 1}: First name is required.`;
+      }
+
+      if (!entry.designation) {
+        return `Member ${index + 1}: Designation is required.`;
+      }
+
+      const candidate = this.normalizeOrgFormForSave({
+        ...form,
+        title: entry.designation,
+        subtitle: entry.firstName,
+        order: form.order > 0 ? form.order + index : form.order,
+      });
+      const error = this.orgFormValidationError(candidate);
+
+      if (error) {
+        return `Member ${index + 1}: ${error
+          .replace('Title is required.', 'Designation is required.')
+          .replace('Member name is required.', 'First name is required.')}`;
+      }
+    }
+
+    return null;
   }
 
   startEditHostel(h: AdminHostel) {
@@ -3681,6 +4956,7 @@ export class AdminPanelComponent {
     this.auth.logout();
     try {
       localStorage.removeItem(ADMIN_ACTIVE_TAB_STORAGE_KEY);
+      localStorage.removeItem(ADMIN_ORG_VIEW_STORAGE_KEY);
     } catch {
       // Ignore localStorage cleanup failures.
     }

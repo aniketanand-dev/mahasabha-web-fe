@@ -50,14 +50,6 @@ export class OfficeBearersComponent {
     ]) ?? null
   );
 
-  protected readonly nominatedNode = computed(() =>
-    findOrgNode(this.tree(), [
-      ['nominated-body'],
-      ['nominated', 'body'],
-      ['nominated'],
-    ])
-  );
-
   protected readonly members = computed(() => {
     const officeBearerNode = this.officeBearerNode();
 

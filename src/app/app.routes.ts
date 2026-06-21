@@ -27,6 +27,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/nominated-body/nominated-body.component').then(m => m.NominatedBodyComponent)
   },
   {
+    path: 'organisation/node/:nodeId/members',
+    loadComponent: () => import('./pages/org-node-members/org-node-members.component').then(m => m.OrgNodeMembersComponent)
+  },
+  {
     path: 'organisation/node/:nodeId',
     loadComponent: () => import('./pages/org-node-detail/org-node-detail.component').then(m => m.OrgNodeDetailComponent)
   },

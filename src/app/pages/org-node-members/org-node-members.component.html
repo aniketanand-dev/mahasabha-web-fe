@@ -1,0 +1,140 @@
+<app-navbar></app-navbar>
+
+<section class="member-page">
+  <div class="member-shell">
+    @if (node(); as currentNode) {
+      <div class="page-head">
+        <div class="page-head__actions">
+          <a [routerLink]="backLink()" class="back-link">Back to Level</a>
+          <a [routerLink]="sectionLink()" [queryParams]="sectionLinkQueryParams()" class="back-link back-link--muted">Section Page</a>
+          <a routerLink="/" class="back-link back-link--muted">Back to Home</a>
+        </div>
+
+        <p class="eyebrow">Same-Level Members</p>
+        <h1>{{ currentNode.title }} Members</h1>
+        <p class="intro">
+          Members added at the same hierarchy level are shown separately on this page.
+        </p>
+
+        @if (currentLocation()) {
+          <p class="location-chip">{{ currentLocation() }}</p>
+        }
+
+        <div class="stats-row">
+          @for (stat of statCards(); track stat.label) {
+            <div class="stat-card">
+              <span>{{ stat.label }}</span>
+              <strong>{{ stat.value }}</strong>
+            </div>
+          }
+        </div>
+      </div>
+
+      @if (members().length) {
+        <div class="member-list-head">
+          <div>
+            <p class="member-list-head__summary">
+              Showing {{ paginatedMembers().start }}-{{ paginatedMembers().end }} of {{ paginatedMembers().total }} members
+            </p>
+          </div>
+
+          @if (paginatedMembers().totalPages > 1) {
+            <div class="list-pagination" aria-label="Member pages">
+              <button
+                type="button"
+                [disabled]="paginatedMembers().page === 1"
+                (click)="goToMemberPage(paginatedMembers().page - 1)"
+              >
+                Previous
+              </button>
+              <span>Page {{ paginatedMembers().page }} / {{ paginatedMembers().totalPages }}</span>
+              <button
+                type="button"
+                [disabled]="paginatedMembers().page === paginatedMembers().totalPages"
+                (click)="goToMemberPage(paginatedMembers().page + 1)"
+              >
+                Next
+              </button>
+            </div>
+          }
+        </div>
+
+        <div class="member-search">
+          <label class="search-field">
+            <span class="search-field__label">Search members</span>
+            <input
+              type="search"
+              [value]="memberSearchTerm()"
+              placeholder="Search name, title, contact, place..."
+              (input)="updateMemberSearch($any($event.target).value)"
+            />
+          </label>
+
+          @if (memberSearchTerm()) {
+            <button type="button" class="search-clear" (click)="clearMemberSearch()">Clear</button>
+          }
+        </div>
+
+        @if (paginatedMembers().total) {
+          <div class="member-grid">
+            @for (member of paginatedMembers().items; track member.id) {
+              <article class="member-card">
+                <div class="member-image-frame">
+                  @if (member.imageUrl) {
+                    <img
+                      class="member-image"
+                      [src]="member.imageUrl"
+                      [alt]="member.imageAlt || member.subtitle || member.title"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  } @else {
+                    <div class="member-image-placeholder" aria-hidden="true">
+                      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                        <circle cx="24" cy="18" r="10" stroke="currentColor" stroke-width="2" opacity="0.35"/>
+                        <path d="M6 44c0-9.941 8.059-18 18-18s18 8.059 18 18" stroke="currentColor" stroke-width="2" opacity="0.25"/>
+                      </svg>
+                    </div>
+                  }
+                </div>
+
+                <div class="member-info">
+                  <div class="member-name">{{ memberName(member) }}</div>
+
+                  @if (memberContact(member)) {
+                    <div class="member-contact">Contact: {{ memberContact(member) }}</div>
+                  }
+
+                  @if (memberTitle(member); as designation) {
+                    <div class="member-designation">{{ designation }}</div>
+                  }
+
+                  <div class="member-desc">{{ memberMeta(member) }}</div>
+
+                  @if (locationLabel(member)) {
+                    <div class="member-location">{{ locationLabel(member) }}</div>
+                  }
+
+                </div>
+              </article>
+            }
+          </div>
+        } @else {
+          <div class="empty-card">
+            <p>No matching members found for this search.</p>
+          </div>
+        }
+      } @else {
+        <div class="empty-card">
+          <p>No same-level members have been added for {{ currentNode.title }} yet.</p>
+        </div>
+      }
+    } @else {
+      <div class="empty-card">
+        <p>The selected organisation node could not be found.</p>
+      </div>
+    }
+  </div>
+</section>
+
+<app-footer></app-footer>

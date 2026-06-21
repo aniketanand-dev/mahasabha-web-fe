@@ -33,14 +33,14 @@
             </div>
             <div class="member-info">
               <div class="member-name">{{ memberName(member) }}</div>
+              @if (memberContact(member)) {
+                <div class="member-contact">Contact: {{ memberContact(member) }}</div>
+              }
               @if (memberDesignation(member); as desig) {
                 <div class="member-designation">{{ desig }}</div>
               }
               @if (memberDesc(member)) {
                 <div class="member-desc">{{ memberDesc(member) }}</div>
-              }
-              @if (memberContact(member)) {
-                <div class="member-contact">📞 {{ memberContact(member) }}</div>
               }
             </div>
           </article>

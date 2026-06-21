@@ -1,41 +1,66 @@
-import { CommonModule } from '@angular/common';
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 import { FooterComponent } from '../../components/footer/footer.component';
 import { NavbarComponent } from '../../components/navbar/navbar.component';
 import { AdminDataService } from '../../services/admin-data.service';
-import { buildOrgTree, flattenOrgDescendants, flattenOrgTree, OrgTreeNode } from '../../utils/org-structure';
+import { clampPage, paginateItems } from '../../utils/pagination';
+import {
+  buildOrgTree,
+  buildOrgTreeIndex,
+  flattenOrgDescendants,
+  getOrgDirectMembers,
+  getOrgNavigableChildren,
+  isOrgMemberChild,
+  OrgTreeNode
+} from '../../utils/org-structure';
 
 @Component({
   selector: 'app-state-committee',
   standalone: true,
   imports: [CommonModule, RouterLink, NavbarComponent, FooterComponent],
   templateUrl: './state-committee.component.html',
-  styleUrl: './state-committee.component.scss'
+  styleUrl: './state-committee.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StateCommitteeComponent {
   private readonly data = inject(AdminDataService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly location = inject(Location);
+  private readonly detailPageSize = 48;
+  private readonly treeBatchSize = 120;
   private readonly normalized = (value: string) =>
     String(value || '')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, ' ')
       .trim();
+  private readonly isStateCommitteeMemberLabel = (value: string) =>
+    this.normalized(value) === this.normalized('state-committee-member');
+  private readonly matchesStateCommitteeStateBranchIdentity = (node: Pick<OrgTreeNode, 'title' | 'subtitle' | 'location'>) => {
+    const normalizedState = this.normalized(String(node.location.state || ''));
+    const normalizedTitle = this.normalized(String(node.title || ''));
+    const normalizedSubtitle = this.normalized(String(node.subtitle || ''));
+
+    return !!normalizedState
+      && normalizedTitle === normalizedState
+      && normalizedSubtitle === normalizedState;
+  };
 
   private readonly tree = computed(() => buildOrgTree(this.data.orgNodes()));
+  private readonly treeIndex = computed(() => buildOrgTreeIndex(this.tree()));
 
   private readonly isStateCommitteeSection = (node: OrgTreeNode) =>
     this.normalized(node.sidebarLabel) === this.normalized('state-committee');
 
-  private readonly stateSectionRoot = (node: OrgTreeNode, flatNodes: OrgTreeNode[]) => {
+  private readonly stateSectionRoot = (node: OrgTreeNode, nodesById: Map<string, OrgTreeNode>) => {
     let current = node;
     let matched: OrgTreeNode | null = this.isStateCommitteeSection(node) ? node : null;
 
     while (current.parentId) {
-      const parent = flatNodes.find((candidate) => candidate.id === current.parentId);
+      const parent = nodesById.get(current.parentId);
 
       if (!parent) {
         break;
@@ -51,11 +76,11 @@ export class StateCommitteeComponent {
     return matched;
   };
 
-  private readonly hasStateLevelAncestor = (node: OrgTreeNode, stopAtId: string, flatNodes: OrgTreeNode[]) => {
+  private readonly hasStateLevelAncestor = (node: OrgTreeNode, stopAtId: string, nodesById: Map<string, OrgTreeNode>) => {
     let parentId = node.parentId;
 
     while (parentId && parentId !== stopAtId) {
-      const parent = flatNodes.find((candidate) => candidate.id === parentId);
+      const parent = nodesById.get(parentId);
 
       if (!parent) {
         break;
@@ -72,14 +97,14 @@ export class StateCommitteeComponent {
   };
 
   protected readonly stateRoots = computed(() => {
-    const flatNodes = flattenOrgTree(this.tree());
+    const { flatNodes, nodesById } = this.treeIndex();
 
     return flatNodes.filter((node) => {
       if (node.level !== 'state') {
         return false;
       }
 
-      const root = this.stateSectionRoot(node, flatNodes);
+      const root = this.stateSectionRoot(node, nodesById);
 
       if (!root) {
         return false;
@@ -92,7 +117,11 @@ export class StateCommitteeComponent {
         return false;
       }
 
-      return !this.hasStateLevelAncestor(node, root.id, flatNodes);
+      if (this.isStateCommitteeMemberNode(node)) {
+        return false;
+      }
+
+      return !this.hasStateLevelAncestor(node, root.id, nodesById);
     });
   });
 
@@ -100,6 +129,10 @@ export class StateCommitteeComponent {
     const roots = this.stateRoots();
     return roots.flatMap((root) => [root, ...flattenOrgDescendants(root)]);
   });
+  private readonly scopedNodesById = computed(() => new Map(this.scopedNodes().map((node) => [node.id, node] as const)));
+  private readonly branchNodes = computed(() =>
+    this.scopedNodes().filter((node) => this.isTreeBranchNode(node))
+  );
 
   private readonly selectedQueryId = toSignal(
     this.route.queryParamMap.pipe(map(params => {
@@ -111,7 +144,12 @@ export class StateCommitteeComponent {
 
   protected readonly selectedNodeId = signal<string | null>(null);
   protected readonly expandedIds = signal<Set<string>>(new Set<string>());
+  protected readonly branchVisibleCounts = signal<Record<string, number>>({});
+  protected readonly detailPage = signal<number>(1);
+  protected readonly treeSearchTerm = signal<string>('');
+  protected readonly detailSearchTerm = signal<string>('');
   private readonly lastSyncedQueryId = signal<string | null>(null);
+  private readonly lastPagedNodeId = signal<string | null>(null);
 
   protected readonly selectedNode = computed(() => {
     const roots = this.stateRoots();
@@ -120,11 +158,60 @@ export class StateCommitteeComponent {
     }
 
     const selectedNodeId = this.selectedNodeId() ?? this.selectedQueryId();
-    return this.scopedNodes().find(node => node.id === selectedNodeId) ?? roots[0];
+    const candidate = selectedNodeId ? this.scopedNodesById().get(selectedNodeId) ?? null : null;
+    return (candidate ? this.resolveSelectedBranch(candidate) : null) ?? roots[0];
   });
 
   protected readonly selectedPathIds = computed(() => new Set(this.findPathIds(this.selectedNode()?.id ?? null)));
+  protected readonly homeBackQueryParams = computed(() => {
+    const selected = this.selectedNode();
+
+    if (!selected) {
+      return undefined;
+    }
+
+    const stateRootId = this.findPathIds(selected.id)[0] ?? selected.id;
+    return { selectedState: stateRootId };
+  });
+  protected readonly navigatorCrumbs = computed(() => {
+    const selected = this.selectedNode();
+
+    if (!selected) {
+      return [] as Array<{ id: string; label: string; current: boolean; node: OrgTreeNode }>;
+    }
+
+      const pathIds = this.findPathIds(selected.id);
+      const nodesById = this.scopedNodesById();
+
+    return pathIds
+      .map((id, index) => {
+        const node = nodesById.get(id);
+
+        if (!node) {
+          return null;
+        }
+
+        return {
+          id,
+          label: node.title,
+          current: index === pathIds.length - 1,
+          node,
+        };
+      })
+      .filter((crumb): crumb is { id: string; label: string; current: boolean; node: OrgTreeNode } => !!crumb);
+  });
   protected readonly stateCount = computed(() => this.stateRoots().length);
+  protected readonly treeSearchResults = computed(() => {
+    const query = this.normalized(this.treeSearchTerm());
+
+    if (!query) {
+      return [] as OrgTreeNode[];
+    }
+
+    return this.branchNodes()
+      .filter((node) => this.matchesNodeSearch(node, query))
+      .slice(0, 30);
+  });
   protected readonly memberCards = computed(() => {
     const selected = this.selectedNode();
 
@@ -132,8 +219,20 @@ export class StateCommitteeComponent {
       return [] as OrgTreeNode[];
     }
 
-    return selected.children.length ? selected.children : [selected];
+    return getOrgDirectMembers(selected, this.treeIndex().flatNodes);
   });
+  protected readonly filteredMemberCards = computed(() => {
+    const query = this.normalized(this.detailSearchTerm());
+
+    if (!query) {
+      return this.memberCards();
+    }
+
+    return this.memberCards().filter((node) => this.matchesNodeSearch(node, query));
+  });
+  protected readonly paginatedMemberCards = computed(() =>
+    paginateItems(this.filteredMemberCards(), this.detailPage(), this.detailPageSize)
+  );
   protected readonly statCards = computed(() => {
     const selectedNode = this.selectedNode();
 
@@ -141,12 +240,15 @@ export class StateCommitteeComponent {
       return [] as Array<{ label: string; value: string }>;
     }
 
-    const nestedCount = flattenOrgDescendants(selectedNode).length;
+    const nestedCount = this.treeIndex().descendantCountById.get(selectedNode.id) ?? 0;
+    const directUnits = this.treeChildren(selectedNode).length;
+    const directMembers = this.memberCards().length;
 
     return [
-      { label: 'Direct Units', value: String(selectedNode.children.length) },
+      { label: 'Members', value: String(directMembers) },
+      { label: 'Direct Units', value: String(directUnits) },
       { label: 'Nested Entries', value: String(nestedCount) },
-      { label: 'Level', value: `L${selectedNode.depth + 1}` },
+      { label: 'Level', value: this.nodeKind(selectedNode) },
     ];
   });
 
@@ -154,10 +256,29 @@ export class StateCommitteeComponent {
     // Sync query-param ?selected=id → selectedNodeId
     effect(() => {
       const selectedQueryId = this.selectedQueryId();
-      if (selectedQueryId && this.lastSyncedQueryId() !== selectedQueryId) {
+      if (this.lastSyncedQueryId() !== selectedQueryId) {
         this.selectedNodeId.set(selectedQueryId);
         this.lastSyncedQueryId.set(selectedQueryId);
       }
+    });
+
+    // Keep the selected node in the URL so refresh restores the same level.
+    effect(() => {
+      const selected = this.selectedNode();
+      const selectedQueryId = this.selectedQueryId();
+
+      if (!selected || selectedQueryId === selected.id) {
+        return;
+      }
+
+      untracked(() => {
+        const urlTree = this.router.createUrlTree([], {
+          relativeTo: this.route,
+          queryParams: { selected: selected.id },
+          queryParamsHandling: 'merge',
+        });
+        this.location.replaceState(this.router.serializeUrl(urlTree));
+      });
     });
 
     // Auto-expand state root nodes when data first loads.
@@ -180,16 +301,161 @@ export class StateCommitteeComponent {
         if (changed) this.expandedIds.set(next);
       });
     });
+
+    // Ensure the selected path is visible after refresh or direct linking.
+    effect(() => {
+      const pathIds = this.findPathIds(this.selectedNode()?.id ?? null);
+      if (!pathIds.length) return;
+      const nodesById = this.scopedNodesById();
+
+      untracked(() => {
+        const current = this.expandedIds();
+        const next = new Set(current);
+        let expandedChanged = false;
+
+        for (const pathId of pathIds) {
+          if (!next.has(pathId)) {
+            next.add(pathId);
+            expandedChanged = true;
+          }
+        }
+
+        if (expandedChanged) {
+          this.expandedIds.set(next);
+        }
+
+        const currentVisibleCounts = this.branchVisibleCounts();
+        const nextVisibleCounts = { ...currentVisibleCounts };
+        let visibleCountsChanged = false;
+
+        for (let index = 0; index < pathIds.length - 1; index += 1) {
+          const parent = nodesById.get(pathIds[index]);
+          const childId = pathIds[index + 1];
+
+          if (!parent) {
+            continue;
+          }
+
+          const childIndex = this.treeChildren(parent).findIndex((child) => child.id === childId);
+
+          if (childIndex < 0) {
+            continue;
+          }
+
+          const requiredCount = Math.max(this.treeBatchSize, childIndex + 1);
+          const currentCount = nextVisibleCounts[parent.id] ?? this.treeBatchSize;
+
+          if (currentCount < requiredCount) {
+            nextVisibleCounts[parent.id] = requiredCount;
+            visibleCountsChanged = true;
+          }
+        }
+
+        if (visibleCountsChanged) {
+          this.branchVisibleCounts.set(nextVisibleCounts);
+        }
+      });
+    });
+
+    effect(() => {
+      const selectedNodeId = this.selectedNode()?.id ?? null;
+
+      if (this.lastPagedNodeId() === selectedNodeId) {
+        return;
+      }
+
+      untracked(() => {
+        this.detailPage.set(1);
+        this.lastPagedNodeId.set(selectedNodeId);
+      });
+    });
+
+    effect(() => {
+      const nextPage = clampPage(this.detailPage(), this.filteredMemberCards().length, this.detailPageSize);
+
+      if (nextPage === this.detailPage()) {
+        return;
+      }
+
+      untracked(() => {
+        this.detailPage.set(nextPage);
+      });
+    });
+
+    effect(() => {
+      this.detailSearchTerm();
+
+      untracked(() => {
+        this.detailPage.set(1);
+      });
+    });
   }
 
   protected selectNode(node: OrgTreeNode): void {
     this.selectedNodeId.set(node.id);
   }
 
+  protected followBreadcrumb(node: OrgTreeNode): void {
+    this.selectNode(node);
+  }
+
+  protected visibleTreeChildren(node: OrgTreeNode): OrgTreeNode[] {
+    const visibleCount = this.branchVisibleCounts()[node.id] ?? this.treeBatchSize;
+    return this.treeChildren(node).slice(0, visibleCount);
+  }
+
+  protected hasTreeChildren(node: OrgTreeNode): boolean {
+    return this.treeChildren(node).length > 0;
+  }
+
+  protected hasHiddenTreeChildren(node: OrgTreeNode): boolean {
+    return this.visibleTreeChildren(node).length < this.treeChildren(node).length;
+  }
+
+  protected remainingTreeChildren(node: OrgTreeNode): number {
+    return Math.max(0, this.treeChildren(node).length - this.visibleTreeChildren(node).length);
+  }
+
+  protected showMoreTreeChildren(node: OrgTreeNode): void {
+    const currentVisibleCounts = this.branchVisibleCounts();
+    const currentCount = currentVisibleCounts[node.id] ?? this.treeBatchSize;
+    const totalChildren = this.treeChildren(node).length;
+
+    this.branchVisibleCounts.set({
+      ...currentVisibleCounts,
+      [node.id]: Math.min(totalChildren, currentCount + this.treeBatchSize),
+    });
+  }
+
+  protected goToDetailPage(page: number): void {
+    this.detailPage.set(clampPage(page, this.filteredMemberCards().length, this.detailPageSize));
+  }
+
+  protected updateTreeSearch(value: string): void {
+    this.treeSearchTerm.set(value);
+  }
+
+  protected clearTreeSearch(): void {
+    this.treeSearchTerm.set('');
+  }
+
+  protected updateDetailSearch(value: string): void {
+    this.detailSearchTerm.set(value);
+  }
+
+  protected clearDetailSearch(): void {
+    this.detailSearchTerm.set('');
+  }
+
+  protected selectSearchResult(node: OrgTreeNode): void {
+    this.treeSearchTerm.set('');
+    this.selectNode(node);
+  }
+
   /** Clicking a row selects the node AND toggles its children open/closed. */
   protected selectAndToggle(node: OrgTreeNode, event: Event): void {
     this.selectedNodeId.set(node.id);
-    if (node.children.length) {
+    if (this.treeChildren(node).length) {
       const nextExpandedIds = new Set(this.expandedIds());
       if (nextExpandedIds.has(node.id)) {
         nextExpandedIds.delete(node.id);
@@ -220,11 +486,7 @@ export class StateCommitteeComponent {
   }
 
   private nodeParent(node: OrgTreeNode): OrgTreeNode | null {
-    if (!node.parentId) {
-      return null;
-    }
-
-    return this.scopedNodes().find((candidate) => candidate.id === node.parentId) ?? null;
+    return this.treeIndex().parentById.get(node.id) ?? null;
   }
 
   private isStateCommitteeContainerNode(node: OrgTreeNode): boolean {
@@ -236,13 +498,19 @@ export class StateCommitteeComponent {
   }
 
   private isStateCommitteeMemberNode(node: OrgTreeNode): boolean {
-    if (this.normalized(node.sidebarLabel) !== this.normalized('state-committee') || this.isStateCommitteeContainerNode(node)) {
+    if (
+      (
+        this.normalized(node.sidebarLabel) !== this.normalized('state-committee')
+        && !this.isStateCommitteeMemberLabel(node.sidebarLabel)
+      )
+      || this.isStateCommitteeContainerNode(node)
+    ) {
       return false;
     }
 
     const parent = this.nodeParent(node);
 
-    if (!parent || this.isStateCommitteeContainerNode(parent)) {
+    if (!parent || this.normalized(parent.sidebarLabel) !== this.normalized('state-committee')) {
       return false;
     }
 
@@ -251,7 +519,16 @@ export class StateCommitteeComponent {
     }
 
     if (node.level === 'state') {
-      return !node.location.district && !node.location.taluk;
+      if (node.location.district || node.location.taluk) {
+        return false;
+      }
+
+      if (this.isStateCommitteeContainerNode(parent)) {
+        return this.isStateCommitteeMemberLabel(node.sidebarLabel)
+          || !this.matchesStateCommitteeStateBranchIdentity(node);
+      }
+
+      return true;
     }
 
     if (node.level === 'district' || node.level === 'city' || node.level === 'corporation' || node.level === 'assembly') {
@@ -285,8 +562,8 @@ export class StateCommitteeComponent {
     const sidebarLabel = this.normalized(node.sidebarLabel);
 
     if (sidebarLabel === this.normalized('taluk-committee')) {
-      if (title.includes('cmc') || title.includes('tmc') || title.includes('gp') || title.includes('assembly')) {
-        return 'CMC/GP / Assembly';
+      if (title.includes('cmc') || title.includes('tmc') || title.includes('gp')) {
+        return 'CMC/TMC/GP';
       }
 
       return 'Local Unit';
@@ -366,18 +643,27 @@ export class StateCommitteeComponent {
       return node.subtitle;
     }
 
-    const childrenCount = node.children.length;
-    const descendantsCount = flattenOrgDescendants(node).length;
+    const childrenCount = this.treeChildren(node).length;
+    const memberCount = getOrgDirectMembers(node, this.treeIndex().flatNodes).length;
+    const descendantsCount = this.treeIndex().descendantCountById.get(node.id) ?? 0;
+
+    if (!childrenCount && !memberCount) {
+      return 'No child branches or members added yet';
+    }
 
     if (!childrenCount) {
-      return 'Leaf member node';
+      return `${memberCount} direct member${memberCount === 1 ? '' : 's'}`;
     }
 
     if (descendantsCount > childrenCount) {
-      return `${childrenCount} direct units · ${descendantsCount} nested entries`;
+      return memberCount
+        ? `${childrenCount} direct units · ${memberCount} members · ${descendantsCount} nested entries`
+        : `${childrenCount} direct units · ${descendantsCount} nested entries`;
     }
 
-    return `${childrenCount} direct units`;
+    return memberCount
+      ? `${childrenCount} direct units · ${memberCount} members`
+      : `${childrenCount} direct units`;
   }
 
   protected nodeDescription(node: OrgTreeNode): string {
@@ -400,14 +686,14 @@ export class StateCommitteeComponent {
     }
 
     if (kind === 'Taluk') {
-      return 'Use this taluk node to review the assembly units and open its dedicated member view.';
+      return 'Use this taluk node to review its CMC/TMC/GP branches and inspect taluk-level members.';
     }
 
     if (kind === 'Corporation') {
       return 'Use this corporation node to review the assembly branches and members configured under it.';
     }
 
-    if (kind === 'CMC/GP / Assembly' || kind === 'Local Unit') {
+    if (kind === 'CMC/TMC/GP' || kind === 'Local Unit') {
       return 'Use this local-unit branch to review its members and open their dedicated member view.';
     }
 
@@ -441,18 +727,45 @@ export class StateCommitteeComponent {
     return ['/organisation/node', String(node.id)];
   }
 
-  private sameSet(nextValue: Set<string>, currentValue: Set<string>): boolean {
-    if (nextValue.size !== currentValue.size) {
-      return false;
+  private matchesNodeSearch(node: OrgTreeNode, query: string): boolean {
+    return this.normalized([
+      node.title,
+      node.subtitle,
+      node.description,
+      node.contact || '',
+      node.location.state,
+      node.location.district,
+      node.location.taluk,
+      node.sidebarLabel,
+    ].join(' ')).includes(query);
+  }
+
+  private treeChildren(node: OrgTreeNode): OrgTreeNode[] {
+    return getOrgNavigableChildren(node, this.treeIndex().flatNodes);
+  }
+
+  private isTreeBranchNode(node: OrgTreeNode): boolean {
+    const parent = this.nodeParent(node);
+
+    if (!parent) {
+      return true;
     }
 
-    for (const item of nextValue) {
-      if (!currentValue.has(item)) {
-        return false;
+    return !isOrgMemberChild(parent, node, this.treeIndex().flatNodes);
+  }
+
+  private resolveSelectedBranch(node: OrgTreeNode): OrgTreeNode | null {
+    let current: OrgTreeNode | null = node;
+
+    while (current) {
+      if (this.isTreeBranchNode(current)) {
+        return current;
       }
+
+      current = this.nodeParent(current);
     }
 
-    return true;
+    return null;
   }
 
   private findPathIds(targetId: string | null): string[] {

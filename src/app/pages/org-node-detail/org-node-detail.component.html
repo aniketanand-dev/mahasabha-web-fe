@@ -5,12 +5,22 @@
     @if (node(); as currentNode) {
       <div class="page-head">
         <div class="page-head__actions">
-          <a routerLink="/organisation/state-committee" class="back-link">Back to State Tree</a>
+          <a [routerLink]="backLink()" class="back-link">{{ backLabel() }}</a>
+          <a [routerLink]="sectionLink()" [queryParams]="sectionLinkQueryParams()" class="back-link back-link--muted">Section Page</a>
           <a routerLink="/" class="back-link back-link--muted">Back to Home</a>
         </div>
-        <p class="eyebrow">Focused Member View</p>
+
+        <p class="eyebrow">Organisation Level</p>
+        <span class="page-badge">{{ nodeBadge(currentNode) }}</span>
         <h1>{{ currentNode.title }}</h1>
-        <p class="intro">{{ currentNode.path.join(' / ') }}</p>
+
+        <p class="intro">{{ introText() }}</p>
+
+        @if (currentLocation()) {
+          <p class="location-chip">{{ currentLocation() }}</p>
+        }
+
+        <p class="path-copy">{{ currentNode.path.join(' / ') }}</p>
 
         <div class="stats-row">
           @for (stat of statCards(); track stat.label) {
@@ -22,24 +32,161 @@
         </div>
       </div>
 
-      @if (members().length) {
-        <div class="member-grid">
-          @for (member of members(); track member.id) {
-            <article class="member-card">
-              <span class="member-card__label">Level {{ member.depth + 1 }}</span>
-              @if (member.imageUrl) {
-                <img class="member-card__photo" [src]="member.imageUrl" [alt]="member.imageAlt || member.subtitle || member.title" loading="lazy" decoding="async" />
+      @if (memberNodes().length || hasNominatedBody()) {
+        <section class="action-strip">
+          <div>
+            <p class="action-strip__eyebrow">Separate Member Page</p>
+            <h2>Open same-level members separately</h2>
+            <p>
+              Same-level members are now grouped on their own page so this screen stays focused on the next level
+              hierarchy.
+            </p>
+          </div>
+
+          <div class="action-strip__actions">
+            @if (memberNodes().length) {
+              <a [routerLink]="['/organisation/node', currentNode.id, 'members']" class="action-btn">
+                View {{ memberNodes().length }} {{ memberNodes().length === 1 ? 'Member' : 'Members' }}
+              </a>
+            }
+
+            @if (hasNominatedBody()) {
+              <a
+                routerLink="/organisation/nominated-body"
+                [queryParams]="{ scopeId: currentNode.id }"
+                class="action-btn action-btn--secondary"
+              >
+                Open Nominated Body
+              </a>
+            }
+          </div>
+        </section>
+      }
+
+      @if (childUnits().length) {
+        <section class="branch-section">
+          <div class="section-head">
+            <div>
+              <p class="section-head__eyebrow">Next Level</p>
+              <h2>Open the next page for each branch</h2>
+            </div>
+
+            @if (paginatedChildUnits().totalPages > 1) {
+              <div class="list-pagination" aria-label="Branch pages">
+                <button
+                  type="button"
+                  [disabled]="paginatedChildUnits().page === 1"
+                  (click)="goToChildPage(paginatedChildUnits().page - 1)"
+                >
+                  Previous
+                </button>
+                <span>Page {{ paginatedChildUnits().page }} / {{ paginatedChildUnits().totalPages }}</span>
+                <button
+                  type="button"
+                  [disabled]="paginatedChildUnits().page === paginatedChildUnits().totalPages"
+                  (click)="goToChildPage(paginatedChildUnits().page + 1)"
+                >
+                  Next
+                </button>
+              </div>
+            }
+          </div>
+
+          <p class="section-summary">
+            Showing {{ paginatedChildUnits().start }}-{{ paginatedChildUnits().end }}
+            of {{ paginatedChildUnits().total }} branches
+          </p>
+
+          <div class="branch-search">
+            <label class="search-field">
+              <span class="search-field__label">Search branches</span>
+              <input
+                type="search"
+                [value]="childSearchTerm()"
+                placeholder="Search unit, place, member path..."
+                (input)="updateChildSearch($any($event.target).value)"
+              />
+            </label>
+
+            @if (childSearchTerm()) {
+              <button type="button" class="search-clear" (click)="clearChildSearch()">Clear</button>
+            }
+          </div>
+
+          @if (paginatedChildUnits().total) {
+            <div class="branch-grid">
+              @for (child of paginatedChildUnits().items; track child.id) {
+                <article class="branch-card">
+                  <span class="branch-card__badge">{{ nodeBadge(child) }}</span>
+                  <h2>{{ child.title }}</h2>
+                  <p class="branch-card__path">{{ child.path.join(' / ') }}</p>
+                  <p class="branch-card__copy">{{ nodeSummary(child) }}</p>
+
+                  @if (locationLabel(child)) {
+                    <p class="branch-card__meta">{{ locationLabel(child) }}</p>
+                  }
+
+                  <p class="branch-card__stats">{{ childStats(child) }}</p>
+
+                  <div class="branch-card__actions">
+                    <a [routerLink]="['/organisation/node', child.id]" class="branch-btn">Open Level</a>
+
+                    @if (hasMembers(child)) {
+                      <a [routerLink]="['/organisation/node', child.id, 'members']" class="branch-btn branch-btn--secondary">
+                        View Members
+                      </a>
+                    }
+
+                    @if (hasChildNominatedBody(child)) {
+                      <a
+                        routerLink="/organisation/nominated-body"
+                        [queryParams]="{ scopeId: child.id }"
+                        class="branch-btn branch-btn--secondary"
+                      >
+                        Nominated Body
+                      </a>
+                    }
+                  </div>
+                </article>
               }
-              <h2 class="member-card__title">{{ member.title }}</h2>
-              <p class="member-card__meta">{{ memberMeta(member) }}</p>
-              <p class="member-card__meta">{{ member.location.state }} @if (member.location.district) { / {{ member.location.district }} } @if (member.location.taluk) { / {{ member.location.taluk }} }</p>
-            </article>
+            </div>
+          } @else {
+            <div class="empty-card">
+              <p>No matching branches found for this search.</p>
+            </div>
           }
-        </div>
-      } @else {
-        <div class="empty-card">
-          <p>No members or nested units have been added for {{ currentNode.title }} yet.</p>
-        </div>
+        </section>
+      } @else if (!memberNodes().length && !hasNominatedBody()) {
+        <section class="leaf-card">
+          @if (currentNode.imageUrl) {
+            <img
+              class="leaf-card__photo"
+              [src]="currentNode.imageUrl"
+              [alt]="currentNode.imageAlt || leafName()"
+              loading="lazy"
+              decoding="async"
+            />
+          }
+
+          <div class="leaf-card__content">
+            <span class="leaf-card__badge">{{ nodeBadge(currentNode) }}</span>
+            <h2>{{ leafName() }}</h2>
+
+            @if (nodeContact(currentNode)) {
+              <p class="leaf-card__meta">Contact: {{ nodeContact(currentNode) }}</p>
+            }
+
+            @if (leafDesignation(); as designation) {
+              <p class="leaf-card__designation">{{ designation }}</p>
+            }
+
+            <p class="leaf-card__copy">{{ leafDescription() }}</p>
+
+            @if (currentLocation()) {
+              <p class="leaf-card__meta">{{ currentLocation() }}</p>
+            }
+          </div>
+        </section>
       }
     } @else {
       <div class="empty-card">

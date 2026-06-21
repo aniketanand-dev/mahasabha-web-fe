@@ -50,7 +50,7 @@ export class WorkingCommitteeComponent {
       ['working-committee'],
       ['working'],
       ['central', 'committee'],
-    ]) ?? this.displayRoots()[1] ?? null
+    ]) ?? null
   );
 
   protected readonly nominatedNode = computed(() =>

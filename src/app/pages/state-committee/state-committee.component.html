@@ -4,7 +4,7 @@
   <div class="state-shell">
 
     <div class="state-head">
-      <a routerLink="/" class="back-link">
+      <a [routerLink]="['/']" fragment="org-chart" [queryParams]="homeBackQueryParams()" class="back-link">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
@@ -13,7 +13,7 @@
       <p class="eyebrow">Organisation Explorer</p>
       <h1>State Committee</h1>
       <p class="intro">
-        Select any state, district, city / GBA, taluk, corporation, assembly, or CMC/GP branch from the list to inspect its structure and open member pages.
+        Select any state, district, city / GBA, taluk, corporation, assembly, or CMC/TMC/GP branch from the list to inspect its members on the right and browse the next structural level on the left.
       </p>
     </div>
 
@@ -33,12 +33,50 @@
           <span class="tree-panel__count">{{ stateCount() }} {{ stateCount() === 1 ? 'state' : 'states' }}</span>
         </div>
 
+        <div class="panel-search">
+          <label class="search-field">
+            <span class="search-field__label">Quick find branch</span>
+            <input
+              type="search"
+              [value]="treeSearchTerm()"
+              placeholder="Search state, district, taluk, branch..."
+              (input)="updateTreeSearch($any($event.target).value)"
+            />
+          </label>
+
+          @if (treeSearchTerm()) {
+            <button type="button" class="search-clear" (click)="clearTreeSearch()">Clear</button>
+          }
+        </div>
+
         @if (stateRoots().length) {
-          <div class="accordion-wrap">
-            <ul class="accordion-list">
-              <ng-container *ngTemplateOutlet="branchTemplate; context: { $implicit: stateRoots(), level: 0 }"></ng-container>
-            </ul>
-          </div>
+          @if (treeSearchTerm()) {
+            @if (treeSearchResults().length) {
+              <div class="tree-search-results">
+                <p class="tree-search-results__summary">
+                  Showing {{ treeSearchResults().length }} matching result{{ treeSearchResults().length === 1 ? '' : 's' }}
+                </p>
+
+                <div class="tree-search-results__list">
+                  @for (result of treeSearchResults(); track result.id) {
+                    <button type="button" class="tree-search-result" (click)="selectSearchResult(result)">
+                      <span class="tree-search-result__badge">{{ nodeKind(result) }}</span>
+                      <strong>{{ result.title }}</strong>
+                      <span>{{ result.path.join(' / ') }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            } @else {
+              <div class="tree-empty">No matching branch found.</div>
+            }
+          } @else {
+            <div class="accordion-wrap">
+              <ul class="accordion-list">
+                <ng-container *ngTemplateOutlet="branchTemplate; context: { $implicit: stateRoots(), level: 0 }"></ng-container>
+              </ul>
+            </div>
+          }
         } @else {
           <div class="tree-empty">No state committee structure is available yet.</div>
         }
@@ -53,6 +91,21 @@
             <div class="detail-card__header">
               <span class="node-badge node-badge--kind">{{ nodeKind(selected) }}</span>
             </div>
+            @if (navigatorCrumbs().length) {
+              <div class="detail-breadcrumbs" aria-label="Level navigation">
+                @for (crumb of navigatorCrumbs(); track crumb.id) {
+                  <button
+                    type="button"
+                    class="detail-breadcrumb"
+                    [class.detail-breadcrumb--active]="crumb.current"
+                    [disabled]="crumb.current"
+                    (click)="followBreadcrumb(crumb.node)"
+                  >
+                    {{ crumb.label }}
+                  </button>
+                }
+              </div>
+            }
             <h2>{{ selected.title }}</h2>
             <p class="detail-card__path">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
@@ -85,45 +138,92 @@
 
           @if (memberCards().length) {
             <div class="children-section">
-              <p class="children-section__label">Members / Sub-units</p>
-              <div class="member-grid">
-                @for (child of memberCards(); track child.id) {
-                  <article class="member-card">
-                    <div class="member-image-frame">
-                      @if (child.imageUrl) {
-                        <img class="member-image" [src]="child.imageUrl" [alt]="child.imageAlt || child.subtitle || child.title" loading="lazy" decoding="async" />
-                      } @else {
-                        <div class="member-image-placeholder" aria-hidden="true">
-                          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                            <circle cx="24" cy="18" r="10" stroke="currentColor" stroke-width="2" opacity="0.35"/>
-                            <path d="M6 44c0-9.941 8.059-18 18-18s18 8.059 18 18" stroke="currentColor" stroke-width="2" opacity="0.25"/>
-                          </svg>
-                        </div>
-                      }
-                    </div>
-                    <div class="member-info">
-                      <div class="member-name">{{ child.subtitle || child.title }}</div>
-                      @if (child.subtitle && child.title) {
-                        <div class="member-designation">{{ child.title }}</div>
-                      }
-                      <div class="member-desc">{{ nodeDescription(child) }}</div>
-                      @if (nodeContact(child)) {
-                        <div class="member-contact">📞 {{ nodeContact(child) }}</div>
-                      }
-                      <div class="member-actions">
-                        <button type="button" (click)="selectNode(child)">Inspect</button>
-                        @if (showsNominatedAction(child)) {
-                          <a routerLink="/organisation/nominated-body" [queryParams]="{ scopeId: child.id }">Nominated</a>
-                        }
-                      </div>
-                    </div>
-                  </article>
+              <div class="children-section__head">
+                <div>
+                  <p class="children-section__label">Members</p>
+                  <p class="children-section__summary">
+                    Showing {{ paginatedMemberCards().start }}-{{ paginatedMemberCards().end }}
+                    of {{ paginatedMemberCards().total }}
+                  </p>
+                </div>
+
+                @if (paginatedMemberCards().totalPages > 1) {
+                  <div class="list-pagination" aria-label="Members and sub-units pages">
+                    <button
+                      type="button"
+                      [disabled]="paginatedMemberCards().page === 1"
+                      (click)="goToDetailPage(paginatedMemberCards().page - 1)"
+                    >
+                      Previous
+                    </button>
+                    <span>
+                      Page {{ paginatedMemberCards().page }} / {{ paginatedMemberCards().totalPages }}
+                    </span>
+                    <button
+                      type="button"
+                      [disabled]="paginatedMemberCards().page === paginatedMemberCards().totalPages"
+                      (click)="goToDetailPage(paginatedMemberCards().page + 1)"
+                    >
+                      Next
+                    </button>
+                  </div>
                 }
               </div>
+
+              <div class="panel-search panel-search--inline">
+                <label class="search-field">
+                  <span class="search-field__label">Search in this level</span>
+                  <input
+                    type="search"
+                    [value]="detailSearchTerm()"
+                    placeholder="Search member, contact, place..."
+                    (input)="updateDetailSearch($any($event.target).value)"
+                  />
+                </label>
+
+                @if (detailSearchTerm()) {
+                  <button type="button" class="search-clear" (click)="clearDetailSearch()">Clear</button>
+                }
+              </div>
+
+              @if (paginatedMemberCards().total) {
+                <div class="member-grid">
+                  @for (child of paginatedMemberCards().items; track child.id) {
+                    <article class="member-card">
+                      <div class="member-image-frame">
+                        @if (child.imageUrl) {
+                          <img class="member-image" [src]="child.imageUrl" [alt]="child.imageAlt || child.subtitle || child.title" loading="lazy" decoding="async" />
+                        } @else {
+                          <div class="member-image-placeholder" aria-hidden="true">
+                            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                              <circle cx="24" cy="18" r="10" stroke="currentColor" stroke-width="2" opacity="0.35"/>
+                              <path d="M6 44c0-9.941 8.059-18 18-18s18 8.059 18 18" stroke="currentColor" stroke-width="2" opacity="0.25"/>
+                            </svg>
+                          </div>
+                        }
+                      </div>
+                      <div class="member-info">
+                        <div class="member-name">{{ child.subtitle || child.title }}</div>
+                        @if (nodeContact(child)) {
+                          <div class="member-contact">Contact: {{ nodeContact(child) }}</div>
+                        }
+                        @if (child.subtitle && child.title) {
+                          <div class="member-designation">{{ child.title }}</div>
+                        }
+                        <div class="member-desc">{{ nodeDescription(child) }}</div>
+                      </div>
+                    </article>
+                  }
+                </div>
+              } @else {
+                <div class="detail-empty">
+                  <p>No matching members found for this search.</p>
+                </div>
+              }
             </div>
           } @else {
             <div class="detail-empty">
-              <p>This node has no direct children. Use the member view to inspect its leaf entries.</p>
+              <p>No direct members have been added under this branch yet. Use the left tree to open its child branches.</p>
             </div>
           }
 
@@ -152,13 +252,13 @@
         type="button"
         class="acc-row"
         [class.acc-row--active]="selectedNode()?.id === node.id"
-        [class.acc-row--expanded]="node.children.length && isExpanded(node)"
+        [class.acc-row--expanded]="hasTreeChildren(node) && isExpanded(node)"
         [style.padding-left.px]="level * 22 + 14"
         (click)="selectAndToggle(node, $event)"
-        [attr.aria-expanded]="node.children.length ? isExpanded(node) : null"
+        [attr.aria-expanded]="hasTreeChildren(node) ? isExpanded(node) : null"
         [attr.title]="node.title"
       >
-        @if (node.children.length) {
+        @if (hasTreeChildren(node)) {
           <span class="acc-chevron" aria-hidden="true">
             <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
               <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
@@ -173,10 +273,22 @@
         </span>
       </button>
 
-      @if (node.children.length && isExpanded(node)) {
+      @if (hasTreeChildren(node) && isExpanded(node)) {
         <ul class="accordion-list acc-children" [attr.data-level]="level + 1" [style.--guide-indent.px]="level * 22 + 22">
-          <ng-container *ngTemplateOutlet="branchTemplate; context: { $implicit: node.children, level: level + 1 }"></ng-container>
+          <ng-container *ngTemplateOutlet="branchTemplate; context: { $implicit: visibleTreeChildren(node), level: level + 1 }"></ng-container>
         </ul>
+
+        @if (hasHiddenTreeChildren(node)) {
+          <button
+            type="button"
+            class="acc-more"
+            [style.--guide-indent.px]="level * 22 + 22"
+            (click)="showMoreTreeChildren(node)"
+          >
+            Show {{ remainingTreeChildren(node) > 120 ? 120 : remainingTreeChildren(node) }} more
+            of {{ remainingTreeChildren(node) }}
+          </button>
+        }
       }
 
     </li>

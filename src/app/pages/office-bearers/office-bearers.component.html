@@ -9,13 +9,6 @@
       <p class="intro">
         This page shows the members currently configured under the Office Bearers section.
       </p>
-
-      @if (nominatedNode(); as nominated) {
-        <a routerLink="/organisation/nominated-body" class="linked-body-card linked-body-card--link">
-          <span>Linked body</span>
-          <strong>{{ nominated.title }}</strong>
-        </a>
-      }
     </div>
 
     @if (members().length) {
@@ -36,13 +29,13 @@
             </div>
             <div class="member-info">
               <div class="member-name">{{ memberName(member) }}</div>
+              @if (memberContact(member)) {
+                <div class="member-contact">Contact: {{ memberContact(member) }}</div>
+              }
               @if (memberTitle(member); as designation) {
                 <div class="member-designation">{{ designation }}</div>
               }
               <div class="member-desc">{{ memberMeta(member) }}</div>
-              @if (memberContact(member)) {
-                <div class="member-contact">📞 {{ memberContact(member) }}</div>
-              }
             </div>
           </article>
         }

@@ -204,6 +204,12 @@
   outline: none;
 }
 
+.org-state-chip--active {
+  border-color: rgba(201, 144, 26, 0.72);
+  background: linear-gradient(180deg, rgba(255, 248, 228, 1), rgba(247, 221, 164, 0.9));
+  box-shadow: 0 16px 28px rgba(122, 14, 34, 0.16);
+}
+
 .org-tree-scroll {
   position: relative;
   z-index: 2;
