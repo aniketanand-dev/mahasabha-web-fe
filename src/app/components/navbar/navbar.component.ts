@@ -32,7 +32,7 @@ export class NavbarComponent {
     { href: '/#org-chart', labelKey: 'nav.orgChart'  },
     { href: '/#events',    labelKey: 'nav.events'    },
     { href: '/#gallery',   labelKey: 'nav.gallery'   },
-    { href: '/#hostels',   labelKey: 'footer.link.hostels' },
+    { href: '/#hostels',   labelKey: 'nav.communityHostel' },
   ];
 
   protected readonly navLinks = computed(() => [...this.baseNavLinks]);

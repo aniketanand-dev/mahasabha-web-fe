@@ -7,7 +7,14 @@ import { map } from 'rxjs';
 import { FooterComponent } from '../../components/footer/footer.component';
 import { NavbarComponent } from '../../components/navbar/navbar.component';
 import { AdminDataService } from '../../services/admin-data.service';
-import { buildOrgTree, flattenOrgTree, OrgTreeNode } from '../../utils/org-structure';
+import {
+  buildOrgTree,
+  buildOrgTreeIndex,
+  findOrgParent,
+  flattenOrgDescendants,
+  OrgTreeNode,
+  isStateCommitteeSectionLabel,
+} from '../../utils/org-structure';
 
 @Component({
   selector: 'app-nominated-body',
@@ -24,7 +31,16 @@ export class NominatedBodyComponent {
     String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
   private readonly tree = computed(() => buildOrgTree(this.data.orgNodes()));
-  private readonly flatNodes = computed(() => flattenOrgTree(this.tree()));
+  private readonly treeIndex = computed(() => buildOrgTreeIndex(this.tree()));
+  private readonly displayRoots = computed(() => {
+    const tree = this.tree();
+
+    if (tree.length === 1 && tree[0].children.length) {
+      return tree[0].children;
+    }
+
+    return tree;
+  });
   private readonly scopeId = toSignal(
     this.route.queryParamMap.pipe(map((params) => {
       const value = String(params.get('scopeId') || '').trim();
@@ -40,55 +56,90 @@ export class NominatedBodyComponent {
       return null;
     }
 
-    return this.flatNodes().find((node) => node.id === scopeId) ?? null;
+    return this.treeIndex().nodesById.get(scopeId) ?? null;
+  });
+
+  protected readonly scopeBranch = computed(() => {
+    let current = this.scopeNode();
+
+    while (current) {
+      if (current.level === 'state' && isStateCommitteeSectionLabel(current.sidebarLabel)) {
+        return current;
+      }
+
+      current = findOrgParent(current, this.treeIndex().flatNodes);
+    }
+
+    return this.scopeNode();
+  });
+
+  private readonly isNominatedNode = (node: OrgTreeNode | null | undefined) =>
+    !!node && this.normalizeLabel(node.sidebarLabel) === 'nominated-body';
+
+  private visibleNominatedMembers(roots: OrgTreeNode[]): OrgTreeNode[] {
+    const visibleMembers: OrgTreeNode[] = [];
+
+    for (const root of roots) {
+      const descendants = flattenOrgDescendants(root).filter((node) => this.isNominatedNode(node));
+
+      if (descendants.length) {
+        visibleMembers.push(...descendants);
+        continue;
+      }
+
+      visibleMembers.push(root);
+    }
+
+    return visibleMembers;
+  }
+
+  protected readonly globalMembers = computed(() => {
+    const roots = this.displayRoots().filter((node) => this.isNominatedNode(node));
+    return this.visibleNominatedMembers(roots);
+  });
+
+  protected readonly scopedMembers = computed(() => {
+    const scopeBranch = this.scopeBranch();
+
+    if (!scopeBranch) {
+      return [] as OrgTreeNode[];
+    }
+
+    const roots = scopeBranch.children.filter((node) => this.isNominatedNode(node));
+    return this.visibleNominatedMembers(roots);
   });
 
   protected readonly members = computed(() => {
-    const allNodes = this.flatNodes();
-    const scopeNode = this.scopeNode();
-    const scopedState = String(scopeNode?.location.state || '').trim();
-
-    // All nodes tagged with nominated-body sidebarLabel
-    const nominatedNodes = allNodes.filter((node) => {
-      if (this.normalizeLabel(node.sidebarLabel) !== 'nominated-body') {
-        return false;
-      }
-
-      if (!scopedState) {
-        return true;
-      }
-
-      return String(node.location.state || '').trim() === scopedState;
-    });
-
-    if (!nominatedNodes.length) return [] as OrgTreeNode[];
-
-    // Find root-level nominated nodes (parent is not also a nominated-body node)
-    const nominatedIds = new Set(nominatedNodes.map(n => n.id));
-    const roots = nominatedNodes.filter(n => !n.parentId || !nominatedIds.has(n.parentId));
-
-    // Single container node with children → show its descendants (the actual members)
-    if (roots.length === 1 && nominatedNodes.some((node) => node.parentId === roots[0].id)) {
-      const descendants = nominatedNodes.filter((node) => node.id !== roots[0].id);
-      return descendants.length ? descendants : roots[0].children;
+    if (this.scopeId()) {
+      return this.scopedMembers();
     }
 
-    return roots;
+    return this.globalMembers();
   });
 
   protected readonly pageTitle = computed(() => {
-    const scopeNode = this.scopeNode();
-    return scopeNode ? `${scopeNode.location.state} Nominated Body` : 'NOMINATED BODY';
+    const scopeBranch = this.scopeBranch();
+    return scopeBranch ? `${scopeBranch.location.state} Nominated Body` : 'NOMINATED BODY';
   });
 
   protected readonly introText = computed(() => {
-    const scopeNode = this.scopeNode();
+    const scopeBranch = this.scopeBranch();
 
-    if (!scopeNode) {
+    if (!scopeBranch) {
       return 'Members and representatives currently configured under the Nominated Body.';
     }
 
-    return `Members and representatives currently configured under the Nominated Body for ${scopeNode.location.state}.`;
+    return `Members and representatives currently configured under the Nominated Body for ${scopeBranch.location.state}.`;
+  });
+
+  protected readonly emptyText = computed(() => {
+    const scopeBranch = this.scopeBranch();
+
+    if (!scopeBranch) {
+      return 'No nominated body members have been added yet.';
+    }
+
+    return `No nominated body members have been added for ${scopeBranch.location.state} yet.`;
   });
 
   protected memberName(member: OrgTreeNode): string {

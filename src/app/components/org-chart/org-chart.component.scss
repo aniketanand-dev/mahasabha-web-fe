@@ -362,7 +362,14 @@
   z-index: 2;
 }
 
+.org-node-card--representative {
+  cursor: default;
+  overflow: visible;
+  z-index: 2;
+}
+
 .org-node-card--president:focus-visible,
+.org-node-card--representative:focus-visible,
 .org-node-card--link:focus-visible {
   outline: 3px solid rgba(232, 98, 10, 0.26);
   outline-offset: 4px;
@@ -458,6 +465,59 @@
   font-size: 0.84rem;
   line-height: 1.5;
   color: rgba(255, 243, 218, 0.88);
+}
+
+.org-representative-tooltip {
+  position: absolute;
+  left: calc(100% + 1rem);
+  top: 50%;
+  transform: translate(0.6rem, -50%);
+  width: min(340px, calc(100vw - 3rem));
+  padding: 1rem 1.05rem;
+  border-radius: 18px;
+  border: 1px solid rgba(122, 14, 34, 0.1);
+  background: rgba(122, 14, 34, 0.96);
+  box-shadow: 0 20px 34px rgba(64, 21, 8, 0.2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+  text-align: left;
+}
+
+.org-representative-tooltip::after {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  background: rgba(122, 14, 34, 0.96);
+  border-left: 1px solid rgba(122, 14, 34, 0.1);
+  border-bottom: 1px solid rgba(122, 14, 34, 0.1);
+  transform: translate(50%, -50%) rotate(45deg);
+}
+
+.org-node-card--representative:hover .org-representative-tooltip,
+.org-node-card--representative:focus-visible .org-representative-tooltip {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+
+.org-representative-tooltip__label {
+  display: inline-flex;
+  margin-bottom: 0.35rem;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #f8d78f;
+}
+
+.org-representative-tooltip__copy {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: rgba(255, 243, 218, 0.9);
 }
 
 .org-side-node__card {
@@ -565,6 +625,30 @@
 
   .org-node-card--president:hover .org-president-tooltip,
   .org-node-card--president:focus-visible .org-president-tooltip {
+    transform: translate(-50%, 0);
+  }
+
+  .org-representative-tooltip {
+    left: 50%;
+    top: auto;
+    bottom: calc(100% + 0.9rem);
+    transform: translate(-50%, 0.6rem);
+    width: min(320px, calc(100vw - 2.5rem));
+    text-align: center;
+  }
+
+  .org-representative-tooltip::after {
+    left: 50%;
+    right: auto;
+    top: 100%;
+    border-left: none;
+    border-right: 1px solid rgba(122, 14, 34, 0.1);
+    border-bottom: 1px solid rgba(122, 14, 34, 0.1);
+    transform: translateX(-50%) rotate(45deg);
+  }
+
+  .org-node-card--representative:hover .org-representative-tooltip,
+  .org-node-card--representative:focus-visible .org-representative-tooltip {
     transform: translate(-50%, 0);
   }
 
@@ -696,6 +780,11 @@
   }
 
   .org-president-tooltip {
+    width: min(280px, calc(100vw - 2rem));
+    padding: 0.9rem;
+  }
+
+  .org-representative-tooltip {
     width: min(280px, calc(100vw - 2rem));
     padding: 0.9rem;
   }

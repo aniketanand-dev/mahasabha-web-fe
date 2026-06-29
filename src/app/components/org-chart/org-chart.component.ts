@@ -80,6 +80,7 @@ export class OrgChartComponent {
       ['office', 'bearers'],
     ]);
     const workingNode = findOrgNode(roots, [
+      ['central', 'working', 'committee'],
       ['working-committee'],
       ['general', 'working', 'committee'],
       ['working'],
@@ -95,10 +96,9 @@ export class OrgChartComponent {
       ['general', 'body'],
       ['representative'],
     ]) ?? null;
-    const nominatedNode = findOrgNode(this.tree(), [
-      ['nominated', 'body'],
-      ['nominated'],
-    ]);
+    const nominatedNode = roots.find((node) =>
+      String(node.sidebarLabel || '').trim().toLowerCase() === 'nominated-body'
+    ) ?? null;
     const presidentDisplayNode = presidentNode
       ? findOrgNode([presidentNode], [
         ['president-office'],
@@ -118,6 +118,8 @@ export class OrgChartComponent {
       presidentPhoto: presidentDisplayNode?.imageUrl || this.data.presidentNoteContent().photoUrl,
       presidentName: presidentDisplayNode?.subtitle || this.lang.t('presNote.name'),
       presidentDescription: presidentDisplayNode?.description || presidentDisplayNode?.title || this.lang.t('presNote.desg'),
+      representativeHoverCopy: String(representativeNode?.description || '').trim()
+        || 'It is constituted by representatives from elected bodies across all levels of the organisation.',
     };
   });
 

@@ -80,6 +80,11 @@ export class RepresentativeGeneralBodyComponent {
     this.representativeNode()?.title || 'REPRESENTATIVE GENERAL BODY'
   );
 
+  protected readonly introText = computed(() =>
+    String(this.representativeNode()?.description || '').trim()
+    || 'This page shows the members and units currently configured under the Representative General Body.'
+  );
+
   protected memberName(member: OrgTreeNode): string {
     return member.subtitle || member.title || 'Representative Member';
   }

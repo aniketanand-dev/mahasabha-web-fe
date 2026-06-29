@@ -14,6 +14,7 @@ import {
   getOrgDirectMembers,
   getOrgNavigableChildren,
   isOrgMemberChild,
+  orgStateAllowsCityLevel,
   OrgTreeNode
 } from '../../utils/org-structure';
 
@@ -95,6 +96,9 @@ export class StateCommitteeComponent {
 
     return false;
   };
+
+  private readonly stateSupportsCityLevel = (node: Pick<OrgTreeNode, 'location'> | null | undefined) =>
+    orgStateAllowsCityLevel(node?.location.state);
 
   protected readonly stateRoots = computed(() => {
     const { flatNodes, nodesById } = this.treeIndex();
@@ -682,6 +686,10 @@ export class StateCommitteeComponent {
     }
 
     if (kind === 'State') {
+      if (!this.stateSupportsCityLevel(node)) {
+        return `Inspect district branches, corporation branches, assemblies, taluks, and related members configured under ${this.nodeLabel(node)}.`;
+      }
+
       return `Inspect district branches, city / GBA branches, taluks, corporations, assemblies, and related members configured under ${this.nodeLabel(node)}.`;
     }
 

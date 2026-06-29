@@ -3,7 +3,7 @@
 <section class="nb-page">
   <div class="nb-shell">
     <div class="nb-head">
-      <a routerLink="/" class="back-link">Back to Home</a>
+      <a [routerLink]="['/']" fragment="org-chart" class="back-link">Back to Home</a>
       <p class="eyebrow">Organisation Structure</p>
       <h1>{{ pageTitle() }}</h1>
       <p class="intro">{{ introText() }}</p>
@@ -48,7 +48,7 @@
       </div>
     } @else {
       <div class="empty-card">
-        <p>No nominated body members have been added yet.</p>
+        <p>{{ emptyText() }}</p>
       </div>
     }
   </div>

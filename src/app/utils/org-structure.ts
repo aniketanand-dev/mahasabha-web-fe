@@ -20,6 +20,9 @@ const normalizeOrgText = (value: string): string =>
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
+export const orgStateAllowsCityLevel = (state: string | null | undefined): boolean =>
+  normalizeOrgText(String(state || '')) === normalizeOrgText('karnataka');
+
 const SIMPLE_ORG_SECTION_LABELS = [
   'president-office',
   'office-bearer',
@@ -343,6 +346,8 @@ export const getOrgNavigableChildren = (
   node: OrgTreeNode,
   nodes: OrgTreeNode[],
 ): OrgTreeNode[] => node.children.filter((child) =>
-  !isOrgMemberChild(node, child, nodes)
+  !(child.level === 'city' && !orgStateAllowsCityLevel(child.location.state || node.location.state))
+  && !(node.level === 'city' && !orgStateAllowsCityLevel(node.location.state))
+  && !isOrgMemberChild(node, child, nodes)
   && !isLinkedOrgSectionChild(node, child)
 );

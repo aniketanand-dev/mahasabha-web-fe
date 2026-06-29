@@ -66,7 +66,7 @@
         <span>📢</span><span class="nav-label">Announcements</span>
       </button>
       <button [class.active]="activeTab() === 'hostels'" (click)="setTab('hostels')">
-        <span>🏨</span><span class="nav-label">Hostels</span>
+        <span>🏨</span><span class="nav-label">Community Hostel</span>
       </button>
       <button [class.active]="activeTab() === 'footer'" (click)="setTab('footer')">
         <span>🔻</span><span class="nav-label">Footer</span>
@@ -98,7 +98,7 @@
           @if (activeTab() === 'directory') { <h2>📘 Directory</h2> }
           @if (activeTab() === 'scholarships') { <h2>🎓 Scholarship Applications</h2> }
           @if (activeTab() === 'ticker') { <h2>📢 Announcements</h2> }
-          @if (activeTab() === 'hostels') { <h2>🏨 Hostels</h2> }
+          @if (activeTab() === 'hostels') { <h2>🏨 Community Hostel</h2> }
           @if (activeTab() === 'footer') { <h2>🔻 Footer</h2> }
           <p class="tab-note">All admin image uploads now save into this project locally, and replacing or deleting a
             record removes the old managed file from disk.</p>
@@ -393,7 +393,7 @@
               <p>Manage each organisation section on its own admin page. Member add and edit actions now stay in a popup so you do not lose your current context.</p>
             </div>
             @if (orgView().kind !== 'overview') {
-              <button class="btn-cancel" (click)="openOrgOverview()">Back to Sections</button>
+              <button class="btn-cancel" (click)="goBackOrgView()">{{ orgBackButtonLabel() }}</button>
             }
           </div>
 
@@ -435,8 +435,16 @@
                     <h4>{{ section.title }}</h4>
                   </div>
                   <p>{{ section.description }}</p>
+                  @if (section.key === 'representative') {
+                    <div class="field-key">Public card comment</div>
+                    <p>{{ representativeSectionComment() || 'No representative comment added yet. Use Edit Comment to add it.' }}</p>
+                  }
                   <div class="org-section-card__actions">
-                    <button class="btn-add" (click)="openOrgSection(section.key)">Open Page</button>
+                    @if (section.key === 'representative') {
+                      <button class="btn-cancel" (click)="openRepresentativeSectionCommentEditor()">Edit Comment</button>
+                    } @else {
+                      <button class="btn-add" (click)="openOrgSection(section.key)">Open Page</button>
+                    }
                   </div>
                 </article>
               }
@@ -450,6 +458,9 @@
                   <p class="org-page-eyebrow">Section Page</p>
                   <h4>{{ orgSectionTitle(section) }}</h4>
                   <p class="org-page-copy">{{ orgSectionDescription(section) }}</p>
+                  @if (section === 'representative' && representativeSectionComment(); as comment) {
+                    <div class="item-sub">Public hover comment: {{ comment }}</div>
+                  }
                 </div>
 
                 <div class="org-page-actions">
@@ -461,6 +472,9 @@
                   }
                   @if (section === 'state') {
                     <button class="btn-cancel" (click)="startAddStateCommitteeSectionMember()">+ State Committee Member</button>
+                  }
+                  @if (section === 'representative') {
+                    <button class="btn-cancel" (click)="openRepresentativeSectionCommentEditor()">Edit Section Comment</button>
                   }
                   <button class="btn-add" (click)="startQuickAddOrgNode(section)">{{ orgSectionAddButtonLabel(section) }}</button>
                 </div>
@@ -613,11 +627,14 @@
                     <button class="btn-add" (click)="startAddOrgMember(node)">{{ orgMemberActionLabel(node) }}</button>
                   }
                   @if (canAddStateNominatedMember(node)) {
+                    <button class="btn-cancel" (click)="openStateNominatedMembersPage(node)">View Nominated</button>
+                  }
+                  @if (canAddStateNominatedMember(node)) {
                     <button class="btn-add" (click)="startAddStateNominatedMember(node)">+ Nominated Member</button>
                   }
                   @if (showsSplitStateBranchActions(node)) {
                     <button class="btn-cancel" (click)="startAddOrgNodeAtLevel(node, 'district')">+ District</button>
-                    <button class="btn-cancel" (click)="startAddOrgNodeAtLevel(node, 'city')">+ City / GBA</button>
+                    <button class="btn-cancel" (click)="startAddOrgNodeAtLevel(node, stateSecondaryBranchTargetLevel(node))">{{ stateSecondaryBranchActionLabel(node) }}</button>
                   } @else if (canAddOrgChild(node)) {
                     <button class="btn-cancel" (click)="startAddOrgNode(node)">{{ orgChildActionLabel(node) }}</button>
                   }
@@ -785,17 +802,23 @@
             }
           }
 
-          @if (orgView().kind === 'members') {
+          @if (orgView().kind === 'members' || orgView().kind === 'nominated-members') {
             @if (currentOrgNode(); as node) {
               <div class="org-page-head">
                 <div>
-                  <p class="org-page-eyebrow">Members Page</p>
-                  <h4>{{ node.title }} Members</h4>
-                  <p class="org-page-copy">Members at the same hierarchy level are managed separately here so the branch page stays focused on structure.</p>
+                  <p class="org-page-eyebrow">{{ orgView().kind === 'nominated-members' ? 'Nominated Members Page' : 'Members Page' }}</p>
+                  <h4>{{ orgView().kind === 'nominated-members' ? orgNominatedMembersHeading(node) : node.title + ' Members' }}</h4>
+                  <p class="org-page-copy">
+                    {{ orgView().kind === 'nominated-members'
+                      ? orgNominatedMembersCopy(node)
+                      : 'Members at the same hierarchy level are managed separately here so the branch page stays focused on structure.' }}
+                  </p>
                 </div>
 
                 <div class="org-page-actions">
-                  @if (canAddOrgMember(node)) {
+                  @if (orgView().kind === 'nominated-members') {
+                    <button class="btn-add" (click)="startAddStateNominatedMember(node)">+ Nominated Member</button>
+                  } @else if (canAddOrgMember(node)) {
                     <button class="btn-add" (click)="startAddOrgMember(node)">{{ orgMemberActionLabel(node) }}</button>
                   }
                 </div>
@@ -1012,7 +1035,9 @@
                       <select [(ngModel)]="newOrgNode.level" class="form-input">
                         <option value="state">state</option>
                         <option value="district">district</option>
-                        <option value="city">city / GBA</option>
+                        @if (canSelectOrgCityLevel(newOrgNode)) {
+                          <option value="city">city / GBA</option>
+                        }
                         <option value="corporation">corporation</option>
                         <option value="assembly">assembly</option>
                         <option value="taluk">taluk</option>
@@ -1141,12 +1166,12 @@
 
                   @if (shouldShowOrgTitleInput(editOrgNode, editingId)) {
                     <div class="form-row">
-                      <label>{{ orgTitleFieldLabel(editOrgNode) }}</label>
-                      <input [(ngModel)]="editOrgNode.title" class="form-input" [placeholder]="orgTitlePlaceholder(editOrgNode)" />
+                      <label>{{ orgTitleFieldLabel(editOrgNode, editingId) }}</label>
+                      <input [(ngModel)]="editOrgNode.title" class="form-input" [placeholder]="orgTitlePlaceholder(editOrgNode, editingId)" />
                     </div>
                   }
 
-                  @if (!isStructuralHierarchyEntry(editOrgNode)) {
+                  @if (!isStructuralHierarchyEntry(editOrgNode) && !isRepresentativeSectionCommentForm(editOrgNode, editingId)) {
                     <div class="form-row">
                       <label>{{ orgPersonNameLabel(editOrgNode) }}</label>
                       <input [(ngModel)]="editOrgNode.subtitle" class="form-input" [placeholder]="orgPersonNamePlaceholder(editOrgNode)" />
@@ -1159,7 +1184,9 @@
                       <select [(ngModel)]="editOrgNode.level" class="form-input">
                         <option value="state">state</option>
                         <option value="district">district</option>
-                        <option value="city">city / GBA</option>
+                        @if (canSelectOrgCityLevel(editOrgNode)) {
+                          <option value="city">city / GBA</option>
+                        }
                         <option value="corporation">corporation</option>
                         <option value="assembly">assembly</option>
                         <option value="taluk">taluk</option>
@@ -1193,19 +1220,19 @@
                     }
                   } @else {
                     <div class="form-row span-two">
-                      <label>{{ orgSectionInfoLabel(editOrgNode) }}</label>
-                      <div class="field-key">{{ orgSectionInfoCopy(editOrgNode) }}</div>
+                      <label>{{ orgSectionInfoLabel(editOrgNode, editingId) }}</label>
+                      <div class="field-key">{{ orgSectionInfoCopy(editOrgNode, editingId) }}</div>
                     </div>
                   }
 
-                  @if (!isStructuralHierarchyEntry(editOrgNode)) {
+                  @if (!isStructuralHierarchyEntry(editOrgNode) && !isRepresentativeSectionCommentForm(editOrgNode, editingId)) {
                     <div class="form-row span-two">
                       <label>Contact (Phone / Email / Any)</label>
                       <input [(ngModel)]="editOrgNode.contact" class="form-input" placeholder="+91..., name@domain.com, or any contact text" />
                     </div>
                   }
 
-                  @if (requiresOrgImageFields(editOrgNode)) {
+                  @if (requiresOrgImageFields(editOrgNode) && !isRepresentativeSectionCommentForm(editOrgNode, editingId)) {
                     <div class="form-row">
                       <label>{{ orgImageLabel(editOrgNode) }}</label>
                       <input type="file" accept="image/*" class="form-input" (change)="onEditOrgNodeImageSelected($event)" />
@@ -1221,8 +1248,8 @@
                   }
 
                   <div class="form-row span-two">
-                    <label>{{ orgDescriptionLabel(editOrgNode) }}</label>
-                    <textarea [(ngModel)]="editOrgNode.description" class="form-input form-textarea" rows="3" [placeholder]="orgDescriptionPlaceholder(editOrgNode)"></textarea>
+                    <label>{{ orgDescriptionLabel(editOrgNode, editingId) }}</label>
+                    <textarea [(ngModel)]="editOrgNode.description" class="form-input form-textarea" rows="3" [placeholder]="orgDescriptionPlaceholder(editOrgNode, editingId)"></textarea>
                   </div>
 
                   <div class="form-row span-two">

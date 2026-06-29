@@ -44,7 +44,7 @@
 
           <div class="org-flow__middle">
             <a routerLink="/organisation/working-committee" class="org-node-card org-node-card--link">
-              <h3 class="org-node-card__title">GENERAL WORKING COMMITTEE</h3>
+              <h3 class="org-node-card__title">CENTRAL WORKING COMMITTEE</h3>
             </a>
 
             @if (structure().nominatedNode) {
@@ -62,9 +62,14 @@
 
           <div class="org-flow__connector" aria-hidden="true"></div>
 
-          <a routerLink="/organisation/representative-general-body" class="org-node-card org-node-card--link">
-            <h3 class="org-node-card__title">REPRESENTATIVE GENERAL BODY</h3>
-          </a>
+          <article class="org-node-card org-node-card--representative" tabindex="0">
+            <h3 class="org-node-card__title">{{ cardTitle(structure().representativeNode, 'REPRESENTATIVE GENERAL BODY') }}</h3>
+
+            <div class="org-representative-tooltip">
+              <span class="org-representative-tooltip__label">Representative Body</span>
+              <p class="org-representative-tooltip__copy">{{ structure().representativeHoverCopy }}</p>
+            </div>
+          </article>
 
           <div class="org-flow__connector" aria-hidden="true"></div>
 

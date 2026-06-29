@@ -10,6 +10,7 @@ export const translations: Translations = {
   'nav.community': { kn: 'ಸಮುದಾಯ',           en: 'Community',          hi: 'समुदाय',    te: 'సమాజం',         ta: 'சமூகம்',        mr: 'समाज' },
   'nav.events':    { kn: 'ಕಾರ್ಯಕ್ರಮಗಳು',     en: 'Events',             hi: 'कार्यक्रम', te: 'కార్యక్రమాలు',  ta: 'நிகழ்வுகள்',    mr: 'कार्यक्रम' },
   'nav.gallery':   { kn: 'ಗ್ಯಾಲರಿ',           en: 'Gallery',            hi: 'गैलरी',     te: 'గ్యాలరీ',        ta: 'தொகுப்பு',      mr: 'गॅलरी' },
+  'nav.communityHostel': { kn: 'ಸಮುದಾಯದ ಛಾತ್ರಾವಾಸ', en: 'Community Hostel', hi: 'सामुदायिक छात्रावास', te: 'కమ్యూనిటీ హాస్టల్', ta: 'சமூக விடுதி', mr: 'सामुदायिक वसतिगृह' },
   'nav.byeLaw':    { kn: 'ಉಪನಿಯಮಗಳು',        en: 'By-law',             hi: 'उपनियम',    te: 'ఉపనియమాలు',     ta: 'உபநியமம்',      mr: 'उपनियम' },
   'nav.magazine':  { kn: 'ಮ್ಯಾಗಜಿನ್',         en: 'Magazine',           hi: 'पत्रिका',   te: 'మ్యాగజైన్',      ta: 'மகசின்',        mr: 'मॅगझिन' },
   'nav.orgChart':  { kn: 'ಸಂಘಟನಾ ರಚನೆ',      en: 'Org Chart',          hi: 'संगठन संरचना', te: 'సంస్థ నిర్మాణం', ta: 'அமைப்பு வடிவம்', mr: 'संघटन रचना' },
