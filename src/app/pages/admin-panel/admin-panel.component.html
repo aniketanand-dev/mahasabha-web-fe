@@ -634,7 +634,20 @@
                   }
                   @if (showsSplitStateBranchActions(node)) {
                     <button class="btn-cancel" (click)="startAddOrgNodeAtLevel(node, 'district')">+ District</button>
-                    <button class="btn-cancel" (click)="startAddOrgNodeAtLevel(node, stateSecondaryBranchTargetLevel(node))">{{ stateSecondaryBranchActionLabel(node) }}</button>
+                    @if (showsStateCityBranchAction(node)) {
+                      <button class="btn-cancel" (click)="startAddOrgNodeAtLevel(node, 'city')">+ Bengaluru City / GBA</button>
+                    }
+                    @if (showsStateCorporationBranchAction(node)) {
+                      <button class="btn-cancel" (click)="startAddOrgNodeAtLevel(node, 'corporation')">+ Corporation</button>
+                    }
+                  } @else if (showsSplitDistrictBranchActions(node)) {
+                    <button class="btn-cancel" (click)="startAddOrgNodeAtLevel(node, 'taluk')">+ Taluk</button>
+                    @if (showsDistrictCityBranchAction(node)) {
+                      <button class="btn-cancel" (click)="startAddOrgNodeAtLevel(node, 'city')">+ Bengaluru City / GBA</button>
+                    }
+                    @if (showsDistrictCorporationBranchAction(node)) {
+                      <button class="btn-cancel" (click)="startAddOrgNodeAtLevel(node, 'corporation')">+ Corporation</button>
+                    }
                   } @else if (canAddOrgChild(node)) {
                     <button class="btn-cancel" (click)="startAddOrgNode(node)">{{ orgChildActionLabel(node) }}</button>
                   }

@@ -14,6 +14,7 @@ import {
   getOrgDirectMembers,
   getOrgNavigableChildren,
   isOrgMemberChild,
+  orgBranchUsesCityLevel,
   orgStateAllowsCityLevel,
   OrgTreeNode
 } from '../../utils/org-structure';
@@ -99,6 +100,8 @@ export class StateCommitteeComponent {
 
   private readonly stateSupportsCityLevel = (node: Pick<OrgTreeNode, 'location'> | null | undefined) =>
     orgStateAllowsCityLevel(node?.location.state);
+  private readonly branchUsesCityLevel = (node: Pick<OrgTreeNode, 'title' | 'subtitle' | 'location'> | null | undefined) =>
+    orgBranchUsesCityLevel(node);
 
   protected readonly stateRoots = computed(() => {
     const { flatNodes, nodesById } = this.treeIndex();
@@ -587,7 +590,7 @@ export class StateCommitteeComponent {
       }
 
       if (node.level === 'city') {
-        return 'City / GBA';
+        return this.branchUsesCityLevel(node) ? 'City / GBA' : 'Corporation';
       }
 
       if (node.level === 'corporation') {
@@ -616,7 +619,7 @@ export class StateCommitteeComponent {
     }
 
     if (node.level === 'city') {
-      return 'City / GBA';
+      return this.branchUsesCityLevel(node) ? 'City / GBA' : 'Corporation';
     }
 
     if (node.level === 'corporation') {
@@ -690,7 +693,7 @@ export class StateCommitteeComponent {
         return `Inspect district branches, corporation branches, assemblies, taluks, and related members configured under ${this.nodeLabel(node)}.`;
       }
 
-      return `Inspect district branches, city / GBA branches, taluks, corporations, assemblies, and related members configured under ${this.nodeLabel(node)}.`;
+      return `Inspect district branches, the Bengaluru city / GBA branch, taluks, corporations, assemblies, and related members configured under ${this.nodeLabel(node)}.`;
     }
 
     if (kind === 'District') {

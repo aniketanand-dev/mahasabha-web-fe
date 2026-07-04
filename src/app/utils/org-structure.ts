@@ -23,6 +23,23 @@ const normalizeOrgText = (value: string): string =>
 export const orgStateAllowsCityLevel = (state: string | null | undefined): boolean =>
   normalizeOrgText(String(state || '')) === normalizeOrgText('karnataka');
 
+export const orgIsBengaluruBranchName = (value: string | null | undefined): boolean => {
+  const normalized = normalizeOrgText(String(value || ''));
+  return normalized.includes(normalizeOrgText('bengaluru'))
+    || normalized.includes(normalizeOrgText('bangalore'));
+};
+
+export const orgBranchUsesCityLevel = (
+  branch: Pick<AdminOrgNode, 'title' | 'subtitle' | 'location'> | null | undefined,
+): boolean =>
+  !!branch
+  && orgStateAllowsCityLevel(branch.location.state)
+  && (
+    orgIsBengaluruBranchName(branch.title)
+    || orgIsBengaluruBranchName(branch.subtitle)
+    || orgIsBengaluruBranchName(branch.location.district)
+  );
+
 const SIMPLE_ORG_SECTION_LABELS = [
   'president-office',
   'office-bearer',

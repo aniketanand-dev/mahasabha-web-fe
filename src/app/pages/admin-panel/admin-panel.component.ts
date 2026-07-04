@@ -31,7 +31,7 @@ import {
 } from '../../services/admin-data.service';
 import { buildManagedAssetUrl } from '../../services/api-base';
 import { translations } from '../../i18n/translations';
-import { orgStateAllowsCityLevel } from '../../utils/org-structure';
+import { orgBranchUsesCityLevel, orgIsBengaluruBranchName, orgStateAllowsCityLevel } from '../../utils/org-structure';
 
 type Tab =
   | 'header'
@@ -1908,7 +1908,7 @@ export class AdminPanelComponent {
     }
 
     if (parent.level === 'city') {
-      return 'corporation';
+      return this.branchUsesCityLevel(parent) ? 'corporation' : 'assembly';
     }
 
     if (parent.level === 'corporation') {
@@ -2001,7 +2001,11 @@ export class AdminPanelComponent {
   }
 
   private usesStateOnlyOrgLevel(level: AdminOrgNodeLevel): boolean {
-    return level === 'state' || level === 'city' || level === 'corporation' || level === 'assembly';
+    return level === 'state';
+  }
+
+  private usesDistrictScopedOrgLevel(level: AdminOrgNodeLevel): boolean {
+    return level === 'city' || level === 'corporation' || level === 'assembly';
   }
 
   private usesTalukOrgLevel(level: AdminOrgNodeLevel): boolean {
@@ -2016,8 +2020,57 @@ export class AdminPanelComponent {
     return orgStateAllowsCityLevel(state);
   }
 
+  private branchUsesCityLevel(branch: Pick<AdminOrgNode, 'title' | 'subtitle' | 'location'> | null | undefined): boolean {
+    return orgBranchUsesCityLevel(branch);
+  }
+
+  private branchNameSupportsCityLevel(value: string | null | undefined): boolean {
+    return orgIsBengaluruBranchName(value);
+  }
+
+  private cityParentSupportsCityLevel(parent: Pick<AdminOrgNode, 'level' | 'title' | 'subtitle' | 'location'> | null | undefined): boolean {
+    if (!parent) {
+      return false;
+    }
+
+    return parent.level === 'district' && this.branchUsesCityLevel(parent);
+  }
+
+  private formUsesCityLevel(form: Pick<OrgNodeForm, 'title' | 'district' | 'state' | 'parentId'>): boolean {
+    const parent = this.orgNodeById(form.parentId);
+
+    if (this.cityParentSupportsCityLevel(parent)) {
+      return true;
+    }
+
+    return this.branchNameSupportsCityLevel(form.title)
+      || this.branchNameSupportsCityLevel(form.district);
+  }
+
+  private editingLegacyCorporationCityNode(formLevel: AdminOrgNodeLevel): boolean {
+    const editingNode = this.orgNodeById(this.editingOrgNodeId());
+    return formLevel === 'city'
+      && !!editingNode
+      && editingNode.level === 'city'
+      && !this.branchUsesCityLevel(editingNode);
+  }
+
+  private editingStateScopedStructureNode(form: Pick<OrgNodeForm, 'level' | 'parentId'>): boolean {
+    if (form.level !== 'city' && form.level !== 'corporation') {
+      return false;
+    }
+
+    const editingNode = this.orgNodeById(this.editingOrgNodeId());
+
+    if (!editingNode || editingNode.level !== form.level || editingNode.parentId !== form.parentId) {
+      return false;
+    }
+
+    return this.orgNodeById(form.parentId)?.level === 'state';
+  }
+
   private stateSupportsDirectCorporationLevel(state: string | null | undefined): boolean {
-    return !!this.normalizeOrgSearchText(String(state || '')) && !this.stateSupportsCityLevel(state);
+    return !!this.normalizeOrgSearchText(String(state || ''));
   }
 
   private stateNodeSupportsCityLevel(node: Pick<AdminOrgNode, 'level' | 'location'> | null | undefined): boolean {
@@ -2032,32 +2085,6 @@ export class AdminPanelComponent {
       && this.stateSupportsDirectCorporationLevel(node.location.state);
   }
 
-  private stateSecondaryBranchLevel(node: Pick<AdminOrgNode, 'level' | 'location'> | null | undefined): AdminOrgNodeLevel | null {
-    if (!node || node.level !== 'state') {
-      return null;
-    }
-
-    if (this.stateNodeSupportsCityLevel(node)) {
-      return 'city';
-    }
-
-    if (this.stateNodeSupportsDirectCorporationLevel(node)) {
-      return 'corporation';
-    }
-
-    return null;
-  }
-
-  protected stateSecondaryBranchTargetLevel(node: AdminOrgNode): AdminOrgNodeLevel {
-    return this.stateSecondaryBranchLevel(node) ?? 'corporation';
-  }
-
-  protected stateSecondaryBranchActionLabel(node: AdminOrgNode): string {
-    return this.stateSecondaryBranchTargetLevel(node) === 'city'
-      ? `+ ${CITY_GBA_LEVEL_TITLE}`
-      : '+ Corporation';
-  }
-
   private resolvedOrgState(form: Pick<OrgNodeForm, 'state' | 'parentId'>): string {
     const explicitState = String(form.state || '').trim();
 
@@ -2069,7 +2096,17 @@ export class AdminPanelComponent {
   }
 
   protected canSelectOrgCityLevel(form: OrgNodeForm): boolean {
-    return form.level === 'city' || this.stateSupportsCityLevel(this.resolvedOrgState(form));
+    if (form.level === 'city') {
+      return true;
+    }
+
+    const parent = this.orgNodeById(form.parentId);
+
+    if (parent?.level === 'district') {
+      return this.branchUsesCityLevel(parent);
+    }
+
+    return false;
   }
 
   private matchesStateCommitteeStateBranchIdentity(node: Pick<AdminOrgNode, 'title' | 'subtitle' | 'location'>): boolean {
@@ -2626,17 +2663,17 @@ export class AdminPanelComponent {
     }
 
     if (form.level === 'city') {
-      return `Enter the ${CITY_GBA_LEVEL_TITLE} branch name here. It sits beside the district branch under the selected state, and members or corporations can be added inside it.`;
+      return `Use ${CITY_GBA_LEVEL_TITLE} only under the Bengaluru district branch. For every other district, create a corporation directly under that district.`;
     }
 
     if (form.level === 'corporation') {
       const parent = this.orgNodeById(form.parentId);
 
-      if (parent?.level === 'state' && !this.stateNodeSupportsCityLevel(parent)) {
+      if (parent?.level === 'state') {
         return 'Enter the corporation branch name. It will be created directly under the selected state branch.';
       }
 
-      return 'Enter the corporation branch name. It will be created under the selected city / GBA branch.';
+      return 'Enter the corporation branch name. It will be created under the selected Bengaluru city / GBA branch.';
     }
 
     if (form.level === 'assembly') {
@@ -2731,11 +2768,37 @@ export class AdminPanelComponent {
   }
 
   protected showsSplitStateBranchActions(node: AdminOrgNode): boolean {
+    return false;
+  }
+
+  protected showsStateCityBranchAction(node: AdminOrgNode): boolean {
     return this.isStateCommitteeNode(node)
       && node.level === 'state'
-      && this.stateSecondaryBranchLevel(node) !== null
+      && this.stateNodeSupportsCityLevel(node)
       && !this.isStateCommitteeContainer(node)
       && !this.isStateCommitteeMemberNode(node);
+  }
+
+  protected showsStateCorporationBranchAction(node: AdminOrgNode): boolean {
+    return this.isStateCommitteeNode(node)
+      && node.level === 'state'
+      && this.stateNodeSupportsDirectCorporationLevel(node)
+      && !this.isStateCommitteeContainer(node)
+      && !this.isStateCommitteeMemberNode(node);
+  }
+
+  protected showsSplitDistrictBranchActions(node: AdminOrgNode): boolean {
+    return this.isStateCommitteeNode(node)
+      && node.level === 'district'
+      && !this.isStateCommitteeMemberNode(node);
+  }
+
+  protected showsDistrictCityBranchAction(node: AdminOrgNode): boolean {
+    return this.showsSplitDistrictBranchActions(node) && this.branchUsesCityLevel(node);
+  }
+
+  protected showsDistrictCorporationBranchAction(node: AdminOrgNode): boolean {
+    return this.showsSplitDistrictBranchActions(node) && !this.branchUsesCityLevel(node);
   }
 
   protected canAddOrgMember(node: AdminOrgNode): boolean {
@@ -2770,7 +2833,7 @@ export class AdminPanelComponent {
       }
 
       if (node.level === 'city') {
-        return '+ Corporation';
+        return this.branchUsesCityLevel(node) ? '+ Corporation' : '+ Assembly';
       }
 
       if (node.level === 'corporation') {
@@ -2807,7 +2870,9 @@ export class AdminPanelComponent {
     }
 
     if (node.level === 'city') {
-      return `+ ${CITY_GBA_LEVEL_TITLE} Member`;
+      return this.branchUsesCityLevel(node)
+        ? `+ ${CITY_GBA_LEVEL_TITLE} Member`
+        : '+ Corporation Member';
     }
 
     if (node.level === 'corporation') {
@@ -2822,13 +2887,8 @@ export class AdminPanelComponent {
   }
 
   protected startAddOrgNodeAtLevel(parent: AdminOrgNode, level: AdminOrgNodeLevel) {
-    if (level === 'city' && !this.stateSupportsCityLevel(parent.location.state)) {
-      this.mediaError.set(`${CITY_GBA_LEVEL_TITLE} is available only for Karnataka state.`);
-      return;
-    }
-
-    if (level === 'corporation' && parent.level === 'state' && this.stateSupportsCityLevel(parent.location.state)) {
-      this.mediaError.set(`Add ${CITY_GBA_LEVEL_TITLE} first before creating a corporation under Karnataka state.`);
+    if (level === 'city' && !this.cityParentSupportsCityLevel(parent)) {
+      this.mediaError.set(`${CITY_GBA_LEVEL_TITLE} is available only under the Bengaluru district branch.`);
       return;
     }
 
@@ -2899,7 +2959,7 @@ export class AdminPanelComponent {
         contact: normalizedContact,
         title,
         subtitle: title,
-        district: form.level === 'district' || form.level === 'taluk' ? districtName : '',
+        district: this.usesStateOnlyOrgLevel(form.level) ? '' : districtName,
         taluk: this.usesTalukOrgLevel(form.level) ? talukName : '',
       };
     }
@@ -3067,6 +3127,10 @@ export class AdminPanelComponent {
       return !form.district.trim() && !form.taluk.trim();
     }
 
+    if (this.usesDistrictScopedOrgLevel(level)) {
+      return !form.taluk.trim();
+    }
+
     if (this.isDistrictOnlyOrgLevel(level)) {
       return !!form.district.trim() && !form.taluk.trim();
     }
@@ -3081,6 +3145,10 @@ export class AdminPanelComponent {
       }
 
       return `For ${this.orgLevelLabel(level).toLowerCase()} level, keep district and taluk empty.`;
+    }
+
+    if (this.usesDistrictScopedOrgLevel(level)) {
+      return `For ${this.orgLevelLabel(level).toLowerCase()} level, taluk must be empty.`;
     }
 
     if (this.isDistrictOnlyOrgLevel(level)) {
@@ -3106,15 +3174,47 @@ export class AdminPanelComponent {
         return 'State is required.';
       }
 
-      if (normalizedForm.level === 'city' && !this.stateSupportsCityLevel(normalizedForm.state)) {
-        return `${CITY_GBA_LEVEL_TITLE} is available only for Karnataka state.`;
+      if (normalizedForm.level === 'city') {
+        const parent = this.orgNodeById(normalizedForm.parentId);
+
+        if ((!parent || parent.level !== 'district') && !this.editingStateScopedStructureNode(normalizedForm)) {
+          return `Select the Bengaluru district branch as the parent before creating ${CITY_GBA_LEVEL_TITLE}.`;
+        }
+
+        if (!this.stateSupportsCityLevel(normalizedForm.state)) {
+          return `${CITY_GBA_LEVEL_TITLE} is available only under the Bengaluru district branch.`;
+        }
+
+        if (!this.editingLegacyCorporationCityNode(normalizedForm.level) && !this.formUsesCityLevel(normalizedForm)) {
+          return `Use ${CITY_GBA_LEVEL_TITLE} only for the Bengaluru district. Create a corporation directly for other districts.`;
+        }
       }
 
       if (normalizedForm.level === 'corporation') {
         const parent = this.orgNodeById(normalizedForm.parentId);
 
-        if (parent?.level === 'state' && this.stateSupportsCityLevel(parent.location.state)) {
-          return `Add ${CITY_GBA_LEVEL_TITLE} first before creating a corporation under Karnataka state.`;
+        if (parent?.level === 'state' && !this.editingStateScopedStructureNode(normalizedForm)) {
+          return 'Create a district first, then add a corporation under that district.';
+        }
+
+        if (parent?.level === 'district' && this.branchUsesCityLevel(parent)) {
+          return `Add ${CITY_GBA_LEVEL_TITLE} first under Bengaluru district before creating a corporation.`;
+        }
+
+        if (parent?.level === 'city' && !this.branchUsesCityLevel(parent)) {
+          return 'This branch behaves as a corporation already. Add an assembly under it instead of another corporation.';
+        }
+      }
+
+      if (normalizedForm.level === 'assembly') {
+        const parent = this.orgNodeById(normalizedForm.parentId);
+
+        if (parent?.level === 'district') {
+          return 'Add a corporation under this district before creating an assembly.';
+        }
+
+        if (parent?.level === 'city' && this.branchUsesCityLevel(parent)) {
+          return 'Add a corporation under this Bengaluru city / GBA branch before creating an assembly.';
         }
       }
 
@@ -3611,15 +3711,29 @@ export class AdminPanelComponent {
       }
 
       if (this.isStateCommitteeSectionLabel(form.sidebarLabel)) {
+        const allowLegacyStateParent = node.id === form.parentId
+          && this.editingStateScopedStructureNode(form);
+
         if (form.level === 'state') {
           return this.isStateCommitteeContainer(node);
         }
 
-        if (form.level === 'district' || form.level === 'city') {
+        if (form.level === 'district') {
           return this.isStateCommitteeNode(node)
             && node.level === 'state'
-            && (form.level !== 'city' || this.stateNodeSupportsCityLevel(node))
             && !this.isStateCommitteeContainer(node)
+            && !this.isStateCommitteeMemberNode(node);
+        }
+
+        if (form.level === 'city') {
+          return this.isStateCommitteeNode(node)
+            && (
+              (
+                node.level === 'district'
+                && this.branchUsesCityLevel(node)
+              )
+              || allowLegacyStateParent
+            )
             && !this.isStateCommitteeMemberNode(node);
         }
 
@@ -3628,20 +3742,20 @@ export class AdminPanelComponent {
             && (
               (
                 node.level === 'city'
-                && this.stateSupportsCityLevel(node.location.state)
+                && this.branchUsesCityLevel(node)
               )
               || (
-                node.level === 'state'
-                && !this.isStateCommitteeContainer(node)
-                && !this.stateSupportsCityLevel(node.location.state)
+                node.level === 'district'
+                && !this.branchUsesCityLevel(node)
               )
+              || allowLegacyStateParent
             )
             && !this.isStateCommitteeMemberNode(node);
         }
 
         if (form.level === 'assembly') {
           return this.isStateCommitteeNode(node)
-            && node.level === 'corporation'
+            && (node.level === 'corporation' || (node.level === 'city' && !this.branchUsesCityLevel(node)))
             && !this.isStateCommitteeMemberNode(node);
         }
 
@@ -3809,17 +3923,14 @@ export class AdminPanelComponent {
     }
 
     if (parent.level === 'state') {
-      const nextLevel = form.level === 'city' && this.stateSupportsCityLevel(parent.location.state)
-        ? 'city'
-        : form.level === 'corporation' && !this.stateSupportsCityLevel(parent.location.state)
-          ? 'corporation'
-          : 'district';
+      const keepLegacyStateScopedLevel = this.editingStateScopedStructureNode(form);
+      const nextLevel = keepLegacyStateScopedLevel ? form.level : 'district';
 
       return {
         ...form,
         level: nextLevel,
         state: parent.location.state || form.state,
-        district: nextLevel === 'district' ? form.district : '',
+        district: nextLevel === 'district' || keepLegacyStateScopedLevel ? form.district : '',
         taluk: '',
       };
     }
@@ -3827,9 +3938,11 @@ export class AdminPanelComponent {
     if (parent.level === 'city') {
       return {
         ...form,
-        level: form.level === 'assembly' ? 'assembly' : 'corporation',
+        level: this.branchUsesCityLevel(parent)
+          ? (form.level === 'assembly' ? 'assembly' : 'corporation')
+          : 'assembly',
         state: parent.location.state || form.state,
-        district: '',
+        district: parent.location.district || form.district,
         taluk: '',
       };
     }
@@ -3839,18 +3952,24 @@ export class AdminPanelComponent {
         ...form,
         level: 'assembly',
         state: parent.location.state || form.state,
-        district: '',
+        district: parent.location.district || form.district,
         taluk: '',
       };
     }
 
     if (parent.level === 'district') {
+      const nextLevel = form.level === 'city' && this.branchUsesCityLevel(parent)
+        ? 'city'
+        : form.level === 'taluk'
+          ? 'taluk'
+          : 'corporation';
+
       return {
         ...form,
-        level: 'taluk',
+        level: nextLevel,
         state: parent.location.state || form.state,
         district: parent.location.district || form.district,
-        taluk: form.taluk,
+        taluk: nextLevel === 'taluk' ? form.taluk : '',
       };
     }
 
@@ -4109,7 +4228,9 @@ export class AdminPanelComponent {
     }
 
     if (node.level === 'city') {
-      return `${CITY_GBA_LEVEL_TITLE} Members`;
+      return this.branchUsesCityLevel(node)
+        ? `${CITY_GBA_LEVEL_TITLE} Members`
+        : 'Corporation Members';
     }
 
     return `${this.orgLevelLabel(node.level)} Members`;
@@ -4121,11 +4242,11 @@ export class AdminPanelComponent {
     }
 
     if (node.level === 'state') {
-      if (!this.stateNodeSupportsCityLevel(node)) {
-        return 'Manage state members here, then open the district or corporation list below.';
+      if (this.stateNodeSupportsCityLevel(node)) {
+        return `Manage state members here, then open the district, Bengaluru ${CITY_GBA_LEVEL_TITLE.toLowerCase()}, or corporation list below.`;
       }
 
-      return `Manage state members here, then open the district or ${CITY_GBA_LEVEL_TITLE} list below.`;
+      return 'Manage state members here, then open the district or corporation list below.';
     }
 
     if (node.level === 'district') {
@@ -4137,7 +4258,9 @@ export class AdminPanelComponent {
     }
 
     if (node.level === 'city') {
-      return `Manage ${CITY_GBA_LEVEL_TITLE} members here, then open the corporation list below.`;
+      return this.branchUsesCityLevel(node)
+        ? `Manage ${CITY_GBA_LEVEL_TITLE} members here, then open the corporation list below.`
+        : 'Manage corporation members here, then open the assembly list below.';
     }
 
     if (node.level === 'corporation') {
@@ -4157,11 +4280,11 @@ export class AdminPanelComponent {
 
   protected orgBranchChildrenHeading(node: AdminOrgNode): string {
     if (node.level === 'state') {
-      if (!this.stateNodeSupportsCityLevel(node)) {
-        return 'District and Corporation List';
+      if (this.stateNodeSupportsCityLevel(node)) {
+        return `District, Bengaluru ${CITY_GBA_LEVEL_TITLE}, and Corporation List`;
       }
 
-      return `District and ${CITY_GBA_LEVEL_TITLE} List`;
+      return 'District and Corporation List';
     }
 
     if (node.level === 'district') {
@@ -4173,7 +4296,7 @@ export class AdminPanelComponent {
     }
 
     if (node.level === 'city') {
-      return 'Corporation List';
+      return this.branchUsesCityLevel(node) ? 'Corporation List' : 'Assembly List';
     }
 
     if (node.level === 'corporation') {
@@ -4185,11 +4308,11 @@ export class AdminPanelComponent {
 
   protected orgBranchChildrenCopy(node: AdminOrgNode): string {
     if (node.level === 'state') {
-      if (!this.stateNodeSupportsCityLevel(node)) {
-        return 'Open a district or corporation branch to manage its members and the next level under it.';
+      if (this.stateNodeSupportsCityLevel(node)) {
+        return `Open a district, Bengaluru ${CITY_GBA_LEVEL_TITLE.toLowerCase()}, or corporation branch to manage its members and the next level under it.`;
       }
 
-      return `Open a district or ${CITY_GBA_LEVEL_TITLE} branch to manage its members and the next level under it.`;
+      return 'Open a district or corporation branch to manage its members and the next level under it.';
     }
 
     if (node.level === 'district') {
@@ -4201,7 +4324,9 @@ export class AdminPanelComponent {
     }
 
     if (node.level === 'city') {
-      return 'Open a corporation branch to manage its members and assembly list.';
+      return this.branchUsesCityLevel(node)
+        ? 'Open a corporation branch to manage its members and assembly list.'
+        : 'Open an assembly branch to manage its members.';
     }
 
     if (node.level === 'corporation') {
@@ -4217,11 +4342,11 @@ export class AdminPanelComponent {
 
   protected orgBranchChildrenEmptyText(node: AdminOrgNode): string {
     if (node.level === 'state') {
-      if (!this.stateNodeSupportsCityLevel(node)) {
-        return 'No district or corporation branches have been added under this state yet.';
+      if (this.stateNodeSupportsCityLevel(node)) {
+        return `No districts, Bengaluru ${CITY_GBA_LEVEL_TITLE.toLowerCase()}, or corporation branches have been added under this state yet.`;
       }
 
-      return `No districts or ${CITY_GBA_LEVEL_TITLE.toLowerCase()} branches have been added under this state yet.`;
+      return 'No district or corporation branches have been added under this state yet.';
     }
 
     if (node.level === 'district') {
@@ -4233,7 +4358,9 @@ export class AdminPanelComponent {
     }
 
     if (node.level === 'city') {
-      return 'No corporation branches have been added under this city / GBA yet.';
+      return this.branchUsesCityLevel(node)
+        ? 'No corporation branches have been added under this city / GBA yet.'
+        : 'No assembly branches have been added under this corporation yet.';
     }
 
     if (node.level === 'corporation') {
@@ -4799,7 +4926,7 @@ export class AdminPanelComponent {
     }
 
     if (node.level === 'city') {
-      return CITY_GBA_LEVEL_TITLE;
+      return this.branchUsesCityLevel(node) ? CITY_GBA_LEVEL_TITLE : 'Corporation';
     }
 
     return this.orgLevelLabel(node.level);

@@ -12,6 +12,7 @@ import {
   buildOrgTreeIndex,
   findOrgParent,
   findOrgSectionRoot,
+  orgBranchUsesCityLevel,
   getOrgDirectMembers,
   getOrgLinkedSectionChildren,
   getOrgNavigableChildren,
@@ -33,6 +34,8 @@ export class OrgNodeDetailComponent {
   private readonly data = inject(AdminDataService);
   private readonly route = inject(ActivatedRoute);
   private readonly childPageSize = 24;
+  private readonly branchUsesCityLevel = (node: Pick<OrgTreeNode, 'title' | 'subtitle' | 'location'> | null | undefined) =>
+    orgBranchUsesCityLevel(node);
   private readonly normalized = (value: string) =>
     String(value || '')
       .toLowerCase()
@@ -267,7 +270,7 @@ export class OrgNodeDetailComponent {
     }
 
     if (node.level === 'city') {
-      return 'City / GBA Level';
+      return this.branchUsesCityLevel(node) ? 'City / GBA Level' : 'Corporation Level';
     }
 
     return `${this.titleCase(node.level)} Level`;

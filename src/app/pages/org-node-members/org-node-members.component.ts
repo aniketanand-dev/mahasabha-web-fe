@@ -11,6 +11,7 @@ import {
   buildOrgTree,
   buildOrgTreeIndex,
   findOrgParent,
+  orgBranchUsesCityLevel,
   findOrgSectionRoot,
   getOrgDirectMembers,
   isSameOrgLabel,
@@ -38,6 +39,8 @@ export class OrgNodeMembersComponent {
 
   private readonly tree = computed(() => buildOrgTree(this.data.orgNodes()));
   private readonly treeIndex = computed(() => buildOrgTreeIndex(this.tree()));
+  private readonly branchUsesCityLevel = (node: Pick<OrgTreeNode, 'title' | 'subtitle' | 'location'> | null | undefined) =>
+    orgBranchUsesCityLevel(node);
   private readonly nodeId = toSignal(
     this.route.paramMap.pipe(map((params) => {
       const value = String(params.get('nodeId') || '').trim();
@@ -198,7 +201,7 @@ export class OrgNodeMembersComponent {
 
   protected nodeLevelLabel(node: OrgTreeNode): string {
     if (node.level === 'city') {
-      return 'City / GBA';
+      return this.branchUsesCityLevel(node) ? 'City / GBA' : 'Corporation';
     }
 
     return this.titleCase(node.level);
